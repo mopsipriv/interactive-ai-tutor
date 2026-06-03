@@ -4,8 +4,9 @@ from agents.graph import app
 async def start_test():
     print("Start of testing of LangGraph\n")
     
-    #searching for user mops
-    test_input = {"student_id": 1}
+    #searching for user mops and course 2
+    test_input = {"student_id": 1,
+                  "course_id": 2}
     
     print("Graph started to work")
     result = await app.ainvoke(test_input)
