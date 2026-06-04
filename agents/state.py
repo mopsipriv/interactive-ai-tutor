@@ -7,4 +7,8 @@ class State(TypedDict):
     course_id: int
     course_data: str
 
+    enrollments: list
+    is_allowed: bool
+
     final_text: str
+
