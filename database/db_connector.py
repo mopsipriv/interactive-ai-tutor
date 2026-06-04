@@ -16,7 +16,7 @@ async def get_student_from_db(student_id: int):
             (student_id,)
         )
         result = await cur.fetchone()
-    async conn.close()
+    conn.close()
     return result if result else "Not found"
 
 async def get_courses_from_db(course_id: int):
@@ -27,7 +27,7 @@ async def get_courses_from_db(course_id: int):
             (course_id,)
         )
         result = await cur.fetchone()
-    async conn.close()
+    conn.close()
     return result if result else "Not found"
 
 async def get_student_enrollments(student_id: int):
@@ -41,5 +41,5 @@ async def get_student_enrollments(student_id: int):
             (student_id,)
         )
         result = await cur.fetchall()
-    async conn.close()
+    conn.close()
     return list(result) if result else []
