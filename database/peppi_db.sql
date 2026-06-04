@@ -40,7 +40,18 @@ CREATE TABLE `course` (
 
 LOCK TABLES `course` WRITE;
 /*!40000 ALTER TABLE `course` DISABLE KEYS */;
-INSERT INTO `course` VALUES (1,'TVT1001','Matematiikan perusteet tietotekniikassa 1',3,'perus'),(2,'TVT1002','Digitaalitekniikan perusteet tietotekniikassa',3,'perus'),(3,'TVT1003','Johdatus ohjelmointiin',5,'perus'),(4,'TVT1004','Ohjelmointi 1',5,'perus'),(5,'TVT1005','Ohjelmointi 2',5,'perus'),(6,'TVT1006','Tietokannat',5,'perus'),(7,'TVT1007','Web-ohjelmointi',5,'perus'),(8,'TVT2001','Tekoälyn ohjelmointi',5,'ammatti'),(9,'TVT2002','Koneoppiminen',5,'ammatti'),(10,'TVT2003','Python-ohjelmointi',3,'ammatti'),(11,'TVT2004','Tietoliikenteen perusteet',3,'perus'),(12,'TVT2005','Käyttöjärjestelmät',3,'perus');
+INSERT INTO `course` VALUES (1,'TVT1001','Matematiikan perusteet tietotekniikassa 1',3,'perus'),
+(2,'TVT1002','Digitaalitekniikan perusteet tietotekniikassa',3,'perus'),
+(3,'TVT1003','Johdatus ohjelmointiin',5,'perus'),
+(4,'TVT1004','Ohjelmointi 1',5,'perus'),
+(5,'TVT1005','Ohjelmointi 2',5,'perus'),
+(6,'TVT1006','Tietokannat',5,'perus'),
+(7,'TVT1007','Web-ohjelmointi',5,'perus'),
+(8,'TVT2001','Tekoälyn ohjelmointi',5,'ammatti'),
+(9,'TVT2002','Koneoppiminen',5,'ammatti'),
+(10,'TVT2003','Python-ohjelmointi',3,'ammatti'),
+(11,'TVT2004','Tietoliikenteen perusteet',3,'perus'),
+(12,'TVT2005','Käyttöjärjestelmät',3,'perus');
 /*!40000 ALTER TABLE `course` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -75,7 +86,16 @@ CREATE TABLE `enrollment` (
 
 LOCK TABLES `enrollment` WRITE;
 /*!40000 ALTER TABLE `enrollment` DISABLE KEYS */;
-INSERT INTO `enrollment` VALUES (1,1,3,1,4,'completed','2024-12-15'),(2,1,6,1,5,'completed','2024-12-20'),(3,1,8,1,NULL,'ongoing',NULL),(4,2,3,1,5,'completed','2024-12-15'),(5,2,6,1,4,'completed','2024-12-20'),(6,2,8,1,3,'completed','2025-01-10'),(7,3,3,1,3,'completed','2024-12-15'),(8,3,4,1,NULL,'ongoing',NULL),(9,4,3,1,2,'completed','2024-12-15'),(10,5,3,2,NULL,'planned',NULL);
+INSERT INTO `enrollment` VALUES (1,1,3,1,4,'completed','2024-12-15'),
+(2,1,6,1,5,'completed','2024-12-20'),
+(3,1,8,1,NULL,'ongoing',NULL),
+(4,2,3,1,5,'completed','2024-12-15'),
+(5,2,6,1,4,'completed','2024-12-20'),
+(6,2,8,1,3,'completed','2025-01-10'),
+(7,3,3,1,3,'completed','2024-12-15'),
+(8,3,4,1,NULL,'ongoing',NULL),
+(9,4,3,1,2,'completed','2024-12-15'),
+(10,5,3,2,NULL,'planned',NULL);
 /*!40000 ALTER TABLE `enrollment` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -127,7 +147,8 @@ CREATE TABLE `project` (
 
 LOCK TABLES `project` WRITE;
 /*!40000 ALTER TABLE `project` DISABLE KEYS */;
-INSERT INTO `project` VALUES (1,'AI Chatbot Development','Tekoälypohjainen chatbot-projekti opettajien tueksi'),(2,'Web Application Project','Full-stack web-sovelluksen kehitysprojekti');
+INSERT INTO `project` VALUES (1,'AI Chatbot Development','Tekoälypohjainen chatbot-projekti opettajien tueksi'),
+(2,'Web Application Project','Full-stack web-sovelluksen kehitysprojekti');
 /*!40000 ALTER TABLE `project` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -215,7 +236,11 @@ CREATE TABLE `student` (
 
 LOCK TABLES `student` WRITE;
 /*!40000 ALTER TABLE `student` DISABLE KEYS */;
-INSERT INTO `student` VALUES (1,'H123456','Aleksandr','Starchenkov','aleksandr.starchenkov@tuni.fi','Insinööri (AMK), tietotekniikka','2024-08-01','2028-07-31'),(2,'H234567','Anna','Mäkinen','anna.makinen@tuni.fi','Insinööri (AMK), tietotekniikka','2024-08-01','2028-07-31'),(3,'H345678','Mikko','Leinonen','mikko.leinonen@tuni.fi','Insinööri (AMK), tietotekniikka','2024-08-01','2028-07-31'),(4,'H456789','Sofia','Nieminen','sofia.nieminen@tuni.fi','Insinööri (AMK), tietotekniikka','2024-08-01','2028-07-31'),(5,'H567890','Eetu','Hakala','eetu.hakala@tuni.fi','Insinööri (AMK), tietotekniikka','2025-08-01','2029-07-31');
+INSERT INTO `student` VALUES (1,'H123456','Aleksandr','Starchenkov','aleksandr.starchenkov@tuni.fi','Insinööri (AMK), tietotekniikka','2024-08-01','2028-07-31'),
+(2,'H234567','Anna','Mäkinen','anna.makinen@tuni.fi','Insinööri (AMK), tietotekniikka','2024-08-01','2028-07-31'),
+(3,'H345678','Mikko','Leinonen','mikko.leinonen@tuni.fi','Insinööri (AMK), tietotekniikka','2024-08-01','2028-07-31'),
+(4,'H456789','Sofia','Nieminen','sofia.nieminen@tuni.fi','Insinööri (AMK), tietotekniikka','2024-08-01','2028-07-31'),
+(5,'H567890','Eetu','Hakala','eetu.hakala@tuni.fi','Insinööri (AMK), tietotekniikka','2025-08-01','2029-07-31');
 /*!40000 ALTER TABLE `student` ENABLE KEYS */;
 UNLOCK TABLES;
 
