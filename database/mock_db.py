@@ -10,6 +10,11 @@ FAKE_COURSES = {
     2: {"idcourse":2, "course_code": "TVT1002", "course_name": "Digitaalitekniikan perusteet tietotekniikassa", "credit":3,"category":"perus"}
 
 }
+
+FAKE_ENROLLMENTS = {
+    1: {"idenrollment":1,"idstudent": 1,"idcourse": 3,"idgroup":1,"grade":4,"status":"completed","completed_date":"2024-12-15"},
+    2: {"idenrollment":10,"idstudent": 5,"idcourse": 3,"idgroup":2,"grade":"NULL","status":"planned","completed_date":"NULL"},
+}
 async def get_student_from_db(student_id: int):
     await asyncio.sleep(1)
 
@@ -25,3 +30,13 @@ async def get_courses_from_db(course_id: int):
         return FAKE_COURSES[course_id]
     
     return "Not found"
+
+async def get_student_enrollments(student_id: int):
+    await asyncio.sleep(0.5)
+    
+    student_courses = []
+    for enrollment in FAKE_ENROLLMENTS.values():
+        if enrollment["idstudent"] == student_id:
+            student_courses.append(enrollment)
+            
+    return student_courses
