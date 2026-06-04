@@ -1,6 +1,10 @@
 from langgraph.graph import StateGraph, START, END
 from agents.state import State
+<<<<<<< HEAD
 from database.mock_db import get_student_from_db, get_courses_from_db, get_student_enrollments
+=======
+from database.db_connector import get_student_from_db, get_courses_from_db, get_student_enrollments
+>>>>>>> f9edb0fc49d1eda9b93455ae38acedfdd1218224
 
 async def load_student_node(state: State):
     current_id = state["student_id"]
