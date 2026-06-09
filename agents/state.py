@@ -12,3 +12,6 @@ class State(TypedDict):
 
     final_text: str
 
+    bot_analyze_text: str 
+    
+

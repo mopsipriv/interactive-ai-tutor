@@ -51,6 +51,14 @@ async def course_agent(state: State):
     course_info="Course: Matematiikan perusteet tietotekniikassa 1, Status: 45/50 students enrolled\n"
     return {"course_data":course_info}
 
+def route_after_status(state: State):
+    allowed = state.get("is_allowed",True)
+
+    if allowed==False:
+        return "go_to_recommendation"
+    else:
+        return "go_to_end"
+
 graph=StateGraph(State)
 
 graph.add_node("progress_node", progress_agent)
@@ -63,7 +71,14 @@ graph.add_node("course_node",course_agent)
 graph.add_edge(START, "progress_node")
 graph.add_edge("progress_node", "study_right_node")
 graph.add_edge("study_right_node", "status_node")     
-graph.add_edge("status_node","course_node")
+graph.add_conditional_edges(
+    "status_node",
+    route_after_status,
+    {
+        "go_to_recommendation": "recommendation_node",
+        "go_to_end":END
+    }
+)
 graph.add_edge("course_node","recommendation_node")
 graph.add_edge("recommendation_node", END)
 
