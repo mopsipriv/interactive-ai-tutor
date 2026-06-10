@@ -2,6 +2,10 @@ from langgraph.graph import StateGraph, START, END
 import asyncio
 from typing_extensions import TypedDict
 from datetime import datetime
+from typing import Annotated
+import typing
+import operator
+
 
 STUDENTS_DB = {
     1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "nikita.mopsov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":10, "credits_expected":30},
@@ -20,7 +24,7 @@ class State(TypedDict):
 
     final_text: str
 
-    bot_analyze_text: str 
+    bot_analyze_text: Annotated[str, operator.add]
     
 async def progress_agent(state: State):
     print("First agent is working")
@@ -33,21 +37,17 @@ async def progress_agent(state: State):
             progress= student["credits_expected"] - student["credits_earned"]
             if progress>15:
                 new_issue= f"Student:{full_name} has critical situation. Student does not have enought credits.\n"
-                current_text=state.get("bot_analyze_text","")
-                return {"bot_analyze_text": current_text+new_issue}
+                return {"bot_analyze_text": new_issue}
             elif progress>5 and progress<15:
                 new_issue= f"Student:{full_name} has warning situation. Student does not have enought credits.\n"
-                current_text=state.get("bot_analyze_text","")
-                return {"bot_analyze_text": current_text+new_issue}
+                return {"bot_analyze_text": new_issue}
             else:
                 new_issue= f"Student:{full_name} has good situation. Student has enought credits.\n"
-                current_text=state.get("bot_analyze_text","")
-                return {"bot_analyze_text": current_text+new_issue}
+                return {"bot_analyze_text": new_issue}
             
     if not found:
         new_issue = f"Student: {name}, Details: Not found in database\n"
-    current_text= state.get("bot_analyze_text","")
-    return {"bot_analyze_text": current_text+new_issue}
+    return {"bot_analyze_text": new_issue}
 
 async def study_right_agent(state: State):
     print("Second agent is working")
@@ -64,27 +64,22 @@ async def study_right_agent(state: State):
             left_study_right= (date_obj - today).days / 30
             if left_study_right<6:
                 new_issue= f"Student:{full_name} has critical situation\n"
-                current_text=state.get("bot_analyze_text","")
-                return {"bot_analyze_text": current_text+new_issue}
+                return {"bot_analyze_text": new_issue}
             elif left_study_right<12:
                 new_issue= f"Student:{full_name} has warning situation\n"
-                current_text=state.get("bot_analyze_text","")
-                return {"bot_analyze_text": current_text+new_issue}
+                return {"bot_analyze_text": new_issue}
             else:
                 new_issue= f"Student:{full_name} has study right\n"
-                current_text=state.get("bot_analyze_text","")
-                return {"bot_analyze_text": current_text+new_issue}
+                return {"bot_analyze_text": new_issue}
     if not found:
         new_issue = f"Student: {full_name}, Details: Not found in database\n"
-    current_text= state.get("bot_analyze_text","")
-    return {"bot_analyze_text": current_text+new_issue}
+    return {"bot_analyze_text": new_issue}
 
 async def recommendation_agent(state: State):
     print("Third agent is working")
     all_issues = state.get("bot_analyze_text","")
     result= "Hi, there is result information about students:\n"
-    course_text = state.get("course_data", "")
-    full_report = result+all_issues+course_text
+    full_report = result+all_issues
     return {"final_text": full_report}
 
 async def status_agent(state: State):
@@ -107,9 +102,7 @@ async def analytics_agent(state: State):
         verdict = "All checks passed. The student is cleared for enrollment.\n"
     else:
         verdict = "Enrollment Blocked. Student must contact the coordinator.\n"
-    
-    current_text=state.get("bot_analyze_text","")
-    return{"bot_analyze_text": current_text+verdict}
+    return{"bot_analyze_text": verdict}
 
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
@@ -130,8 +123,9 @@ graph.add_node("course_node",course_agent)
 
 
 graph.add_edge(START, "progress_node")
-graph.add_edge("progress_node", "study_right_node")
+graph.add_edge(START, "study_right_node")
 graph.add_edge("study_right_node", "status_node")     
+graph.add_edge("progress_node", "status_node")
 graph.add_conditional_edges(
     "status_node",
     route_after_status,
