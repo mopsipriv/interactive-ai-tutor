@@ -4,8 +4,8 @@ from typing_extensions import TypedDict
 from datetime import datetime
 
 STUDENTS_DB = {
-    1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "aleksandr.starchenkov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":10, "credits_expected":30},
-    2: {"idstudent": 2,"student_number": "H234567", "fname": "Anna", "lname":"Mäkinen", "email": "anna.makinen@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":30, "credits_expected":90}
+    1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "nikita.mopsov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":10, "credits_expected":30},
+    2: {"idstudent": 2,"student_number": "H234567", "fname": "Lena", "lname":"Golovach", "email": "lena.golovach@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":30, "credits_expected":90}
 }
 
 class State(TypedDict):
