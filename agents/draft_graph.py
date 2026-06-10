@@ -4,8 +4,8 @@ from typing_extensions import TypedDict
 from datetime import datetime
 
 STUDENTS_DB = {
-    1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "aleksandr.starchenkov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31"},
-    2: {"idstudent": 2,"student_number": "H234567", "fname": "Anna", "lname":"Mäkinen", "email": "anna.makinen@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31"}
+    1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "aleksandr.starchenkov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":10, "credits_expected":30},
+    2: {"idstudent": 2,"student_number": "H234567", "fname": "Anna", "lname":"Mäkinen", "email": "anna.makinen@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":30, "credits_expected":90}
 }
 
 class State(TypedDict):
@@ -30,7 +30,20 @@ async def progress_agent(state: State):
         full_name= student["fname"]+" "+student["lname"]
         if full_name==name:
             found= True
-            new_issue = f"Student: {full_name}"
+            progress= student["credits_expected"] - student["credits_earned"]
+            if progress>15:
+                new_issue= f"Student:{full_name} has critical situation. Student does not have enought credits.\n"
+                current_text=state.get("bot_analyze_text","")
+                return {"bot_analyze_text": current_text+new_issue}
+            elif progress>5 and progress<15:
+                new_issue= f"Student:{full_name} has warning situation. Student does not have enought credits.\n"
+                current_text=state.get("bot_analyze_text","")
+                return {"bot_analyze_text": current_text+new_issue}
+            else:
+                new_issue= f"Student:{full_name} has good situation. Student has enought credits.\n"
+                current_text=state.get("bot_analyze_text","")
+                return {"bot_analyze_text": current_text+new_issue}
+            
     if not found:
         new_issue = f"Student: {name}, Details: Not found in database\n"
     current_text= state.get("bot_analyze_text","")
@@ -58,7 +71,7 @@ async def study_right_agent(state: State):
                 current_text=state.get("bot_analyze_text","")
                 return {"bot_analyze_text": current_text+new_issue}
             else:
-                new_issue= f"Student:{full_name} has good situation\n"
+                new_issue= f"Student:{full_name} has study right\n"
                 current_text=state.get("bot_analyze_text","")
                 return {"bot_analyze_text": current_text+new_issue}
     if not found:
