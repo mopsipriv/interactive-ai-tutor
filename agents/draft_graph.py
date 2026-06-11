@@ -74,7 +74,7 @@ async def recommendation_agent(state: State):
     all_issues = state.get("bot_analyze_text","")
     response = client.chat.completions.create(
         messages=[
-                {"role": "system", "content": "You are a tutor assistant.You receive student analysis data and write a short professional report for the teacher"},
+                {"role": "system", "content": "You are an AI assistant helping a tutor teacher at a university. You receive automated analysis of student progress and study rights. Write a clear and concise summary message for the teacher. Use bullet points for each student with an issue. Maximum 150 words. Do not use formal letter format."},
                 {"role": "user", "content": all_issues}
         ],
         model="llama-3.3-70b-versatile",
