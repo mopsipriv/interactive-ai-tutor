@@ -165,6 +165,10 @@ async def main():
     print("Start of graph")
     result = await app.ainvoke(initial_state)
 
+    graph_image = app.get_graph().draw_mermaid_png()
+    with open("graph.png", "wb") as f:
+        f.write(graph_image)
+
     print("\nFinal text from final_text")
     print(result["final_text"])
     
