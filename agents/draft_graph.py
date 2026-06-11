@@ -15,11 +15,12 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 STUDENTS_DB = {
     1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "nikita.mopsov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":10, "credits_expected":30},
-    2: {"idstudent": 2,"student_number": "H234567", "fname": "Lena", "lname":"Golovach", "email": "lena.golovach@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":30, "credits_expected":90}
+    2: {"idstudent": 2,"student_number": "H234567", "fname": "Lena", "lname":"Golovach", "email": "lena.golovach@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":30, "credits_expected":90},
+    3: {"idstudent": 3,"student_number": "H789123", "fname": "Papich", "lname":"Veneckiy", "email": "jfasjdfjfad@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":120, "credits_expected":120}
 }
 
 class State(TypedDict):
-    student_name: str
+    students: list
     student_data: str
     
     course_id: int
@@ -34,51 +35,38 @@ class State(TypedDict):
     
 async def progress_agent(state: State):
     print("First agent is working")
-    name = state.get("student_name","")
-    found = False
-    for student in STUDENTS_DB.values():
+    students = state.get("students",[])
+    new_issue= ""
+    for student in students:
         full_name= student["fname"]+" "+student["lname"]
-        if full_name==name:
-            found= True
-            progress= student["credits_expected"] - student["credits_earned"]
-            if progress>15:
-                new_issue= f"Student:{full_name} has critical situation. Student does not have enought credits.\n"
-                return {"bot_analyze_text": new_issue}
-            elif progress>5 and progress<15:
-                new_issue= f"Student:{full_name} has warning situation. Student does not have enought credits.\n"
-                return {"bot_analyze_text": new_issue}
-            else:
-                new_issue= f"Student:{full_name} has good situation. Student has enought credits.\n"
-                return {"bot_analyze_text": new_issue}
-            
-    if not found:
-        new_issue = f"Student: {name}, Details: Not found in database\n"
+        progress= student["credits_expected"] - student["credits_earned"]
+        if progress>15:
+            new_issue+= f"Student:{full_name} has critical situation. Student does not have enought credits.\n"
+        elif progress>5 and progress<15:
+            new_issue+= f"Student:{full_name} has warning situation. Student does not have enought credits.\n"
+        else:
+            new_issue+= f"Student:{full_name} has good situation. Student has enought credits.\n"
+        
     return {"bot_analyze_text": new_issue}
 
 async def study_right_agent(state: State):
     print("Second agent is working")
-    name= state.get("student_name","")
-    found = False
-    for student in STUDENTS_DB.values():
+    students= state.get("students",[])
+    new_issue=""
+    for student in students:
         full_name= student["fname"]+" "+student["lname"]
-        if full_name==name:
-            found = True
-            today = datetime.now()
-            right_time = student["valid_until"]
-            format_string= "%Y-%m-%d"
-            date_obj= datetime.strptime(right_time,format_string)
-            left_study_right= (date_obj - today).days / 30
-            if left_study_right<6:
-                new_issue= f"Student:{full_name} has critical situation\n"
-                return {"bot_analyze_text": new_issue}
-            elif left_study_right<12:
-                new_issue= f"Student:{full_name} has warning situation\n"
-                return {"bot_analyze_text": new_issue}
-            else:
-                new_issue= f"Student:{full_name} has study right\n"
-                return {"bot_analyze_text": new_issue}
-    if not found:
-        new_issue = f"Student: {full_name}, Details: Not found in database\n"
+        today = datetime.now()
+        right_time = student["valid_until"]
+        format_string= "%Y-%m-%d"
+        date_obj= datetime.strptime(right_time,format_string)
+        left_study_right= (date_obj - today).days / 30
+        if left_study_right<6:
+            new_issue+= f"Student:{full_name} has critical situation\n"
+        elif left_study_right<12:
+            new_issue+= f"Student:{full_name} has warning situation\n"
+        else:
+            new_issue+= f"Student:{full_name} has study right\n"
+
     return {"bot_analyze_text": new_issue}
 
 async def recommendation_agent(state: State):
@@ -119,6 +107,12 @@ async def analytics_agent(state: State):
         verdict = "Enrollment Blocked. Student must contact the coordinator.\n"
     return{"bot_analyze_text": verdict}
 
+async def fetch_students_agent(state: State):
+    print("Fetch agent is working")
+    all_students = list(STUDENTS_DB.values())
+    return {"students":all_students}
+
+
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
 
@@ -129,6 +123,7 @@ def route_after_status(state: State):
 
 graph=StateGraph(State)
 
+graph.add_node("fetch_node",fetch_students_agent)
 graph.add_node("progress_node", progress_agent)
 graph.add_node("study_right_node", study_right_agent)
 graph.add_node("recommendation_node", recommendation_agent)
@@ -136,9 +131,9 @@ graph.add_node("status_node",status_agent)
 graph.add_node("analytics_node",analytics_agent)
 graph.add_node("course_node",course_agent)
 
-
-graph.add_edge(START, "progress_node")
-graph.add_edge(START, "study_right_node")
+graph.add_edge(START, "fetch_node")
+graph.add_edge("fetch_node", "progress_node")
+graph.add_edge("fetch_node", "study_right_node")
 graph.add_edge("study_right_node", "status_node")     
 graph.add_edge("progress_node", "status_node")
 graph.add_conditional_edges(
@@ -157,7 +152,7 @@ app=graph.compile()
 
 async def main():
     initial_state = {
-        "student_name": "Nikita Mopsov",
+        "students": [],
         "student_data": "",
         "course_id": 0,
         "course_data": "",
