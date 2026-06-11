@@ -2,6 +2,7 @@ from langgraph.graph import StateGraph, START, END
 from agents.state import State
 from database.db_connector import get_student_from_db, get_courses_from_db, get_student_enrollments
 
+
 async def load_student_node(state: State):
     current_id = state["student_id"]
     result = await get_student_from_db(current_id)

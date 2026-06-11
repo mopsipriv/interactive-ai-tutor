@@ -5,6 +5,12 @@ from datetime import datetime
 from typing import Annotated
 import typing
 import operator
+import os
+from dotenv import load_dotenv
+from groq import Groq
+
+load_dotenv()
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 STUDENTS_DB = {
@@ -76,11 +82,20 @@ async def study_right_agent(state: State):
     return {"bot_analyze_text": new_issue}
 
 async def recommendation_agent(state: State):
-    print("Third agent is working")
+    print("Third Groq agent is working")
     all_issues = state.get("bot_analyze_text","")
-    result= "Hi, there is result information about students:\n"
-    full_report = result+all_issues
-    return {"final_text": full_report}
+    response = client.chat.completions.create(
+        messages=[
+                {"role": "system", "content": "You are a tutor assistant.You receive student analysis data and write a short professional report for the teacher"},
+                {"role": "user", "content": all_issues}
+        ],
+        model="llama-3.3-70b-versatile",
+        max_completion_tokens=1024,
+    )
+    result_text = response.choices[0].message.content
+    return {"final_text": result_text}
+
+
 
 async def status_agent(state: State):
     print("Forth agent is working")
