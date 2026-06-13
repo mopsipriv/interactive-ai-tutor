@@ -37,6 +37,7 @@ TUTOR_CALENDAR = {
 class State(TypedDict):
     students: list
     student_data: str
+    filter_name: str
     
     course_id: int
     course_data: str
@@ -49,6 +50,7 @@ class State(TypedDict):
     calendar_info: str
 
     student_messages:str
+
 
     bot_analyze_text: Annotated[str, operator.add]
     
@@ -131,9 +133,16 @@ async def analytics_agent(state: State):
 
 async def fetch_students_agent(state: State):
     print("Fetch agent is working")
-    all_students = list(STUDENTS_DB.values())
-    return {"students":all_students}
-
+    filter_name = state.get("filter_name","")
+    if filter_name!="":
+        for student in STUDENTS_DB.values():
+            full_name = student["fname"] + " "+ student["lname"]
+            if full_name==filter_name:
+                return {"students":[student]}
+    else:
+        all_students = list(STUDENTS_DB.values())
+        return {"students": all_students}
+    
 async def calendar_agent(state: State):
     print("Seventh agent is working")
     today= datetime.now()
@@ -201,6 +210,8 @@ graph.add_edge("communication_node", END)
 app=graph.compile()
 
 async def main():
+    name = input("Enter student name or press Enter for all: ")
+
     initial_state = {
         "students": [],
         "student_data": "",
@@ -211,7 +222,8 @@ async def main():
         "bot_analyze_text": "",
         "final_text": "",
         "calendar_info":"",
-        "student_messages":""
+        "student_messages":"",
+        "filter_name": name
         
     }
 
