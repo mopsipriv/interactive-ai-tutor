@@ -48,6 +48,8 @@ class State(TypedDict):
 
     calendar_info: str
 
+    student_messages:str
+
     bot_analyze_text: Annotated[str, operator.add]
     
 async def progress_agent(state: State):
@@ -139,6 +141,21 @@ async def calendar_agent(state: State):
     calendar_info = TUTOR_CALENDAR[month]
     return {"calendar_info": calendar_info}
 
+async def communication_agent(state: State):
+    print("Eighth agent is working")
+    current_text=state.get("bot_analyze_text","")
+    response = client.chat.completions.create(
+        messages=[
+                {"role": "system", "content": "You are an AI assistant at a university. You receive student analysis data. Write a short personal message directly to each student who has a problem with credits or study right. Address them by name.Add information about problem. Maximum 100 words total."},
+                {"role": "user", "content": current_text + "\n"}
+        ],
+        model="llama-3.3-70b-versatile",
+        max_completion_tokens=1024,
+    )
+    result_text = response.choices[0].message.content
+    return {"student_messages": result_text}
+
+
 
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
@@ -158,6 +175,7 @@ graph.add_node("status_node",status_agent)
 graph.add_node("analytics_node",analytics_agent)
 #graph.add_node("course_node",course_agent)
 graph.add_node("calendar_node",calendar_agent)
+graph.add_node("communication_node",communication_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge("fetch_node", "progress_node")
@@ -174,10 +192,11 @@ graph.add_conditional_edges(
     }
 )
 graph.add_edge("analytics_node", "recommendation_node")
+graph.add_edge("analytics_node","communication_node")
 graph.add_edge("calendar_node", "status_node")
 #graph.add_edge("analytics_node", "course_node")
 #graph.add_edge("course_node","recommendation_node")
-graph.add_edge("recommendation_node", END)
+graph.add_edge("communication_node", END)
 
 app=graph.compile()
 
@@ -191,7 +210,8 @@ async def main():
         "is_allowed": True,
         "bot_analyze_text": "",
         "final_text": "",
-        "calendar_info":""
+        "calendar_info":"",
+        "student_messages":""
         
     }
 
@@ -204,6 +224,9 @@ async def main():
 
     print("\nFinal text from final_text")
     print(result["final_text"])
+
+    print("\nMessages for students:")
+    print(result["student_messages"])
     
     print("Is student allowed?:", result["is_allowed"])
 
