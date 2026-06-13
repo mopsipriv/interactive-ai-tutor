@@ -19,6 +19,21 @@ STUDENTS_DB = {
     3: {"idstudent": 3,"student_number": "H789123", "fname": "Papich", "lname":"Veneckiy", "email": "jfasjdfjfad@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":120, "credits_expected":120}
 }
 
+TUTOR_CALENDAR = {
+    1: "January: Spring semester begins. Organize orientation meetings with new students.",
+    2: "February: Mid-winter check-in. Review student progress and study rights.",
+    3: "March: Spring exam period approaching. Identify students at risk.",
+    4: "April: Spring exams. Monitor student performance closely.",
+    5: "May: Semester ending. Final progress review for all students.",
+    6: "June: Summer break begins. Send summary reports to coordinators.",
+    7: "July: Summer break. No active tutoring sessions.",
+    8: "August: Autumn semester begins. Welcome new students, organize first meetings.",
+    9: "September: First month check-in. Verify all students are enrolled correctly.",
+    10: "October: Mid-semester review. Check credit accumulation and study rights.",
+    11: "November: Autumn exam period approaching. Support students at risk.",
+    12: "December: Autumn exams. Final check before winter break."
+}
+
 class State(TypedDict):
     students: list
     student_data: str
@@ -30,6 +45,8 @@ class State(TypedDict):
     is_allowed: bool
 
     final_text: str
+
+    calendar_info: str
 
     bot_analyze_text: Annotated[str, operator.add]
     
@@ -72,10 +89,11 @@ async def study_right_agent(state: State):
 async def recommendation_agent(state: State):
     print("Third Groq agent is working")
     all_issues = state.get("bot_analyze_text","")
+    calendar = state.get("calendar_info", "")
     response = client.chat.completions.create(
         messages=[
                 {"role": "system", "content": "You are an AI assistant helping a tutor teacher at a university. You receive automated analysis of student progress and study rights. Write a clear and concise summary message for the teacher. Use bullet points for each student with an issue. Maximum 150 words. Do not use formal letter format."},
-                {"role": "user", "content": all_issues}
+                {"role": "user", "content": all_issues + "\n" + calendar}
         ],
         model="llama-3.3-70b-versatile",
         max_completion_tokens=1024,
@@ -93,10 +111,12 @@ async def status_agent(state: State):
     else:
         return {"is_allowed": True}
     
-async def course_agent(state: State):
+
+#maybe i need to delete it
+"""async def course_agent(state: State):
     print("Fifth agent is working")
     course_info="Course: Matematiikan perusteet tietotekniikassa 1, Status: 45/50 students enrolled\n"
-    return {"course_data":course_info}
+    return {"course_data":course_info}"""
 
 async def analytics_agent(state: State):
     print("Sixth agent is working")
@@ -111,6 +131,13 @@ async def fetch_students_agent(state: State):
     print("Fetch agent is working")
     all_students = list(STUDENTS_DB.values())
     return {"students":all_students}
+
+async def calendar_agent(state: State):
+    print("Seventh agent is working")
+    today= datetime.now()
+    month=today.month
+    calendar_info = TUTOR_CALENDAR[month]
+    return {"calendar_info": calendar_info}
 
 
 def route_after_status(state: State):
@@ -129,13 +156,15 @@ graph.add_node("study_right_node", study_right_agent)
 graph.add_node("recommendation_node", recommendation_agent)
 graph.add_node("status_node",status_agent)
 graph.add_node("analytics_node",analytics_agent)
-graph.add_node("course_node",course_agent)
+#graph.add_node("course_node",course_agent)
+graph.add_node("calendar_node",calendar_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge("fetch_node", "progress_node")
 graph.add_edge("fetch_node", "study_right_node")
 graph.add_edge("study_right_node", "status_node")     
 graph.add_edge("progress_node", "status_node")
+graph.add_edge("fetch_node", "calendar_node")
 graph.add_conditional_edges(
     "status_node",
     route_after_status,
@@ -144,8 +173,10 @@ graph.add_conditional_edges(
         "go_to_end": END
     }
 )
-graph.add_edge("analytics_node", "course_node")
-graph.add_edge("course_node","recommendation_node")
+graph.add_edge("analytics_node", "recommendation_node")
+graph.add_edge("calendar_node", "status_node")
+#graph.add_edge("analytics_node", "course_node")
+#graph.add_edge("course_node","recommendation_node")
 graph.add_edge("recommendation_node", END)
 
 app=graph.compile()
@@ -159,7 +190,9 @@ async def main():
         "enrollments": [],
         "is_allowed": True,
         "bot_analyze_text": "",
-        "final_text": ""
+        "final_text": "",
+        "calendar_info":""
+        
     }
 
     print("Start of graph")
