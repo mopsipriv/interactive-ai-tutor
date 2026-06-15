@@ -14,9 +14,9 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 STUDENTS_DB = {
-    1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "nikita.mopsov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":10, "credits_expected":30},
-    2: {"idstudent": 2,"student_number": "H234567", "fname": "Lena", "lname":"Golovach", "email": "lena.golovach@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":30, "credits_expected":90},
-    3: {"idstudent": 3,"student_number": "H789123", "fname": "Papich", "lname":"Veneckiy", "email": "jfasjdfjfad@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":120, "credits_expected":120}
+    1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "nikita.mopsov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":10, "credits_expected":30, "completed_courses": []},
+    2: {"idstudent": 2,"student_number": "H234567", "fname": "Lena", "lname":"Golovach", "email": "lena.golovach@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":30, "credits_expected":90,"completed_courses":[3,5,6]},
+    3: {"idstudent": 3,"student_number": "H789123", "fname": "Papich", "lname":"Veneckiy", "email": "jfasjdfjfad@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":120, "credits_expected":120,"completed_courses":[3]}
 }
 
 TUTOR_CALENDAR = {
@@ -32,6 +32,11 @@ TUTOR_CALENDAR = {
     10: "October: Mid-semester review. Check credit accumulation and study rights.",
     11: "November: Autumn exam period approaching. Support students at risk.",
     12: "December: Autumn exams. Final check before winter break."
+}
+
+PROJECTS_DB = {
+    1: {"project_name": "AI Chatbot Development", "required_courses": [3, 6, 8]},
+    2: {"project_name": "Web Application Project", "required_courses": [3, 4, 7]}
 }
 
 class State(TypedDict):
@@ -116,12 +121,6 @@ async def status_agent(state: State):
         return {"is_allowed": True}
     
 
-#maybe i need to delete it
-"""async def course_agent(state: State):
-    print("Fifth agent is working")
-    course_info="Course: Matematiikan perusteet tietotekniikassa 1, Status: 45/50 students enrolled\n"
-    return {"course_data":course_info}"""
-
 async def analytics_agent(state: State):
     print("Sixth agent is working")
     allowed = state.get("is_allowed",True)
@@ -164,6 +163,27 @@ async def communication_agent(state: State):
     result_text = response.choices[0].message.content
     return {"student_messages": result_text}
 
+async def eligibility_agent(state: State):
+    print("Ninth agent is working")
+    new_issue= ""
+    students = state.get("students",[])
+    for student in students:
+        for project in PROJECTS_DB.values():
+            eligible = True
+            required = project["required_courses"]
+            completed = student["completed_courses"]
+            for course in required:
+                if course not in completed:
+                    eligible = False
+            full_name = student["fname"] + " " + student["lname"]
+            project_name = project["project_name"]
+            if eligible:
+                new_issue += f"{full_name} is eligible for {project_name}\n"
+            else:
+                new_issue += f"{full_name} is not eligible for {project_name}\n"
+
+    return {"bot_analyze_text": new_issue}
+
 
 
 def route_after_status(state: State):
@@ -182,6 +202,7 @@ graph.add_node("study_right_node", study_right_agent)
 graph.add_node("recommendation_node", recommendation_agent)
 graph.add_node("status_node",status_agent)
 graph.add_node("analytics_node",analytics_agent)
+graph.add_node("eligibility_node", eligibility_agent)
 #graph.add_node("course_node",course_agent)
 graph.add_node("calendar_node",calendar_agent)
 graph.add_node("communication_node",communication_agent)
@@ -191,6 +212,8 @@ graph.add_edge("fetch_node", "progress_node")
 graph.add_edge("fetch_node", "study_right_node")
 graph.add_edge("study_right_node", "status_node")     
 graph.add_edge("progress_node", "status_node")
+graph.add_edge("fetch_node", "eligibility_node")
+graph.add_edge("eligibility_node", "status_node")
 graph.add_edge("fetch_node", "calendar_node")
 graph.add_conditional_edges(
     "status_node",
@@ -239,6 +262,9 @@ async def main():
 
     print("\nMessages for students:")
     print(result["student_messages"])
+
+    print("\nEligibility check:")
+    print(result["bot_analyze_text"])
     
     print("Is student allowed?:", result["is_allowed"])
 
