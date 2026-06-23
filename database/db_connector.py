@@ -34,12 +34,31 @@ async def get_student_enrollments(student_id: int):
     conn = await aiomysql.connect(**DB_CONFIG)
     async with conn.cursor(aiomysql.DictCursor) as cur:
         await cur.execute(
-            """SELECT e.*, c.course_name 
+            """SELECT e.*, c.course_name, c.credit
                FROM enrollment e
                JOIN course c ON e.idcourse = c.idcourse
                WHERE e.idstudent = %s""",
             (student_id,)
         )
+        result = await cur.fetchall()
+    conn.close()
+    return list(result) if result else []
+
+async def check_eligibility(student_id: int, project_id: int):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            
+            (student_id,student_id,project_id)
+        )
+        result= await cur.fetchall()
+    conn.close()
+    return list(result) if result else[]
+
+async def get_all_students():
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute("SELECT * FROM student")
         result = await cur.fetchall()
     conn.close()
     return list(result) if result else []

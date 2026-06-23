@@ -8,6 +8,8 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
+from database.db_connector import get_all_students, get_student_enrollments
+
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -82,17 +84,14 @@ async def study_right_agent(state: State):
     for student in students:
         full_name= student["fname"]+" "+student["lname"]
         today = datetime.now()
-        right_time = student["valid_until"]
-        format_string= "%Y-%m-%d"
-        date_obj= datetime.strptime(right_time,format_string)
-        left_study_right= (date_obj - today).days / 30
+        date_obj = student["valid_until"]
+        left_study_right= (date_obj - today.date()).days / 30
         if left_study_right<6:
             new_issue+= f"Student:{full_name} has critical situation\n"
         elif left_study_right<12:
             new_issue+= f"Student:{full_name} has warning situation\n"
         else:
             new_issue+= f"Student:{full_name} has study right\n"
-
     return {"bot_analyze_text": new_issue}
 
 async def recommendation_agent(state: State):
@@ -133,14 +132,34 @@ async def analytics_agent(state: State):
 async def fetch_students_agent(state: State):
     print("Fetch agent is working")
     filter_name = state.get("filter_name","")
-    if filter_name!="":
-        for student in STUDENTS_DB.values():
-            full_name = student["fname"] + " "+ student["lname"]
-            if full_name==filter_name:
-                return {"students":[student]}
+    all_students = await get_all_students()
+    
+    for student in all_students:
+        enrollments = await get_student_enrollments(student["idstudent"])
+        completed_credits = 0
+        completed_courses = []
+        credits_expected = 0
+        for enrollment in enrollments:
+            if enrollment["status"] == "completed":
+                completed_courses.append(enrollment["idcourse"])
+                completed_credits += enrollment["credit"]
+        student["completed_courses"] = completed_courses
+        student["credits_earned"] = completed_credits
+        today = datetime.now()
+        date_obj= student["valid_from"]
+        days_passed= (today.date()-date_obj).days
+        semesters= days_passed/182
+        total_credits=semesters*30
+        student["credits_expected"]= total_credits
+
+    if filter_name != "":
+        for student in all_students:
+            full_name = student["fname"] + " " + student["lname"]
+            if full_name == filter_name:
+                return {"students": [student]}
     else:
-        all_students = list(STUDENTS_DB.values())
         return {"students": all_students}
+
     
 async def calendar_agent(state: State):
     print("Seventh agent is working")
