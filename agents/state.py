@@ -15,5 +15,8 @@ class State(TypedDict):
     bot_analyze_text: str 
     
     filter_course: str
-    
+
+    enroll_student_name: str
+    enroll_course_name: str
+    enroll_result: str
 

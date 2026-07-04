@@ -77,3 +77,46 @@ async def get_student_by_course(course_name:str):
         result=await cur.fetchall()
     conn.close()
     return list(result) if result else[]
+
+async def enroll_student(student_id: int, course_id: int):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """INSERT INTO enrollment (idstudent, idcourse, status) 
+                VALUES (%s, %s, 'planned')""",
+                (student_id, course_id)
+            )
+        await conn.commit()
+        conn.close()
+        return "Student enrolled successfully"
+    except Exception as e:
+        return f"Error: {e}"
+    
+async def get_student_id_by_name(fname:str ,lname:str):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT idstudent FROM student WHERE fname= %s AND lname=%s""",
+            (fname, lname)
+        )
+        result = await cur.fetchone()
+    conn.close()
+    if result:
+        return result["idstudent"]
+    else: 
+        return None
+    
+async def get_course_id_by_name(course_name:str):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT idcourse FROM course WHERE course_name= %s""",
+            (course_name,)
+        )
+        result = await cur.fetchone()
+    conn.close()
+    if result:
+        return result["idcourse"]
+    else: 
+        return None

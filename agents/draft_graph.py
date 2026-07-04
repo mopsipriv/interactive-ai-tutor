@@ -8,7 +8,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course
+from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student
 
 
 load_dotenv()
@@ -62,6 +62,12 @@ class State(TypedDict):
     bot_analyze_text: Annotated[str, operator.add]
 
     filter_course: str 
+
+    enroll_student_name: str
+    enroll_course_name: str
+    enroll_result: str
+
+
     
 async def progress_agent(state: State):
     print("First agent is working")
@@ -217,6 +223,22 @@ async def course_student_agent(state: State):
 
     return {"bot_analyze_text": new_issue}
 
+async def enroll_agent(state: State):
+    print("Eleventh agent is working")
+    enroll_student_name=state.get("enroll_student_name","")
+    enroll_course_name=state.get("enroll_course_name","")
+    if enroll_student_name == "" or enroll_course_name == "":
+        return {"enroll_result": ""}
+    fname,lname = enroll_student_name.split()[:2]
+    idstudent = await get_student_id_by_name(fname, lname)
+    idcourse = await get_course_id_by_name(enroll_course_name)
+    if idstudent is None:
+        return {"enroll_result": "Error: student not found"}
+    if idcourse is None:
+        return {"enroll_result": "Error: course not found"}
+    enroll = await enroll_student(idstudent, idcourse)
+    return {"enroll_result": enroll}
+    
 
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
@@ -236,12 +258,15 @@ graph.add_node("status_node",status_agent)
 graph.add_node("analytics_node",analytics_agent)
 graph.add_node("eligibility_node", eligibility_agent)
 graph.add_node("course_students_node",course_student_agent)
+graph.add_node("enroll_node",enroll_agent)
 #graph.add_node("course_node",course_agent)
 graph.add_node("calendar_node",calendar_agent)
 graph.add_node("communication_node",communication_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge(START, "course_students_node")
+graph.add_edge(START, "enroll_node")
+graph.add_edge("enroll_node", END)
 graph.add_edge("fetch_node", "progress_node")
 graph.add_edge("course_students_node", "status_node")
 graph.add_edge("fetch_node", "study_right_node")
@@ -270,6 +295,8 @@ app=graph.compile()
 async def main():
     name = input("Enter student name or press Enter for all: ")
     course = input("Enter course name or press Enter to skip: ")
+    enroll_name = input("Enter student name to enroll (or press Enter to skip): ")
+    enroll_course = input("Enter course to enroll in (or press Enter to skip): ")
     initial_state = {
         "students": [],
         "student_data": "",
@@ -282,7 +309,12 @@ async def main():
         "calendar_info":"",
         "student_messages":"",
         "filter_name": name,
-        "filter_course":course
+        "filter_course":course,
+        "enroll_course_name":"",
+        "enroll_student_name":"",
+        "enroll_result": "",
+        "enroll_student_name": enroll_name,
+        "enroll_course_name": enroll_course
         
     }
 
@@ -303,5 +335,8 @@ async def main():
     print(result["bot_analyze_text"])
     
     print("Is student allowed?:", result["is_allowed"])
+
+    print(result["enroll_result"])
+    print("Enroll result:", result.get("enroll_result", "NOT FOUND"))
 
 asyncio.run(main())
