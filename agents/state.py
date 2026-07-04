@@ -14,4 +14,6 @@ class State(TypedDict):
 
     bot_analyze_text: str 
     
+    filter_course: str
+    
 

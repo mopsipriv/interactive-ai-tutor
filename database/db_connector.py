@@ -62,3 +62,18 @@ async def get_all_students():
         result = await cur.fetchall()
     conn.close()
     return list(result) if result else []
+
+async def get_student_by_course(course_name:str):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT s.fname,s.lname,e.status,e.grade,c.course_name 
+            FROM enrollment e 
+            JOIN course c ON e.idcourse= c.idcourse
+            JOIN student s ON e.idstudent= s.idstudent
+            WHERE c.course_name= %s""",
+            (course_name,)
+        )
+        result=await cur.fetchall()
+    conn.close()
+    return list(result) if result else[]

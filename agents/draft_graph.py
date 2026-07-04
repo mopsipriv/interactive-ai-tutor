@@ -8,7 +8,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments
+from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course
 
 
 load_dotenv()
@@ -60,6 +60,8 @@ class State(TypedDict):
 
 
     bot_analyze_text: Annotated[str, operator.add]
+
+    filter_course: str 
     
 async def progress_agent(state: State):
     print("First agent is working")
@@ -203,6 +205,17 @@ async def eligibility_agent(state: State):
 
     return {"bot_analyze_text": new_issue}
 
+async def course_student_agent(state: State):
+    print("Tenth agent is working")
+    new_issue=""
+    filter_course = state.get("filter_course","")
+    if filter_course!="":
+        students=await get_student_by_course(filter_course)
+        new_issue = f"Students on course {filter_course}:\n"
+        for student in students:
+            new_issue += f"- {student['fname']} {student['lname']}: {student['status']}, grade: {student['grade']}\n"
+
+    return {"bot_analyze_text": new_issue}
 
 
 def route_after_status(state: State):
@@ -222,12 +235,15 @@ graph.add_node("recommendation_node", recommendation_agent)
 graph.add_node("status_node",status_agent)
 graph.add_node("analytics_node",analytics_agent)
 graph.add_node("eligibility_node", eligibility_agent)
+graph.add_node("course_students_node",course_student_agent)
 #graph.add_node("course_node",course_agent)
 graph.add_node("calendar_node",calendar_agent)
 graph.add_node("communication_node",communication_agent)
 
 graph.add_edge(START, "fetch_node")
+graph.add_edge(START, "course_students_node")
 graph.add_edge("fetch_node", "progress_node")
+graph.add_edge("course_students_node", "status_node")
 graph.add_edge("fetch_node", "study_right_node")
 graph.add_edge("study_right_node", "status_node")     
 graph.add_edge("progress_node", "status_node")
@@ -253,7 +269,7 @@ app=graph.compile()
 
 async def main():
     name = input("Enter student name or press Enter for all: ")
-
+    course = input("Enter course name or press Enter to skip: ")
     initial_state = {
         "students": [],
         "student_data": "",
@@ -265,7 +281,8 @@ async def main():
         "final_text": "",
         "calendar_info":"",
         "student_messages":"",
-        "filter_name": name
+        "filter_name": name,
+        "filter_course":course
         
     }
 
