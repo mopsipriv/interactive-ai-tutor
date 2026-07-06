@@ -321,22 +321,14 @@ async def main():
     print("Start of graph")
     result = await app.ainvoke(initial_state)
 
-    graph_image = app.get_graph().draw_mermaid_png()
-    with open("graph.png", "wb") as f:
-        f.write(graph_image)
-
-    print("\nFinal text from final_text")
-    print(result["final_text"])
-
-    print("\nMessages for students:")
-    print(result["student_messages"])
-
-    print("\nEligibility check:")
-    print(result["bot_analyze_text"])
-    
-    print("Is student allowed?:", result["is_allowed"])
-
-    print(result["enroll_result"])
-    print("Enroll result:", result.get("enroll_result", "NOT FOUND"))
+    if enroll_name and enroll_course:
+        print(result["enroll_result"])
+    elif course:
+        print(result["bot_analyze_text"])
+    elif name:
+        print(result["final_text"])
+        print(result["student_messages"])
+    else:
+        print(result["final_text"])
 
 asyncio.run(main())
