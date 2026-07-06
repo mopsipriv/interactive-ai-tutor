@@ -23,3 +23,9 @@ class State(TypedDict):
     show_courses: bool
     courses_list: str
 
+    grade_student_name:str
+    grade_course_name:str
+    grade_value: str
+    grade_result: str
+
+

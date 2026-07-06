@@ -8,7 +8,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses
+from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade
 
 
 load_dotenv()
@@ -69,6 +69,12 @@ class State(TypedDict):
 
     show_courses: bool
     courses_list: str
+
+    grade_student_name:str
+    grade_course_name:str
+    grade_value: str
+    grade_result: str
+
 
 
     
@@ -252,6 +258,23 @@ async def course_list_agent(state: State):
             new_issue += f"- {course['course_code']}: {course['course_name']} ({course['credit']} credits)\n"
     return {"courses_list": new_issue}
 
+async def grade_agent(state: State):
+    print("Thirteenth agent is working")
+    grade_student_name=state.get("grade_student_name","")
+    grade_course_name=state.get("grade_course_name","")
+    grade_value= state.get("grade_value","")
+    if grade_student_name == "" or grade_course_name == "" or grade_value == "":
+        return {"grade_result": ""}
+    fname,lname = grade_student_name.split()[:2]
+    idstudent = await get_student_id_by_name(fname, lname)
+    idcourse = await get_course_id_by_name(grade_course_name)
+    grade_result= await update_grade(idstudent,idcourse,grade_value)
+    if idstudent is None:
+        return {"grade_result": "Error: student not found"}
+    if idcourse is None:
+        return {"grade_result": "Error: course not found"}
+    grade_result = await update_grade(idstudent, idcourse, grade_value)
+    return {"grade_result": grade_result}
 
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
@@ -272,10 +295,10 @@ graph.add_node("analytics_node",analytics_agent)
 graph.add_node("eligibility_node", eligibility_agent)
 graph.add_node("course_students_node",course_student_agent)
 graph.add_node("enroll_node",enroll_agent)
-#graph.add_node("course_node",course_agent)
 graph.add_node("calendar_node",calendar_agent)
 graph.add_node("communication_node",communication_agent)
 graph.add_node("course_list_node", course_list_agent)
+graph.add_node("grade_node", grade_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge(START, "course_students_node")
@@ -283,6 +306,8 @@ graph.add_edge(START, "enroll_node")
 graph.add_edge("enroll_node", END)
 graph.add_edge(START, "course_list_node")
 graph.add_edge("course_list_node", END)
+graph.add_edge(START, "grade_node")
+graph.add_edge("grade_node", END)
 graph.add_edge("fetch_node", "progress_node")
 graph.add_edge("course_students_node", "status_node")
 graph.add_edge("fetch_node", "study_right_node")
@@ -302,8 +327,6 @@ graph.add_conditional_edges(
 graph.add_edge("analytics_node", "recommendation_node")
 graph.add_edge("analytics_node","communication_node")
 graph.add_edge("calendar_node", "status_node")
-#graph.add_edge("analytics_node", "course_node")
-#graph.add_edge("course_node","recommendation_node")
 graph.add_edge("communication_node", END)
 
 app=graph.compile()
@@ -314,6 +337,9 @@ async def main():
     enroll_name = input("Enter student name to enroll (or press Enter to skip): ")
     enroll_course = input("Enter course to enroll in (or press Enter to skip): ")
     show_courses = input("Show all courses? (yes/no): ")
+    grade_student = input("Enter student name to grade (or press Enter to skip): ")
+    grade_course = input("Enter course name: ")
+    grade_value = input("Enter grade (1-5): ")
     initial_state = {
         "students": [],
         "student_data": "",
@@ -333,7 +359,11 @@ async def main():
         "enroll_student_name": enroll_name,
         "enroll_course_name": enroll_course,
         "show_courses": show_courses=="yes", 
-        "courses_list": ""
+        "courses_list": "",
+        "grade_student_name": grade_student,
+        "grade_course_name": grade_course,
+        "grade_value": grade_value,
+        "grade_result": ""
         
     }
 
@@ -349,6 +379,8 @@ async def main():
         print(result["student_messages"])
     elif show_courses.lower() == "yes":
         print(result["courses_list"])
+    elif grade_student and grade_course:
+        print(result["grade_result"])
     else:
         print(result["final_text"])
 

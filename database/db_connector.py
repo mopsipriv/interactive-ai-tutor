@@ -130,3 +130,19 @@ async def get_all_courses():
         result=await cur.fetchall()
     conn.close()
     return list(result) if result else[]
+
+async def update_grade(student_id:int, course_id:int, grade:int):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """UPDATE enrollment 
+                SET grade=%s
+                WHERE idstudent=%s AND idcourse=%s""",
+                (grade, student_id, course_id, )
+            )
+            await conn.commit()
+            conn.close()
+        return "Student grade updated successfully"
+    except Exception as e:
+        return f"Error: {e}"
