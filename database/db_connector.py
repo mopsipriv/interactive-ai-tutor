@@ -120,3 +120,13 @@ async def get_course_id_by_name(course_name:str):
         return result["idcourse"]
     else: 
         return None
+    
+async def get_all_courses():
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT * FROM course"""
+        )
+        result=await cur.fetchall()
+    conn.close()
+    return list(result) if result else[]

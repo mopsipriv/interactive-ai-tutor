@@ -8,7 +8,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student
+from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses
 
 
 load_dotenv()
@@ -66,6 +66,9 @@ class State(TypedDict):
     enroll_student_name: str
     enroll_course_name: str
     enroll_result: str
+
+    show_courses: bool
+    courses_list: str
 
 
     
@@ -238,7 +241,17 @@ async def enroll_agent(state: State):
         return {"enroll_result": "Error: course not found"}
     enroll = await enroll_student(idstudent, idcourse)
     return {"enroll_result": enroll}
-    
+
+async def course_list_agent(state: State):
+    print("Twelveth agent is working")
+    new_issue=""
+    courses=state.get("show_courses","")
+    if courses is True:
+        all_courses = await get_all_courses()
+        for course in all_courses:
+            new_issue += f"- {course['course_code']}: {course['course_name']} ({course['credit']} credits)\n"
+    return {"courses_list": new_issue}
+
 
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
@@ -262,11 +275,14 @@ graph.add_node("enroll_node",enroll_agent)
 #graph.add_node("course_node",course_agent)
 graph.add_node("calendar_node",calendar_agent)
 graph.add_node("communication_node",communication_agent)
+graph.add_node("course_list_node", course_list_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge(START, "course_students_node")
 graph.add_edge(START, "enroll_node")
 graph.add_edge("enroll_node", END)
+graph.add_edge(START, "course_list_node")
+graph.add_edge("course_list_node", END)
 graph.add_edge("fetch_node", "progress_node")
 graph.add_edge("course_students_node", "status_node")
 graph.add_edge("fetch_node", "study_right_node")
@@ -297,6 +313,7 @@ async def main():
     course = input("Enter course name or press Enter to skip: ")
     enroll_name = input("Enter student name to enroll (or press Enter to skip): ")
     enroll_course = input("Enter course to enroll in (or press Enter to skip): ")
+    show_courses = input("Show all courses? (yes/no): ")
     initial_state = {
         "students": [],
         "student_data": "",
@@ -314,7 +331,9 @@ async def main():
         "enroll_student_name":"",
         "enroll_result": "",
         "enroll_student_name": enroll_name,
-        "enroll_course_name": enroll_course
+        "enroll_course_name": enroll_course,
+        "show_courses": show_courses=="yes", 
+        "courses_list": ""
         
     }
 
@@ -328,6 +347,8 @@ async def main():
     elif name:
         print(result["final_text"])
         print(result["student_messages"])
+    elif show_courses.lower() == "yes":
+        print(result["courses_list"])
     else:
         print(result["final_text"])
 

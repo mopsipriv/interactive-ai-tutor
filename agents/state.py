@@ -20,3 +20,6 @@ class State(TypedDict):
     enroll_course_name: str
     enroll_result: str
 
+    show_courses: bool
+    courses_list: str
+
