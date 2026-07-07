@@ -146,3 +146,18 @@ async def update_grade(student_id:int, course_id:int, grade:int):
         return "Student grade updated successfully"
     except Exception as e:
         return f"Error: {e}"
+
+async def get_student_profile(student_id:int):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT s.*, c.course_name, c.credit, e.status, e.grade
+            FROM student s
+            JOIN enrollment e ON s.idstudent = e.idstudent
+            JOIN course c ON e.idcourse = c.idcourse
+            WHERE s.idstudent = %s""",
+            (student_id,)
+        )
+        result = await cur.fetchall()
+    conn.close()
+    return result if result else[]

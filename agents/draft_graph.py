@@ -8,7 +8,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade
+from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile
 
 
 load_dotenv()
@@ -75,6 +75,8 @@ class State(TypedDict):
     grade_value: str
     grade_result: str
 
+    student_profile: str
+
 
 
     
@@ -94,6 +96,7 @@ async def progress_agent(state: State):
         
     return {"bot_analyze_text": new_issue}
 
+
 async def study_right_agent(state: State):
     print("Second agent is working")
     students= state.get("students",[])
@@ -111,6 +114,7 @@ async def study_right_agent(state: State):
             new_issue+= f"Student:{full_name} has study right\n"
     return {"bot_analyze_text": new_issue}
 
+
 async def recommendation_agent(state: State):
     print("Third Groq agent is working")
     all_issues = state.get("bot_analyze_text","")
@@ -125,7 +129,6 @@ async def recommendation_agent(state: State):
     )
     result_text = response.choices[0].message.content
     return {"final_text": result_text}
-
 
 
 async def status_agent(state: State):
@@ -146,10 +149,12 @@ async def analytics_agent(state: State):
         verdict = "Enrollment Blocked. Student must contact the coordinator.\n"
     return{"bot_analyze_text": verdict}
 
+
 async def fetch_students_agent(state: State):
     print("Fetch agent is working")
     filter_name = state.get("filter_name","")
     all_students = await get_all_students()
+
     
     for student in all_students:
         enrollments = await get_student_enrollments(student["idstudent"])
@@ -185,6 +190,7 @@ async def calendar_agent(state: State):
     calendar_info = TUTOR_CALENDAR[month]
     return {"calendar_info": calendar_info}
 
+
 async def communication_agent(state: State):
     print("Eighth agent is working")
     current_text=state.get("bot_analyze_text","")
@@ -198,6 +204,7 @@ async def communication_agent(state: State):
     )
     result_text = response.choices[0].message.content
     return {"student_messages": result_text}
+
 
 async def eligibility_agent(state: State):
     print("Ninth agent is working")
@@ -220,6 +227,7 @@ async def eligibility_agent(state: State):
 
     return {"bot_analyze_text": new_issue}
 
+
 async def course_student_agent(state: State):
     print("Tenth agent is working")
     new_issue=""
@@ -231,6 +239,7 @@ async def course_student_agent(state: State):
             new_issue += f"- {student['fname']} {student['lname']}: {student['status']}, grade: {student['grade']}\n"
 
     return {"bot_analyze_text": new_issue}
+
 
 async def enroll_agent(state: State):
     print("Eleventh agent is working")
@@ -248,6 +257,7 @@ async def enroll_agent(state: State):
     enroll = await enroll_student(idstudent, idcourse)
     return {"enroll_result": enroll}
 
+
 async def course_list_agent(state: State):
     print("Twelveth agent is working")
     new_issue=""
@@ -257,6 +267,7 @@ async def course_list_agent(state: State):
         for course in all_courses:
             new_issue += f"- {course['course_code']}: {course['course_name']} ({course['credit']} credits)\n"
     return {"courses_list": new_issue}
+
 
 async def grade_agent(state: State):
     print("Thirteenth agent is working")
@@ -276,6 +287,26 @@ async def grade_agent(state: State):
     grade_result = await update_grade(idstudent, idcourse, grade_value)
     return {"grade_result": grade_result}
 
+
+async def profile_agent(state: State):
+    print("Fourteeth agent is working")
+    new_issue=""
+    filter_name = state.get("filter_name","")
+    if filter_name == "":
+        return {"student_profile": ""}
+    fname,lname = filter_name.split()[:2]
+    idstudent= await get_student_id_by_name(fname,lname)
+    student_profile= await get_student_profile(idstudent)
+    if student_profile:
+        first = student_profile[0] 
+        new_issue = f"Student: {first['fname']} {first['lname']}\n"
+        new_issue += f"Email: {first['email']}\n"
+        new_issue += f"Study right: {first['valid_until']}\n"
+        new_issue += "Courses:\n"
+        for row in student_profile:
+            new_issue += f"- {row['course_name']}: {row['status']}, grade: {row['grade']}\n"
+    return {"student_profile":new_issue}
+
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
 
@@ -283,6 +314,7 @@ def route_after_status(state: State):
         return "go_to_analytics"
     else:
         return "go_to_end"
+    
 
 graph=StateGraph(State)
 
@@ -299,6 +331,7 @@ graph.add_node("calendar_node",calendar_agent)
 graph.add_node("communication_node",communication_agent)
 graph.add_node("course_list_node", course_list_agent)
 graph.add_node("grade_node", grade_agent)
+graph.add_node("profile_node",profile_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge(START, "course_students_node")
@@ -308,6 +341,8 @@ graph.add_edge(START, "course_list_node")
 graph.add_edge("course_list_node", END)
 graph.add_edge(START, "grade_node")
 graph.add_edge("grade_node", END)
+graph.add_edge(START,"profile_node")
+graph.add_edge("profile_node",END)
 graph.add_edge("fetch_node", "progress_node")
 graph.add_edge("course_students_node", "status_node")
 graph.add_edge("fetch_node", "study_right_node")
@@ -340,6 +375,7 @@ async def main():
     grade_student = input("Enter student name to grade (or press Enter to skip): ")
     grade_course = input("Enter course name: ")
     grade_value = input("Enter grade (1-5): ")
+    student_profile = input("Enter student name to see his profile or press Enter to skip: ")
     initial_state = {
         "students": [],
         "student_data": "",
@@ -351,7 +387,7 @@ async def main():
         "final_text": "",
         "calendar_info":"",
         "student_messages":"",
-        "filter_name": name,
+        "filter_name": student_profile if student_profile else name,
         "filter_course":course,
         "enroll_course_name":"",
         "enroll_student_name":"",
@@ -363,7 +399,8 @@ async def main():
         "grade_student_name": grade_student,
         "grade_course_name": grade_course,
         "grade_value": grade_value,
-        "grade_result": ""
+        "grade_result": "",
+        "student_profile": ""
         
     }
 
@@ -381,6 +418,8 @@ async def main():
         print(result["courses_list"])
     elif grade_student and grade_course:
         print(result["grade_result"])
+    elif student_profile:
+        print(result["student_profile"])
     else:
         print(result["final_text"])
 

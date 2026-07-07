@@ -28,4 +28,6 @@ class State(TypedDict):
     grade_value: str
     grade_result: str
 
+    student_profile:str
+
 
