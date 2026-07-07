@@ -37,3 +37,6 @@ class State(TypedDict):
 
     risk_report:str
 
+    filter_group:str
+    group_report:str
+

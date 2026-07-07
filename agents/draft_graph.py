@@ -8,7 +8,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile,update_enrollment_status
+from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile,update_enrollment_status,get_students_by_group
 
 
 load_dotenv()
@@ -83,6 +83,9 @@ class State(TypedDict):
     status_update_result:str
 
     risk_report: str
+
+    filter_group:str
+    group_report:str
 
 
 
@@ -364,6 +367,20 @@ async def risk_report_agent(state: State):
     return {"risk_report": new_issue}
 
 
+async def group_report_agent(state:State):
+    print("Seventeenth agent is working")
+    new_issue=""
+    filter_group = state.get("filter_group","")
+    if filter_group == "":
+        return {"group_report": ""}
+    students = await get_students_by_group(filter_group)
+    new_issue = f"Students in group {filter_group}:\n"
+    for student in students:
+        new_issue += f"- {student['fname']} {student['lname']} ({student['student_number']})\n"
+
+    return {"group_report": new_issue}
+
+
 
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
@@ -392,6 +409,7 @@ graph.add_node("grade_node", grade_agent)
 graph.add_node("profile_node",profile_agent)
 graph.add_node("update_status_node",status_update_agent)
 graph.add_node("risk_report_node",risk_report_agent)
+graph.add_node("group_report_node",group_report_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge(START, "course_students_node")
@@ -405,6 +423,8 @@ graph.add_edge(START,"profile_node")
 graph.add_edge("profile_node",END)
 graph.add_edge(START,"update_status_node")
 graph.add_edge("update_status_node",END)
+graph.add_edge(START,"group_report_node")
+graph.add_edge("group_report_node",END)
 graph.add_edge("fetch_node", "risk_report_node")
 graph.add_edge("risk_report_node", "status_node")
 graph.add_edge("fetch_node", "progress_node")
@@ -443,6 +463,7 @@ async def main():
     status_student = input("Enter student name to update status (or press Enter to skip): ")
     status_course = input("Enter course name: ")
     status_value = input("Enter status (planned/ongoing/completed): ")
+    group_code = input("Enter group code to see students (or press Enter to skip): ")
     initial_state = {
         "students": [],
         "student_data": "",
@@ -472,7 +493,9 @@ async def main():
         "status_course_name": status_course,
         "status_value": status_value,
         "status_update_result": "",
-        "risk_report":""
+        "risk_report":"",
+        "group_report":"",
+        "filter_group":group_code
         
     }
 
@@ -494,6 +517,8 @@ async def main():
         print(result["student_profile"])
     elif status_student and status_course:
         print(result["status_update_result"])
+    elif group_code:
+        print(result["group_report"])
     else:
         print(result["risk_report"])
 
