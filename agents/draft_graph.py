@@ -496,7 +496,6 @@ async def main():
         "risk_report":"",
         "group_report":"",
         "filter_group":group_code
-        
     }
 
     print("Start of graph")
