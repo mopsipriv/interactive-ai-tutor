@@ -30,4 +30,9 @@ class State(TypedDict):
 
     student_profile:str
 
+    status_student_name:str
+    status_course_name: str
+    status_value: str
+    status_update_result:str
+
 

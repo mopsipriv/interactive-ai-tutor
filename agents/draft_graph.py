@@ -8,7 +8,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile
+from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile,update_enrollment_status
 
 
 load_dotenv()
@@ -76,6 +76,11 @@ class State(TypedDict):
     grade_result: str
 
     student_profile: str
+
+    status_student_name:str
+    status_course_name: str
+    status_value: str
+    status_update_result:str
 
 
 
@@ -307,6 +312,26 @@ async def profile_agent(state: State):
             new_issue += f"- {row['course_name']}: {row['status']}, grade: {row['grade']}\n"
     return {"student_profile":new_issue}
 
+
+async def status_update_agent(state: State):
+    print("Fiftheenth agent is working")
+    status_student_name = state.get("status_student_name","")
+    status_course_name= state.get("status_course_name","")
+    status_value = state.get("status_value","")
+    if status_student_name == "" or status_course_name == "" or status_value == "":
+        return {"status_update_result": ""}
+    fname,lname = status_student_name.split()[:2]
+    idstudent = await get_student_id_by_name(fname, lname)
+    idcourse = await get_course_id_by_name(status_course_name)
+    if idstudent is None:
+        return {"status_update_result": "Error: student not found"}
+    if idcourse is None:
+        return {"status_update_result": "Error: course not found"}
+    status_update_result = await update_enrollment_status(idstudent, idcourse, status_value)
+    return {"status_update_result": status_update_result}
+
+
+
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
 
@@ -332,6 +357,7 @@ graph.add_node("communication_node",communication_agent)
 graph.add_node("course_list_node", course_list_agent)
 graph.add_node("grade_node", grade_agent)
 graph.add_node("profile_node",profile_agent)
+graph.add_node("update_status_node",status_update_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge(START, "course_students_node")
@@ -343,6 +369,8 @@ graph.add_edge(START, "grade_node")
 graph.add_edge("grade_node", END)
 graph.add_edge(START,"profile_node")
 graph.add_edge("profile_node",END)
+graph.add_edge(START,"update_status_node")
+graph.add_edge("update_status_node",END)
 graph.add_edge("fetch_node", "progress_node")
 graph.add_edge("course_students_node", "status_node")
 graph.add_edge("fetch_node", "study_right_node")
@@ -376,6 +404,9 @@ async def main():
     grade_course = input("Enter course name: ")
     grade_value = input("Enter grade (1-5): ")
     student_profile = input("Enter student name to see his profile or press Enter to skip: ")
+    status_student = input("Enter student name to update status (or press Enter to skip): ")
+    status_course = input("Enter course name: ")
+    status_value = input("Enter status (planned/ongoing/completed): ")
     initial_state = {
         "students": [],
         "student_data": "",
@@ -400,7 +431,11 @@ async def main():
         "grade_course_name": grade_course,
         "grade_value": grade_value,
         "grade_result": "",
-        "student_profile": ""
+        "student_profile": "",
+        "status_student_name": status_student,
+        "status_course_name": status_course,
+        "status_value": status_value,
+        "status_update_result": ""
         
     }
 
@@ -420,6 +455,8 @@ async def main():
         print(result["grade_result"])
     elif student_profile:
         print(result["student_profile"])
+    elif status_student and status_course:
+        print(result["status_update_result"])
     else:
         print(result["final_text"])
 

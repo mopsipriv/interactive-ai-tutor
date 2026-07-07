@@ -161,3 +161,19 @@ async def get_student_profile(student_id:int):
         result = await cur.fetchall()
     conn.close()
     return result if result else[]
+
+async def update_enrollment_status(student_id:int,course_id:int,status:str):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """UPDATE enrollment 
+                SET status=%s
+                WHERE idstudent=%s AND idcourse=%s""",
+                (status, student_id, course_id, )
+            )
+        await conn.commit()
+        conn.close()
+        return "Students enrollment status updated successfully"
+    except Exception as e:
+        return f"Error: {e}"
