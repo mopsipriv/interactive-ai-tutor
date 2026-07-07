@@ -35,4 +35,5 @@ class State(TypedDict):
     status_value: str
     status_update_result:str
 
+    risk_report:str
 

@@ -82,6 +82,8 @@ class State(TypedDict):
     status_value: str
     status_update_result:str
 
+    risk_report: str
+
 
 
     
@@ -294,7 +296,7 @@ async def grade_agent(state: State):
 
 
 async def profile_agent(state: State):
-    print("Fourteeth agent is working")
+    print("Fourteenth agent is working")
     new_issue=""
     filter_name = state.get("filter_name","")
     if filter_name == "":
@@ -314,7 +316,7 @@ async def profile_agent(state: State):
 
 
 async def status_update_agent(state: State):
-    print("Fiftheenth agent is working")
+    print("Fifteenth agent is working")
     status_student_name = state.get("status_student_name","")
     status_course_name= state.get("status_course_name","")
     status_value = state.get("status_value","")
@@ -329,6 +331,37 @@ async def status_update_agent(state: State):
         return {"status_update_result": "Error: course not found"}
     status_update_result = await update_enrollment_status(idstudent, idcourse, status_value)
     return {"status_update_result": status_update_result}
+
+
+async def risk_report_agent(state: State):
+    print("Sixteenth agent is working")
+    new_issue = "=== Risk Report ===\n"
+    students = state.get("students",[])
+    for student in students:
+        full_name = student["fname"] + " " + student["lname"]
+        progress = student["credits_expected"] - student["credits_earned"]
+        today = datetime.now()
+        date_obj = student["valid_until"]
+        left_study_right = (date_obj - today.date()).days / 30
+        issues = []
+        if progress > 15:
+            issues.append("🔴Critical credits!")
+        elif progress > 5:
+            issues.append("🟡Warning credits!")
+
+        if left_study_right < 6:
+            issues.append("🔴Study right expires soon")
+        elif left_study_right < 12:
+            issues.append("🟡Study right expires during year")
+
+        if issues:
+            new_issue += f"{full_name}:\n"
+            for issue in issues:
+                new_issue += f"  {issue}\n"
+        else:
+            new_issue += f"🟢{full_name}: Everything is good\n"
+    
+    return {"risk_report": new_issue}
 
 
 
@@ -358,6 +391,7 @@ graph.add_node("course_list_node", course_list_agent)
 graph.add_node("grade_node", grade_agent)
 graph.add_node("profile_node",profile_agent)
 graph.add_node("update_status_node",status_update_agent)
+graph.add_node("risk_report_node",risk_report_agent)
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge(START, "course_students_node")
@@ -371,6 +405,8 @@ graph.add_edge(START,"profile_node")
 graph.add_edge("profile_node",END)
 graph.add_edge(START,"update_status_node")
 graph.add_edge("update_status_node",END)
+graph.add_edge("fetch_node", "risk_report_node")
+graph.add_edge("risk_report_node", "status_node")
 graph.add_edge("fetch_node", "progress_node")
 graph.add_edge("course_students_node", "status_node")
 graph.add_edge("fetch_node", "study_right_node")
@@ -435,7 +471,8 @@ async def main():
         "status_student_name": status_student,
         "status_course_name": status_course,
         "status_value": status_value,
-        "status_update_result": ""
+        "status_update_result": "",
+        "risk_report":""
         
     }
 
@@ -458,6 +495,6 @@ async def main():
     elif status_student and status_course:
         print(result["status_update_result"])
     else:
-        print(result["final_text"])
+        print(result["risk_report"])
 
 asyncio.run(main())
