@@ -40,3 +40,7 @@ class State(TypedDict):
     filter_group:str
     group_report:str
 
+    bulk_group_code:str
+    bulk_course_name:str
+    bulk_enroll_result:str
+

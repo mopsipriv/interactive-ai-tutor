@@ -87,7 +87,9 @@ class State(TypedDict):
     filter_group:str
     group_report:str
 
-
+    bulk_group_code:str
+    bulk_course_name:str
+    bulk_enroll_result:str
 
     
 async def progress_agent(state: State):
@@ -381,6 +383,23 @@ async def group_report_agent(state:State):
     return {"group_report": new_issue}
 
 
+async def bulk_enroll_agent(state: State):
+    print("Eighteenth agent is working")
+    bulk_group_code = state.get("bulk_group_code", "")
+    bulk_course_code = state.get("bulk_course_name", "")
+    if bulk_group_code == "" or bulk_course_code == "":
+        return {"bulk_enroll_result": ""}
+    students = await get_students_by_group(bulk_group_code)
+    idcourse = await get_course_id_by_name(bulk_course_code)
+    success_count = 0
+    for student in students:
+        result = await enroll_student(student["idstudent"], idcourse)
+        if "successfully" in result:
+            success_count += 1
+    new_issue = f"Enrolled {success_count} out of {len(students)} students"
+    return {"bulk_enroll_result": new_issue}
+
+
 
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
@@ -410,6 +429,8 @@ graph.add_node("profile_node",profile_agent)
 graph.add_node("update_status_node",status_update_agent)
 graph.add_node("risk_report_node",risk_report_agent)
 graph.add_node("group_report_node",group_report_agent)
+graph.add_node("bulk_enroll_node",bulk_enroll_agent)
+
 
 graph.add_edge(START, "fetch_node")
 graph.add_edge(START, "course_students_node")
@@ -425,6 +446,8 @@ graph.add_edge(START,"update_status_node")
 graph.add_edge("update_status_node",END)
 graph.add_edge(START,"group_report_node")
 graph.add_edge("group_report_node",END)
+graph.add_edge(START,"bulk_enroll_node")
+graph.add_edge("bulk_enroll_node",END)
 graph.add_edge("fetch_node", "risk_report_node")
 graph.add_edge("risk_report_node", "status_node")
 graph.add_edge("fetch_node", "progress_node")
@@ -464,6 +487,8 @@ async def main():
     status_course = input("Enter course name: ")
     status_value = input("Enter status (planned/ongoing/completed): ")
     group_code = input("Enter group code to see students (or press Enter to skip): ")
+    bulk_group = input("Enter group code for bulk enroll (or press Enter to skip): ")
+    bulk_course = input("Enter course name for bulk enroll: ")
     initial_state = {
         "students": [],
         "student_data": "",
@@ -495,7 +520,10 @@ async def main():
         "status_update_result": "",
         "risk_report":"",
         "group_report":"",
-        "filter_group":group_code
+        "filter_group":group_code,
+        "bulk_group_code": bulk_group,
+        "bulk_course_name": bulk_course,
+        "bulk_enroll_result": ""
     }
 
     print("Start of graph")
@@ -518,6 +546,8 @@ async def main():
         print(result["status_update_result"])
     elif group_code:
         print(result["group_report"])
+    elif bulk_group and bulk_course:
+        print(result["bulk_enroll_result"])
     else:
         print(result["risk_report"])
 

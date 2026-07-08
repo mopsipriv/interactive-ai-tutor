@@ -182,7 +182,7 @@ async def get_students_by_group(group_code:str):
     conn = await aiomysql.connect(**DB_CONFIG)
     async with conn.cursor(aiomysql.DictCursor) as cur:
         await cur.execute(
-            """SELECT s.fname, s.lname, s.student_number, gc.group_code 
+            """SELECT s.fname, s.lname, s.student_number, gc.group_code, s.idstudent
             FROM student s
             JOIN student_group sg ON s.idstudent = sg.idstudent
             JOIN group_cohort gc ON sg.idgroup = gc.idgroup_cohort
@@ -192,3 +192,4 @@ async def get_students_by_group(group_code:str):
         result = await cur.fetchall()
     conn.close()
     return result if result else[]
+
