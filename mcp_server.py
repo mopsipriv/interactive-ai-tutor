@@ -9,7 +9,10 @@ from database.db_connector import (
     get_students_by_group,
     get_course_id_by_name,
     get_student_id_by_name,
-    update_enrollment_status
+    update_enrollment_status,
+    get_student_from_db,
+    get_courses_from_db,
+    get_student_enrollments
 )
 
 mcp = FastMCP("Tutor Server")
@@ -63,6 +66,21 @@ async def get_student_id_by_name_tool(fname:str ,lname:str) ->list:
 async def update_enrollment_status_tool(student_id:int,course_id:int,status:str) ->list:
     """Update enrollment status for a student in a course"""
     return await update_enrollment_status(student_id,course_id,status)
+
+@mcp.tool
+async def get_student_from_db_tool(student_id: int) ->list:
+    """Get a single student by their id"""
+    return await get_student_from_db(student_id)
+
+@mcp.tool
+async def get_courses_from_db_tool(course_id: int) ->list:
+    """Get a single course by its id"""
+    return await get_courses_from_db(course_id)
+
+@mcp.tool
+async def get_student_enrollments_tool(student_id: int) ->list:
+    """Get all enrollments for a student with course names"""
+    return await get_student_enrollments(student_id)
 
 
 if __name__=="__main__":
