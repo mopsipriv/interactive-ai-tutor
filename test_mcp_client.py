@@ -12,4 +12,7 @@ async def test():
         profile = await client.call_tool("get_student_profile_tool", {"student_id": 1})
         print("Profile:", profile)
 
+        all_students_group = await client.call_tool("get_students_by_group_tool",{"group_code":"TVT24SPO"})
+        print("Students from group: ",all_students_group)
+
 asyncio.run(test())
