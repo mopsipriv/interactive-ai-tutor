@@ -38,7 +38,7 @@ async def get_student_profile_tool(student_id:int) -> list:
     return await get_student_profile(student_id)
 
 @mcp.tool
-async def enroll_student_tool(student_id:int, course_id:int) ->list:
+async def enroll_student_tool(student_id:int, course_id:int) ->str:
     """Enroll a student into a course"""
     return await enroll_student(student_id,course_id)
 
@@ -53,12 +53,12 @@ async def get_students_by_group_tool(group_code:str) ->list:
     return await get_students_by_group(group_code)
 
 @mcp.tool
-async def get_course_id_by_name_tool(course_name:str) ->list:
+async def get_course_id_by_name_tool(course_name:str) ->int:
     """Get course id by course name"""
     return await get_course_id_by_name(course_name)
 
 @mcp.tool
-async def get_student_id_by_name_tool(fname:str ,lname:str) ->list:
+async def get_student_id_by_name_tool(fname:str ,lname:str) ->int:
     """Get student id by first and last name"""
     return await get_student_id_by_name(fname,lname)
 

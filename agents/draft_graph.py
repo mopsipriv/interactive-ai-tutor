@@ -270,13 +270,28 @@ async def enroll_agent(state: State):
     if enroll_student_name == "" or enroll_course_name == "":
         return {"enroll_result": ""}
     fname,lname = enroll_student_name.split()[:2]
-    idstudent = await get_student_id_by_name(fname, lname)
-    idcourse = await get_course_id_by_name(enroll_course_name)
+    tools= await mcp_client.get_tools()
+    get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
+    raw_student_id = await get_student_id_tool.ainvoke({"fname":fname, "lname":lname})
+    idstudent = json.loads(raw_student_id[0]["text"])
+
+    get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
+    raw_course_id = await get_course_id_tool.ainvoke({"course_name": enroll_course_name})
+    idcourse = json.loads(raw_course_id[0]["text"])
+
+    #idstudent = await get_student_id_by_name(fname, lname)
+    #idcourse = await get_course_id_by_name(enroll_course_name)
+
     if idstudent is None:
         return {"enroll_result": "Error: student not found"}
     if idcourse is None:
         return {"enroll_result": "Error: course not found"}
-    enroll = await enroll_student(idstudent, idcourse)
+    
+    #enroll = await enroll_student(idstudent, idcourse)
+
+    enroll_tool = next(t for t in tools if t.name == "enroll_student_tool")
+    raw_enroll = await enroll_tool.ainvoke({"student_id":idstudent, "course_id":idcourse})
+    enroll = raw_enroll[0]["text"]    
     return {"enroll_result": enroll}
 
 
