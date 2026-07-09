@@ -313,15 +313,26 @@ async def grade_agent(state: State):
     grade_value= state.get("grade_value","")
     if grade_student_name == "" or grade_course_name == "" or grade_value == "":
         return {"grade_result": ""}
+    tools= await mcp_client.get_tools()
     fname,lname = grade_student_name.split()[:2]
-    idstudent = await get_student_id_by_name(fname, lname)
-    idcourse = await get_course_id_by_name(grade_course_name)
-    grade_result= await update_grade(idstudent,idcourse,grade_value)
+    
+    get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
+    raw_student_id = await get_student_id_tool.ainvoke({"fname":fname, "lname":lname})
+    idstudent = json.loads(raw_student_id[0]["text"])
+    
+    get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
+    raw_course_id = await get_course_id_tool.ainvoke({"course_name":grade_course_name})
+    idcourse = json.loads(raw_course_id[0]["text"])
+    
     if idstudent is None:
         return {"grade_result": "Error: student not found"}
     if idcourse is None:
         return {"grade_result": "Error: course not found"}
-    grade_result = await update_grade(idstudent, idcourse, grade_value)
+    
+    update_grade_tool = next(t for t in tools if t.name== "update_grade_tool")
+    raw_grade_result = await update_grade_tool.ainvoke({"student_id":idstudent, "course_id":idcourse, "grade": grade_value})
+    grade_result = raw_grade_result[0]["text"]
+    
     return {"grade_result": grade_result}
 
 

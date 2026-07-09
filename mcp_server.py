@@ -43,7 +43,7 @@ async def enroll_student_tool(student_id:int, course_id:int) ->str:
     return await enroll_student(student_id,course_id)
 
 @mcp.tool
-async def update_grade_tool(student_id:int, course_id:int, grade:int) ->list:
+async def update_grade_tool(student_id:int, course_id:int, grade:int) ->str:
     """Update a students grade in course"""
     return await update_grade(student_id,course_id,grade)
 
