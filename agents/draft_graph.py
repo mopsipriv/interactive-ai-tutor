@@ -9,7 +9,15 @@ import os
 from dotenv import load_dotenv
 from groq import Groq
 from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile,update_enrollment_status,get_students_by_group
+from langchain_mcp_adapters.client import MultiServerMCPClient
+import json
 
+mcp_client = MultiServerMCPClient({
+    "tutor_server": {
+        "url": "http://127.0.0.1:8000/mcp",
+        "transport": "streamable_http"
+    }
+})
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -116,7 +124,7 @@ async def study_right_agent(state: State):
     for student in students:
         full_name= student["fname"]+" "+student["lname"]
         today = datetime.now()
-        date_obj = student["valid_until"]
+        date_obj = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
         left_study_right= (date_obj - today.date()).days / 30
         if left_study_right<6:
             new_issue+= f"Student:{full_name} has critical situation\n"
@@ -165,8 +173,10 @@ async def analytics_agent(state: State):
 async def fetch_students_agent(state: State):
     print("Fetch agent is working")
     filter_name = state.get("filter_name","")
-    all_students = await get_all_students()
-
+    tools = await mcp_client.get_tools()
+    get_students_tool = next(t for t in tools if t.name == "get_students_tool")
+    raw_result = await get_students_tool.ainvoke({})
+    all_students = json.loads(raw_result[0]["text"])
     
     for student in all_students:
         enrollments = await get_student_enrollments(student["idstudent"])
@@ -180,7 +190,7 @@ async def fetch_students_agent(state: State):
         student["completed_courses"] = completed_courses
         student["credits_earned"] = completed_credits
         today = datetime.now()
-        date_obj= student["valid_from"]
+        date_obj = datetime.strptime(student["valid_from"], "%Y-%m-%d").date()
         days_passed= (today.date()-date_obj).days
         semesters= days_passed/182
         total_credits=semesters*30
@@ -346,7 +356,7 @@ async def risk_report_agent(state: State):
         full_name = student["fname"] + " " + student["lname"]
         progress = student["credits_expected"] - student["credits_earned"]
         today = datetime.now()
-        date_obj = student["valid_until"]
+        date_obj = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
         left_study_right = (date_obj - today.date()).days / 30
         issues = []
         if progress > 15:
