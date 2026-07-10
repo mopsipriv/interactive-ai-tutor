@@ -294,8 +294,11 @@ async def course_list_agent(state: State):
     print("Twelveth agent is working")
     new_issue=""
     courses=state.get("show_courses","")
+    tools= await mcp_client.get_tools()
     if courses is True:
-        all_courses = await get_all_courses()
+        all_courses_tool = next(t for t in tools if t.name == "get_all_courses_tool")
+        raw_all_courses = await all_courses_tool.ainvoke({})
+        all_courses = json.loads(raw_all_courses[0]["text"])
         for course in all_courses:
             new_issue += f"- {course['course_code']}: {course['course_name']} ({course['credit']} credits)\n"
     return {"courses_list": new_issue}
