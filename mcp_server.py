@@ -63,7 +63,7 @@ async def get_student_id_by_name_tool(fname:str ,lname:str) ->int:
     return await get_student_id_by_name(fname,lname)
 
 @mcp.tool
-async def update_enrollment_status_tool(student_id:int,course_id:int,status:str) ->list:
+async def update_enrollment_status_tool(student_id:int,course_id:int,status:str) ->str:
     """Update enrollment status for a student in a course"""
     return await update_enrollment_status(student_id,course_id,status)
 

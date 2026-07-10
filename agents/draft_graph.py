@@ -371,14 +371,24 @@ async def status_update_agent(state: State):
     status_value = state.get("status_value","")
     if status_student_name == "" or status_course_name == "" or status_value == "":
         return {"status_update_result": ""}
+    tools = await mcp_client.get_tools()
+    
     fname,lname = status_student_name.split()[:2]
-    idstudent = await get_student_id_by_name(fname, lname)
-    idcourse = await get_course_id_by_name(status_course_name)
+    get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
+    raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    idstudent = json.loads(raw_student_id[0]["text"])
+    
+    get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
+    raw_course_id = await get_course_id_tool.ainvoke({"course_name":status_course_name})
+    idcourse = json.loads(raw_course_id[0]["text"])
     if idstudent is None:
         return {"status_update_result": "Error: student not found"}
     if idcourse is None:
         return {"status_update_result": "Error: course not found"}
-    status_update_result = await update_enrollment_status(idstudent, idcourse, status_value)
+    
+    status_update_tool = next(t for t in tools if t.name== "update_enrollment_status_tool")
+    raw_status_update= await status_update_tool.ainvoke({"student_id":idstudent, "course_id":idcourse, "status": status_value})
+    status_update_result = raw_status_update[0]["text"]
     return {"status_update_result": status_update_result}
 
 
