@@ -254,8 +254,12 @@ async def course_student_agent(state: State):
     print("Tenth agent is working")
     new_issue=""
     filter_course = state.get("filter_course","")
+    tools = await mcp_client.get_tools()
     if filter_course!="":
-        students=await get_student_by_course(filter_course)
+        get_students_course_tool = next(t for t in tools if t.name == "get_student_by_course_tool")
+        raw_students_course = await get_students_course_tool.ainvoke({"course_name":filter_course})
+        students = json.loads(raw_students_course[0]["text"])
+
         new_issue = f"Students on course {filter_course}:\n"
         for student in students:
             new_issue += f"- {student['fname']} {student['lname']}: {student['status']}, grade: {student['grade']}\n"
