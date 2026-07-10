@@ -450,11 +450,22 @@ async def bulk_enroll_agent(state: State):
     bulk_course_code = state.get("bulk_course_name", "")
     if bulk_group_code == "" or bulk_course_code == "":
         return {"bulk_enroll_result": ""}
-    students = await get_students_by_group(bulk_group_code)
-    idcourse = await get_course_id_by_name(bulk_course_code)
+    tools = await mcp_client.get_tools()
+    
+    get_students_group_tool = next(t for t in tools if t.name == "get_students_by_group_tool")
+    raw_students_group = await get_students_group_tool.ainvoke({"group_code":bulk_group_code})
+    students = json.loads(raw_students_group[0]["text"])
+    
+    get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
+    raw_course_id = await get_course_id_tool.ainvoke({"course_name":bulk_course_code})
+    idcourse = json.loads(raw_course_id[0]["text"])
+    
     success_count = 0
+    student_enroll_tool = next(t for t in tools if t.name == "enroll_student_tool")
     for student in students:
-        result = await enroll_student(student["idstudent"], idcourse)
+        raw_student_enroll = await student_enroll_tool.ainvoke({"student_id":student["idstudent"],"course_id":idcourse})
+        result = raw_student_enroll[0]["text"]
+        
         if "successfully" in result:
             success_count += 1
     new_issue = f"Enrolled {success_count} out of {len(students)} students"
