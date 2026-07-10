@@ -342,9 +342,17 @@ async def profile_agent(state: State):
     filter_name = state.get("filter_name","")
     if filter_name == "":
         return {"student_profile": ""}
+    tools = await mcp_client.get_tools()
     fname,lname = filter_name.split()[:2]
-    idstudent= await get_student_id_by_name(fname,lname)
-    student_profile= await get_student_profile(idstudent)
+   
+    get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
+    raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    idstudent = json.loads(raw_student_id[0]["text"])
+
+    get_profile_tool = next(t for t in tools if t.name == "get_student_profile_tool")
+    raw_profile = await get_profile_tool.ainvoke({"student_id":idstudent})
+    student_profile = json.loads(raw_profile[0]["text"])
+
     if student_profile:
         first = student_profile[0] 
         new_issue = f"Student: {first['fname']} {first['lname']}\n"
