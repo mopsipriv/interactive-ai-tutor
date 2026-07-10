@@ -279,15 +279,10 @@ async def enroll_agent(state: State):
     raw_course_id = await get_course_id_tool.ainvoke({"course_name": enroll_course_name})
     idcourse = json.loads(raw_course_id[0]["text"])
 
-    #idstudent = await get_student_id_by_name(fname, lname)
-    #idcourse = await get_course_id_by_name(enroll_course_name)
-
     if idstudent is None:
         return {"enroll_result": "Error: student not found"}
     if idcourse is None:
         return {"enroll_result": "Error: course not found"}
-    
-    #enroll = await enroll_student(idstudent, idcourse)
 
     enroll_tool = next(t for t in tools if t.name == "enroll_student_tool")
     raw_enroll = await enroll_tool.ainvoke({"student_id":idstudent, "course_id":idcourse})
@@ -377,7 +372,7 @@ async def status_update_agent(state: State):
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
     idstudent = json.loads(raw_student_id[0]["text"])
-    
+
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name":status_course_name})
     idcourse = json.loads(raw_course_id[0]["text"])
@@ -429,12 +424,17 @@ async def group_report_agent(state:State):
     filter_group = state.get("filter_group","")
     if filter_group == "":
         return {"group_report": ""}
-    students = await get_students_by_group(filter_group)
+    tools = await mcp_client.get_tools()
+    get_students_group_tool = next(t for t in tools if t.name == "get_students_by_group_tool")
+    raw_students_group = await get_students_group_tool.ainvoke({"group_code":filter_group})
+    students = json.loads(raw_students_group[0]["text"])
+
     new_issue = f"Students in group {filter_group}:\n"
     for student in students:
         new_issue += f"- {student['fname']} {student['lname']} ({student['student_number']})\n"
 
     return {"group_report": new_issue}
+
 
 
 async def bulk_enroll_agent(state: State):
