@@ -3,7 +3,6 @@ import asyncio
 from typing_extensions import TypedDict
 from datetime import datetime
 from typing import Annotated
-import typing
 import operator
 import os
 from dotenv import load_dotenv
@@ -22,12 +21,6 @@ mcp_client = MultiServerMCPClient({
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-
-STUDENTS_DB = {
-    1: {"idstudent": 1,"student_number": "H123456", "fname": "Nikita", "lname":"Mopsov", "email": "nikita.mopsov@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":10, "credits_expected":30, "completed_courses": []},
-    2: {"idstudent": 2,"student_number": "H234567", "fname": "Lena", "lname":"Golovach", "email": "lena.golovach@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":30, "credits_expected":90,"completed_courses":[3,5,6]},
-    3: {"idstudent": 3,"student_number": "H789123", "fname": "Papich", "lname":"Veneckiy", "email": "jfasjdfjfad@tuni.fi","study_right": "Insinööri (AMK), tietotekniikka" , "valid_from":"2024-08-01","valid_until":"2028-07-31","credits_earned":120, "credits_expected":120,"completed_courses":[3]}
-}
 
 TUTOR_CALENDAR = {
     1: "January: Spring semester begins. Organize orientation meetings with new students.",
