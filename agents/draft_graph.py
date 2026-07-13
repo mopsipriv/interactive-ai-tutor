@@ -10,6 +10,8 @@ from groq import Groq
 from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile,update_enrollment_status,get_students_by_group
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
+from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
+from agents.state import State
 
 mcp_client = MultiServerMCPClient({
     "tutor_server": {
@@ -20,78 +22,6 @@ mcp_client = MultiServerMCPClient({
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-
-TUTOR_CALENDAR = {
-    1: "January: Spring semester begins. Organize orientation meetings with new students.",
-    2: "February: Mid-winter check-in. Review student progress and study rights.",
-    3: "March: Spring exam period approaching. Identify students at risk.",
-    4: "April: Spring exams. Monitor student performance closely.",
-    5: "May: Semester ending. Final progress review for all students.",
-    6: "June: Summer break begins. Send summary reports to coordinators.",
-    7: "July: Summer break. No active tutoring sessions.",
-    8: "August: Autumn semester begins. Welcome new students, organize first meetings.",
-    9: "September: First month check-in. Verify all students are enrolled correctly.",
-    10: "October: Mid-semester review. Check credit accumulation and study rights.",
-    11: "November: Autumn exam period approaching. Support students at risk.",
-    12: "December: Autumn exams. Final check before winter break."
-}
-
-PROJECTS_DB = {
-    1: {"project_name": "AI Chatbot Development", "required_courses": [3, 6, 8]},
-    2: {"project_name": "Web Application Project", "required_courses": [3, 4, 7]}
-}
-
-class State(TypedDict):
-    students: list
-    student_data: str
-    filter_name: str
-    
-    course_id: int
-    course_data: str
-
-    enrollments: list
-    is_allowed: bool
-
-    final_text: str
-
-    calendar_info: str
-
-    student_messages:str
-
-
-    bot_analyze_text: Annotated[str, operator.add]
-
-    filter_course: str 
-
-    enroll_student_name: str
-    enroll_course_name: str
-    enroll_result: str
-
-    show_courses: bool
-    courses_list: str
-
-    grade_student_name:str
-    grade_course_name:str
-    grade_value: str
-    grade_result: str
-
-    student_profile: str
-
-    status_student_name:str
-    status_course_name: str
-    status_value: str
-    status_update_result:str
-
-    risk_report: str
-
-    filter_group:str
-    group_report:str
-
-    bulk_group_code:str
-    bulk_course_name:str
-    bulk_enroll_result:str
-
     
 async def progress_agent(state: State):
     print("First agent is working")
