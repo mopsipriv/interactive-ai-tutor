@@ -497,6 +497,46 @@ async def main():
             return
         print(f"Welcome, {student['fname']} {student['lname']}!")
 
+        student_full_name = f"{student['fname']} {student['lname']}"
+        initial_state = {
+        "students": [],
+        "student_data": "",
+        "course_id": 0,
+        "course_data": "",
+        "enrollments": [],
+        "is_allowed": True,
+        "bot_analyze_text": "",
+        "final_text": "",
+        "calendar_info": "",
+        "student_messages": "",
+        "filter_name": student_full_name,
+        "filter_course": "",
+        "enroll_course_name": "",
+        "enroll_student_name": "",
+        "enroll_result": "",
+        "show_courses": False,
+        "courses_list": "",
+        "grade_student_name": "",
+        "grade_course_name": "",
+        "grade_value": "",
+        "grade_result": "",
+        "student_profile": "",
+        "status_student_name": "",
+        "status_course_name": "",
+        "status_value": "",
+        "status_update_result": "",
+        "risk_report": "",
+        "group_report": "",
+        "filter_group": "",
+        "bulk_group_code": "",
+        "bulk_course_name": "",
+        "bulk_enroll_result": ""
+    }
+    
+        result = await app.ainvoke(initial_state)
+        print(result["student_profile"])
+        return
+
     name = input("Enter student name or press Enter for all: ")
     course = input("Enter course name or press Enter to skip: ")
     enroll_name = input("Enter student name to enroll (or press Enter to skip): ")
