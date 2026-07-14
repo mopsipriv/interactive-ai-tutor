@@ -193,3 +193,56 @@ async def get_students_by_group(group_code:str):
     conn.close()
     return result if result else[]
 
+async def get_teacher_by_email(email:str):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT * FROM teacher WHERE email=%s""",
+            (email,)
+        )
+        result = await cur.fetchone()
+    conn.close()
+    return result if result else None
+
+async def set_teacher_password(teacher_id:int, password_hash:str):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """UPDATE teacher 
+                    SET password_hash=%s
+                    WHERE idteacher=%s""",
+                    (password_hash, teacher_id,)
+            )
+            await conn.commit()
+            conn.close()
+        return "Teacher's password updated successfully"
+    except Exception as e:
+        return f"Error: {e}"
+    
+async def get_student_by_number(student_number:int):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT * FROM student WHERE student_number=%s""",
+            (student_number,)
+        )
+        result = await cur.fetchone()
+    conn.close()
+    return result if result else None
+
+async def set_student_password(student_id:int, password_hash:str):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """UPDATE student
+                    SET password_hash=%s
+                    WHERE idstudent=%s""",
+                    (password_hash, student_id,)
+            )
+            await conn.commit()
+            conn.close()
+        return "Student's password updated successfully"
+    except Exception as e:
+        return f"Error: {e}"
