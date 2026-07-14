@@ -385,8 +385,8 @@ async def student_recommendation_agent(state: State):
     
     response = client.chat.completions.create(
         messages=[
-            {"role": "system", "content": "You are a friendly AI assistant helping a university student understand their academic progress. Give clear, encouraging, actionable advice. Maximum 100 words."},
-            {"role": "user", "content": f"{profile}\n{eligibility}\n{progress}"}
+            {"role": "system", "content": "You are a friendly academic advisor AI. You receive a student's actual course data, eligibility status, and progress info. Reference SPECIFIC courses, grades, and situations by name from the data provided. Give concrete, actionable next steps (e.g. 'finish course X to unlock project Y'). Be encouraging but specific. Maximum 100 words."},
+            {"role": "user", "content": f"Student profile:\n{profile}\n\nProject eligibility:\n{eligibility}\n\nProgress status:\n{progress}"}
         ],
         model="llama-3.3-70b-versatile",
         max_completion_tokens=512,
@@ -443,8 +443,8 @@ graph.add_edge(START,"group_report_node")
 graph.add_edge("group_report_node",END)
 graph.add_edge(START,"bulk_enroll_node")
 graph.add_edge("bulk_enroll_node",END)
-graph.add_edge(START,"student_recommendation_note")
-graph.add_edge("student_recommendation_note",END)
+graph.add_edge("profile_node", "student_recommendation_note")
+graph.add_edge("eligibility_node", "student_recommendation_note")
 graph.add_edge("fetch_node", "risk_report_node")
 graph.add_edge("risk_report_node", "status_node")
 graph.add_edge("fetch_node", "progress_node")
