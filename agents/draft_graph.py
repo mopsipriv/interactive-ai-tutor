@@ -7,11 +7,13 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile,update_enrollment_status,get_students_by_group
+from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile,update_enrollment_status,get_students_by_group, get_teacher_by_email, get_student_by_number
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
 from agents.state import State
+from database.auth import verify_password
+
 
 mcp_client = MultiServerMCPClient({
     "tutor_server": {
@@ -469,6 +471,32 @@ graph.add_edge("communication_node", END)
 app=graph.compile()
 
 async def main():
+    role = input("Are you a teacher or student? (teacher/student): ")
+
+    if role == "teacher":
+        email = input("Enter your email: ")
+        password = input("Enter your password: ")
+        teacher = await get_teacher_by_email(email)
+        if teacher is None:
+            print("Access denied. Teacher not found")
+            return
+        if not verify_password(password, teacher["password_hash"]):
+            print("Access denied. Wrong password")
+            return
+        print(f"Welcome, {teacher['fname']} {teacher['lname']}!")
+    
+    if role == "student":
+        student_number = input("Enter your student number: ")
+        password = input("Enter your password: ")
+        student = await get_student_by_number(student_number)
+        if student is None:
+            print("Access denied. Student not found")
+            return
+        if not verify_password(password, student["password_hash"]):
+            print("Access denied. Wrong password")
+            return
+        print(f"Welcome, {student['fname']} {student['lname']}!")
+
     name = input("Enter student name or press Enter for all: ")
     course = input("Enter course name or press Enter to skip: ")
     enroll_name = input("Enter student name to enroll (or press Enter to skip): ")
