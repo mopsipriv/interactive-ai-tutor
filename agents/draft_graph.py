@@ -534,30 +534,29 @@ async def main():
             "bulk_enroll_result": "",
             "eligibility_report": ""
         }
+        while True:
+            choice = input("What would you like to see? (profile / eligibility / recommend / exit): ")
 
-        choice = input("What would you like to see? (profile / eligibility / recommend / exit): ")
+            if choice == "exit":
+                print("Goodbye!")
+                break
 
-        if choice == "exit":
-            print("Goodbye!")
-            return
+            if choice == "profile":
+                result = await app.ainvoke(initial_state)
+                print(result["student_profile"])
 
-        if choice == "profile":
-            result = await app.ainvoke(initial_state)
-            print(result["student_profile"])
-            return
+            elif choice == "eligibility":
+                result = await app.ainvoke(initial_state)
+                print("Your project eligibility:")
+                print(result["eligibility_report"])
 
-        if choice == "eligibility":
-            result = await app.ainvoke(initial_state)
-            print("Your project eligibility:")
-            print(result["eligibility_report"])
-            return
-
-        if choice == "recommend":
-            result = await app.ainvoke(initial_state)
-            print("Your personal recommendation:")
-            print(result["student_recommendation"])
-            return
+            elif choice == "recommend":
+                result = await app.ainvoke(initial_state)
+                print("Your personal recommendation:")
+                print(result["student_recommendation"])
         
+        return
+
 
     name = input("Enter student name or press Enter for all: ")
     course = input("Enter course name or press Enter to skip: ")
