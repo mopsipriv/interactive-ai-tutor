@@ -163,7 +163,7 @@ async def eligibility_agent(state: State):
             else:
                 new_issue += f"{full_name} is not eligible for {project_name}\n"
 
-    return {"bot_analyze_text": new_issue}
+    return {"eligibility_report": new_issue}
 
 
 async def course_student_agent(state: State):
@@ -378,6 +378,22 @@ async def bulk_enroll_agent(state: State):
     new_issue = f"Enrolled {success_count} out of {len(students)} students"
     return {"bulk_enroll_result": new_issue}
 
+async def student_recommendation_agent(state: State):
+    print("Nineteenth agent is working")
+    profile = state.get("student_profile", "")
+    eligibility = state.get("eligibility_report", "")
+    progress = state.get("bot_analyze_text", "")
+    
+    response = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": "You are a friendly AI assistant helping a university student understand their academic progress. Give clear, encouraging, actionable advice. Maximum 100 words."},
+            {"role": "user", "content": f"{profile}\n{eligibility}\n{progress}"}
+        ],
+        model="llama-3.3-70b-versatile",
+        max_completion_tokens=512,
+    )
+    return {"student_recommendation": response.choices[0].message.content}
+
 
 
 def route_after_status(state: State):
@@ -409,6 +425,7 @@ graph.add_node("update_status_node",status_update_agent)
 graph.add_node("risk_report_node",risk_report_agent)
 graph.add_node("group_report_node",group_report_agent)
 graph.add_node("bulk_enroll_node",bulk_enroll_agent)
+graph.add_node("student_recommendation_note",student_recommendation_agent)
 
 
 graph.add_edge(START, "fetch_node")
@@ -427,6 +444,8 @@ graph.add_edge(START,"group_report_node")
 graph.add_edge("group_report_node",END)
 graph.add_edge(START,"bulk_enroll_node")
 graph.add_edge("bulk_enroll_node",END)
+graph.add_edge(START,"student_recommendation_note")
+graph.add_edge("student_recommendation_note",END)
 graph.add_edge("fetch_node", "risk_report_node")
 graph.add_edge("risk_report_node", "status_node")
 graph.add_edge("fetch_node", "progress_node")
@@ -481,45 +500,64 @@ async def main():
 
         student_full_name = f"{student['fname']} {student['lname']}"
         initial_state = {
-        "students": [],
-        "student_data": "",
-        "course_id": 0,
-        "course_data": "",
-        "enrollments": [],
-        "is_allowed": True,
-        "bot_analyze_text": "",
-        "final_text": "",
-        "calendar_info": "",
-        "student_messages": "",
-        "filter_name": student_full_name,
-        "filter_course": "",
-        "enroll_course_name": "",
-        "enroll_student_name": "",
-        "enroll_result": "",
-        "show_courses": False,
-        "courses_list": "",
-        "grade_student_name": "",
-        "grade_course_name": "",
-        "grade_value": "",
-        "grade_result": "",
-        "student_profile": "",
-        "status_student_name": "",
-        "status_course_name": "",
-        "status_value": "",
-        "status_update_result": "",
-        "risk_report": "",
-        "group_report": "",
-        "filter_group": "",
-        "bulk_group_code": "",
-        "bulk_course_name": "",
-        "bulk_enroll_result": ""
-    }
-    
-        result = await app.ainvoke(initial_state)
-        print(result["student_profile"])
-        print("\nEligibility for projects:")
-        print(result["bot_analyze_text"])
-        return
+            "students": [],
+            "student_data": "",
+            "course_id": 0,
+            "course_data": "",
+            "enrollments": [],
+            "is_allowed": True,
+            "bot_analyze_text": "",
+            "final_text": "",
+            "calendar_info": "",
+            "student_messages": "",
+            "filter_name": student_full_name,
+            "filter_course": "",
+            "enroll_course_name": "",
+            "enroll_student_name": "",
+            "enroll_result": "",
+            "show_courses": False,
+            "courses_list": "",
+            "grade_student_name": "",
+            "grade_course_name": "",
+            "grade_value": "",
+            "grade_result": "",
+            "student_profile": "",
+            "status_student_name": "",
+            "status_course_name": "",
+            "status_value": "",
+            "status_update_result": "",
+            "risk_report": "",
+            "group_report": "",
+            "filter_group": "",
+            "bulk_group_code": "",
+            "bulk_course_name": "",
+            "bulk_enroll_result": "",
+            "eligibility_report": ""
+        }
+
+        choice = input("What would you like to see? (profile / eligibility / recommend / exit): ")
+
+        if choice == "exit":
+            print("Goodbye!")
+            return
+
+        if choice == "profile":
+            result = await app.ainvoke(initial_state)
+            print(result["student_profile"])
+            return
+
+        if choice == "eligibility":
+            result = await app.ainvoke(initial_state)
+            print("Your project eligibility:")
+            print(result["eligibility_report"])
+            return
+
+        if choice == "recommend":
+            result = await app.ainvoke(initial_state)
+            print("Your personal recommendation:")
+            print(result["student_recommendation"])
+            return
+        
 
     name = input("Enter student name or press Enter for all: ")
     course = input("Enter course name or press Enter to skip: ")
