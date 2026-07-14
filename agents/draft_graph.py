@@ -535,6 +535,8 @@ async def main():
     
         result = await app.ainvoke(initial_state)
         print(result["student_profile"])
+        print("\nEligibility for projects:")
+        print(result["bot_analyze_text"])
         return
 
     name = input("Enter student name or press Enter for all: ")
