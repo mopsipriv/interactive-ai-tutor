@@ -379,7 +379,6 @@ async def bulk_enroll_agent(state: State):
     return {"bulk_enroll_result": new_issue}
 
 async def student_recommendation_agent(state: State):
-    print("Nineteenth agent is working")
     profile = state.get("student_profile", "")
     eligibility = state.get("eligibility_report", "")
     progress = state.get("bot_analyze_text", "")
