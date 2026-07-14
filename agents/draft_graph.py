@@ -26,7 +26,6 @@ load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     
 async def progress_agent(state: State):
-    print("First agent is working")
     students = state.get("students",[])
     new_issue= ""
     for student in students:
@@ -43,7 +42,6 @@ async def progress_agent(state: State):
 
 
 async def study_right_agent(state: State):
-    print("Second agent is working")
     students= state.get("students",[])
     new_issue=""
     for student in students:
@@ -61,7 +59,6 @@ async def study_right_agent(state: State):
 
 
 async def recommendation_agent(state: State):
-    print("Third Groq agent is working")
     all_issues = state.get("bot_analyze_text","")
     calendar = state.get("calendar_info", "")
     response = client.chat.completions.create(
@@ -77,7 +74,6 @@ async def recommendation_agent(state: State):
 
 
 async def status_agent(state: State):
-    print("Forth agent is working")
     current_text = state.get("bot_analyze_text","")
     if "critical" in current_text or "warning" in current_text or "Not found" in current_text:
         return{"is_allowed":False}
@@ -86,7 +82,6 @@ async def status_agent(state: State):
     
 
 async def analytics_agent(state: State):
-    print("Sixth agent is working")
     allowed = state.get("is_allowed",True)
     if allowed:
         verdict = "All checks passed. The student is cleared for enrollment.\n"
@@ -96,7 +91,6 @@ async def analytics_agent(state: State):
 
 
 async def fetch_students_agent(state: State):
-    print("Fetch agent is working")
     filter_name = state.get("filter_name","")
     tools = await mcp_client.get_tools()
     get_students_tool = next(t for t in tools if t.name == "get_students_tool")
@@ -131,7 +125,6 @@ async def fetch_students_agent(state: State):
 
     
 async def calendar_agent(state: State):
-    print("Seventh agent is working")
     today= datetime.now()
     month=today.month
     calendar_info = TUTOR_CALENDAR[month]
@@ -139,7 +132,6 @@ async def calendar_agent(state: State):
 
 
 async def communication_agent(state: State):
-    print("Eighth agent is working")
     current_text=state.get("bot_analyze_text","")
     response = client.chat.completions.create(
         messages=[
@@ -154,7 +146,6 @@ async def communication_agent(state: State):
 
 
 async def eligibility_agent(state: State):
-    print("Ninth agent is working")
     new_issue= ""
     students = state.get("students",[])
     for student in students:
@@ -176,7 +167,6 @@ async def eligibility_agent(state: State):
 
 
 async def course_student_agent(state: State):
-    print("Tenth agent is working")
     new_issue=""
     filter_course = state.get("filter_course","")
     tools = await mcp_client.get_tools()
@@ -193,7 +183,6 @@ async def course_student_agent(state: State):
 
 
 async def enroll_agent(state: State):
-    print("Eleventh agent is working")
     enroll_student_name=state.get("enroll_student_name","")
     enroll_course_name=state.get("enroll_course_name","")
     if enroll_student_name == "" or enroll_course_name == "":
@@ -220,7 +209,6 @@ async def enroll_agent(state: State):
 
 
 async def course_list_agent(state: State):
-    print("Twelveth agent is working")
     new_issue=""
     courses=state.get("show_courses","")
     tools= await mcp_client.get_tools()
@@ -234,7 +222,6 @@ async def course_list_agent(state: State):
 
 
 async def grade_agent(state: State):
-    print("Thirteenth agent is working")
     grade_student_name=state.get("grade_student_name","")
     grade_course_name=state.get("grade_course_name","")
     grade_value= state.get("grade_value","")
@@ -264,7 +251,6 @@ async def grade_agent(state: State):
 
 
 async def profile_agent(state: State):
-    print("Fourteenth agent is working")
     new_issue=""
     filter_name = state.get("filter_name","")
     if filter_name == "":
@@ -292,7 +278,6 @@ async def profile_agent(state: State):
 
 
 async def status_update_agent(state: State):
-    print("Fifteenth agent is working")
     status_student_name = state.get("status_student_name","")
     status_course_name= state.get("status_course_name","")
     status_value = state.get("status_value","")
@@ -320,7 +305,6 @@ async def status_update_agent(state: State):
 
 
 async def risk_report_agent(state: State):
-    print("Sixteenth agent is working")
     new_issue = "=== Risk Report ===\n"
     students = state.get("students",[])
     for student in students:
@@ -351,7 +335,6 @@ async def risk_report_agent(state: State):
 
 
 async def group_report_agent(state:State):
-    print("Seventeenth agent is working")
     new_issue=""
     filter_group = state.get("filter_group","")
     if filter_group == "":
@@ -370,7 +353,6 @@ async def group_report_agent(state:State):
 
 
 async def bulk_enroll_agent(state: State):
-    print("Eighteenth agent is working")
     bulk_group_code = state.get("bulk_group_code", "")
     bulk_course_code = state.get("bulk_course_name", "")
     if bulk_group_code == "" or bulk_course_code == "":
@@ -591,7 +573,6 @@ async def main():
         "bulk_enroll_result": ""
     }
 
-    print("Start of graph")
     result = await app.ainvoke(initial_state)
 
     if enroll_name and enroll_course:
