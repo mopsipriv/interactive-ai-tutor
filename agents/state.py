@@ -49,3 +49,7 @@ class State(TypedDict):
     bulk_group_code: str
     bulk_course_name: str
     bulk_enroll_result: str
+
+    eligibility_report: str
+
+    student_recommendation: str
