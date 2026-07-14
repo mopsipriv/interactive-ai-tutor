@@ -218,3 +218,4 @@ __marimo__/
 .streamlit/secrets.toml
 
 setup_password.py
+setup_student_password.py
