@@ -484,6 +484,90 @@ async def main():
             print("Access denied. Wrong password")
             return
         print(f"Welcome, {teacher['fname']} {teacher['lname']}!")
+
+        while True:
+            name = input("Enter student name or press Enter for all: ")
+            course = input("Enter course name or press Enter to skip: ")
+            enroll_name = input("Enter student name to enroll (or press Enter to skip): ")
+            enroll_course = input("Enter course to enroll in (or press Enter to skip): ")
+            show_courses = input("Show all courses? (yes/no): ")
+            grade_student = input("Enter student name to grade (or press Enter to skip): ")
+            grade_course = input("Enter course name: ")
+            grade_value = input("Enter grade (1-5): ")
+            student_profile = input("Enter student name to see his profile or press Enter to skip: ")
+            status_student = input("Enter student name to update status (or press Enter to skip): ")
+            status_course = input("Enter course name: ")
+            status_value = input("Enter status (planned/ongoing/completed): ")
+            group_code = input("Enter group code to see students (or press Enter to skip): ")
+            bulk_group = input("Enter group code for bulk enroll (or press Enter to skip): ")
+            bulk_course = input("Enter course name for bulk enroll: ")
+            initial_state = {
+                "students": [],
+                "student_data": "",
+                "course_id": 0,
+                "course_data": "",
+                "enrollments": [],
+                "is_allowed": True,
+                "bot_analyze_text": "",
+                "final_text": "",
+                "calendar_info":"",
+                "student_messages":"",
+                "filter_name": student_profile if student_profile else name,
+                "filter_course":course,
+                "enroll_course_name":"",
+                "enroll_student_name":"",
+                "enroll_result": "",
+                "enroll_student_name": enroll_name,
+                "enroll_course_name": enroll_course,
+                "show_courses": show_courses=="yes", 
+                "courses_list": "",
+                "grade_student_name": grade_student,
+                "grade_course_name": grade_course,
+                "grade_value": grade_value,
+                "grade_result": "",
+                "student_profile": "",
+                "status_student_name": status_student,
+                "status_course_name": status_course,
+                "status_value": status_value,
+                "status_update_result": "",
+                "risk_report":"",
+                "group_report":"",
+                "filter_group":group_code,
+                "bulk_group_code": bulk_group,
+                "bulk_course_name": bulk_course,
+                "bulk_enroll_result": ""
+            }
+
+            result = await app.ainvoke(initial_state)
+
+            if enroll_name and enroll_course:
+                print(result["enroll_result"])
+            elif course:
+                print(result["bot_analyze_text"])
+            elif name:
+                print(result["final_text"])
+                print(result["student_messages"])
+            elif show_courses.lower() == "yes":
+                print(result["courses_list"])
+            elif grade_student and grade_course:
+                print(result["grade_result"])
+            elif student_profile:
+                print(result["student_profile"])
+            elif status_student and status_course:
+                print(result["status_update_result"])
+            elif group_code:
+                print(result["group_report"])
+            elif bulk_group and bulk_course:
+                print(result["bulk_enroll_result"])
+            else:
+                print(result["risk_report"])
+
+            continue_choice = input("\nContinue? (yes/exit): ")
+            if continue_choice == "exit":
+                print("Goodbye!")
+                break
+
+
     
     if role == "student":
         student_number = input("Enter your student number: ")
@@ -555,82 +639,5 @@ async def main():
                 print(result["student_recommendation"])
         
         return
-
-
-    name = input("Enter student name or press Enter for all: ")
-    course = input("Enter course name or press Enter to skip: ")
-    enroll_name = input("Enter student name to enroll (or press Enter to skip): ")
-    enroll_course = input("Enter course to enroll in (or press Enter to skip): ")
-    show_courses = input("Show all courses? (yes/no): ")
-    grade_student = input("Enter student name to grade (or press Enter to skip): ")
-    grade_course = input("Enter course name: ")
-    grade_value = input("Enter grade (1-5): ")
-    student_profile = input("Enter student name to see his profile or press Enter to skip: ")
-    status_student = input("Enter student name to update status (or press Enter to skip): ")
-    status_course = input("Enter course name: ")
-    status_value = input("Enter status (planned/ongoing/completed): ")
-    group_code = input("Enter group code to see students (or press Enter to skip): ")
-    bulk_group = input("Enter group code for bulk enroll (or press Enter to skip): ")
-    bulk_course = input("Enter course name for bulk enroll: ")
-    initial_state = {
-        "students": [],
-        "student_data": "",
-        "course_id": 0,
-        "course_data": "",
-        "enrollments": [],
-        "is_allowed": True,
-        "bot_analyze_text": "",
-        "final_text": "",
-        "calendar_info":"",
-        "student_messages":"",
-        "filter_name": student_profile if student_profile else name,
-        "filter_course":course,
-        "enroll_course_name":"",
-        "enroll_student_name":"",
-        "enroll_result": "",
-        "enroll_student_name": enroll_name,
-        "enroll_course_name": enroll_course,
-        "show_courses": show_courses=="yes", 
-        "courses_list": "",
-        "grade_student_name": grade_student,
-        "grade_course_name": grade_course,
-        "grade_value": grade_value,
-        "grade_result": "",
-        "student_profile": "",
-        "status_student_name": status_student,
-        "status_course_name": status_course,
-        "status_value": status_value,
-        "status_update_result": "",
-        "risk_report":"",
-        "group_report":"",
-        "filter_group":group_code,
-        "bulk_group_code": bulk_group,
-        "bulk_course_name": bulk_course,
-        "bulk_enroll_result": ""
-    }
-
-    result = await app.ainvoke(initial_state)
-
-    if enroll_name and enroll_course:
-        print(result["enroll_result"])
-    elif course:
-        print(result["bot_analyze_text"])
-    elif name:
-        print(result["final_text"])
-        print(result["student_messages"])
-    elif show_courses.lower() == "yes":
-        print(result["courses_list"])
-    elif grade_student and grade_course:
-        print(result["grade_result"])
-    elif student_profile:
-        print(result["student_profile"])
-    elif status_student and status_course:
-        print(result["status_update_result"])
-    elif group_code:
-        print(result["group_report"])
-    elif bulk_group and bulk_course:
-        print(result["bulk_enroll_result"])
-    else:
-        print(result["risk_report"])
 
 asyncio.run(main())
