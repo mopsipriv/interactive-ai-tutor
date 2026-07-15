@@ -534,13 +534,19 @@ async def main():
                 name = input("Student name: ")
                 state["filter_name"] = name
                 result = await app.ainvoke(state)
-                print(result["student_profile"])
+                if not result["student_profile"]:
+                    print(f"Error: Student '{name}' not found.")
+                else:
+                    print(result["student_profile"])
 
             elif command == "course":
                 course = input("Course name: ")
                 state["filter_course"] = course
                 result = await app.ainvoke(state)
-                print(result["bot_analyze_text"])
+                if not result["bot_analyze_text"]:
+                    print(f"Error: Course '{course}' not found.")
+                else:
+                    print(result["bot_analyze_text"])
 
             elif command == "enroll":
                 enroll_name = input("Student name: ")
@@ -548,7 +554,10 @@ async def main():
                 state["enroll_student_name"] = enroll_name
                 state["enroll_course_name"] = enroll_course
                 result = await app.ainvoke(state)
-                print(result["enroll_result"])
+                if not result["enroll_result"]:
+                    print(f"Error: Student '{enroll_name}' and Course '{enroll_course}' not found.")
+                else:
+                    print(result["enroll_result"])
 
             elif command == "grade":
                 grade_student = input("Student name: ")
@@ -558,7 +567,10 @@ async def main():
                 state["grade_course_name"] = grade_course
                 state["grade_value"] = grade_value
                 result = await app.ainvoke(state)
-                print(result["grade_result"])
+                if not result["grade_result"]:
+                    print(f"Error: Student '{grade_student}', Course '{grade_course}' and Grade '{grade_value} not found'")
+                else:
+                    print(result["grade_result"])
 
             elif command == "status":
                 status_student = input("Student name: ")
