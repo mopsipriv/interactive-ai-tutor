@@ -173,13 +173,18 @@ async def course_student_agent(state: State):
     if filter_course!="":
         get_students_course_tool = next(t for t in tools if t.name == "get_student_by_course_tool")
         raw_students_course = await get_students_course_tool.ainvoke({"course_name":filter_course})
+        if not raw_students_course:
+            return {"course_report": f"Error: Course '{filter_course}' not found."}
         students = json.loads(raw_students_course[0]["text"])
+
+        if not students:
+            return {"course_report": f"No students found on course '{filter_course}'."}
 
         new_issue = f"Students on course {filter_course}:\n"
         for student in students:
             new_issue += f"- {student['fname']} {student['lname']}: {student['status']}, grade: {student['grade']}\n"
 
-    return {"bot_analyze_text": new_issue}
+    return {"course_report": new_issue}
 
 
 async def enroll_agent(state: State):
@@ -561,7 +566,8 @@ async def main():
             "bulk_group_code": "",
             "bulk_course_name": "",
             "bulk_enroll_result": "", 
-            "eligibility_report": ""
+            "eligibility_report": "",
+            "course_report": "" 
         }
 
         while True:
@@ -586,10 +592,7 @@ async def main():
                 course = input("Course name: ")
                 state["filter_course"] = course
                 result = await app.ainvoke(state)
-                if not result["bot_analyze_text"]:
-                    print(f"Error: Course '{course}' not found.")
-                else:
-                    print(result["bot_analyze_text"])
+                print(result["course_report"])
 
             elif command == "enroll":
                 enroll_name = input("Student name: ")
@@ -707,7 +710,8 @@ async def main():
             "bulk_group_code": "",
             "bulk_course_name": "",
             "bulk_enroll_result": "",
-            "eligibility_report": ""
+            "eligibility_report": "",
+            "course_report": "" 
         }
         while True:
             choice = input("What would you like to see? (profile / eligibility / recommend / exit): ")
