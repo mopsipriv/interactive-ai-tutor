@@ -187,14 +187,21 @@ async def enroll_agent(state: State):
     enroll_course_name=state.get("enroll_course_name","")
     if enroll_student_name == "" or enroll_course_name == "":
         return {"enroll_result": ""}
+    parts = enroll_student_name.split()
+    if len(parts) < 2:
+        return {"enroll_result": "Error: Student not found"}
     fname,lname = enroll_student_name.split()[:2]
     tools= await mcp_client.get_tools()
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname, "lname":lname})
+    if not raw_student_id:
+        return {"enroll_result": "Error: student not found"}
     idstudent = json.loads(raw_student_id[0]["text"])
 
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name": enroll_course_name})
+    if not raw_course_id:
+        return {"enroll_result": "Error: course not found"}
     idcourse = json.loads(raw_course_id[0]["text"])
 
     if idstudent is None:
@@ -206,7 +213,6 @@ async def enroll_agent(state: State):
     raw_enroll = await enroll_tool.ainvoke({"student_id":idstudent, "course_id":idcourse})
     enroll = raw_enroll[0]["text"]    
     return {"enroll_result": enroll}
-
 
 async def course_list_agent(state: State):
     new_issue=""
@@ -227,15 +233,22 @@ async def grade_agent(state: State):
     grade_value= state.get("grade_value","")
     if grade_student_name == "" or grade_course_name == "" or grade_value == "":
         return {"grade_result": ""}
+    parts = grade_student_name.split()
+    if len(parts) < 2:
+        return {"grade_result": "Error: Student or Course not found"}
     tools= await mcp_client.get_tools()
     fname,lname = grade_student_name.split()[:2]
     
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname, "lname":lname})
+    if not raw_student_id:
+        return {"grade_result": "Error: student not found"}
     idstudent = json.loads(raw_student_id[0]["text"])
     
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name":grade_course_name})
+    if not raw_course_id:
+        return {"grade_result": "Error: course not found"}
     idcourse = json.loads(raw_course_id[0]["text"])
     
     if idstudent is None:
@@ -255,11 +268,16 @@ async def profile_agent(state: State):
     filter_name = state.get("filter_name","")
     if filter_name == "":
         return {"student_profile": ""}
+    parts = filter_name.split()
+    if len(parts) < 2:
+        return {"student_profile": "Error: please provide full name (first and last name)"}
     tools = await mcp_client.get_tools()
     fname,lname = filter_name.split()[:2]
    
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    if not raw_student_id:
+        return {"student_profile": f"Error: Student '{filter_name}' not found."}
     idstudent = json.loads(raw_student_id[0]["text"])
 
     get_profile_tool = next(t for t in tools if t.name == "get_student_profile_tool")
@@ -283,16 +301,25 @@ async def status_update_agent(state: State):
     status_value = state.get("status_value","")
     if status_student_name == "" or status_course_name == "" or status_value == "":
         return {"status_update_result": ""}
+    parts = status_student_name.split()
+    if len(parts) < 2:
+        return {"status_update_result": "Error: Student or Course not found"}
+    
     tools = await mcp_client.get_tools()
     
     fname,lname = status_student_name.split()[:2]
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    if not raw_student_id:
+        return {"status_update_result": "Error: student not found"}
     idstudent = json.loads(raw_student_id[0]["text"])
 
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name":status_course_name})
+    if not raw_course_id:
+        return {"status_update_result": "Error: course not found"}
     idcourse = json.loads(raw_course_id[0]["text"])
+    
     if idstudent is None:
         return {"status_update_result": "Error: student not found"}
     if idcourse is None:
@@ -484,6 +511,139 @@ async def main():
             print("Access denied. Wrong password")
             return
         print(f"Welcome, {teacher['fname']} {teacher['lname']}!")
+
+        base_state = {
+            "students": [], 
+            "student_data": "", 
+            "course_id": 0, 
+            "course_data": "",
+            "enrollments": [], 
+            "is_allowed": True, 
+            "bot_analyze_text": "",
+            "final_text": "", 
+            "calendar_info": "", 
+            "student_messages": "",
+            "filter_name": "", 
+            "filter_course": "", 
+            "enroll_course_name": "",
+            "enroll_student_name": "", 
+            "enroll_result": "", 
+            "show_courses": False,
+            "courses_list": "", 
+            "grade_student_name": "",
+            "grade_course_name": "",
+            "grade_value": "", 
+            "grade_result": "", 
+            "student_profile": "",
+            "status_student_name": "", 
+            "status_course_name": "", 
+            "status_value": "",
+            "status_update_result": "", 
+            "risk_report": "", 
+            "group_report": "",
+            "filter_group": "", 
+            "bulk_group_code": "",
+            "bulk_course_name": "",
+            "bulk_enroll_result": "", 
+            "eligibility_report": ""
+        }
+
+        while True:
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/exit): ")
+
+            if command == "exit":
+                print("Goodbye!")
+                break
+
+            state = base_state.copy()
+
+            if command == "profile":
+                name = input("Student name: ")
+                state["filter_name"] = name
+                result = await app.ainvoke(state)
+                if not result["student_profile"]:
+                    print(f"Error: Student '{name}' not found.")
+                else:
+                    print(result["student_profile"])
+
+            elif command == "course":
+                course = input("Course name: ")
+                state["filter_course"] = course
+                result = await app.ainvoke(state)
+                if not result["bot_analyze_text"]:
+                    print(f"Error: Course '{course}' not found.")
+                else:
+                    print(result["bot_analyze_text"])
+
+            elif command == "enroll":
+                enroll_name = input("Student name: ")
+                enroll_course = input("Course name: ")
+                state["enroll_student_name"] = enroll_name
+                state["enroll_course_name"] = enroll_course
+                result = await app.ainvoke(state)
+                if not result["enroll_result"]:
+                    print(f"Error: Student '{enroll_name}' and Course '{enroll_course}' not found.")
+                else:
+                    print(result["enroll_result"])
+
+            elif command == "grade":
+                grade_student = input("Student name: ")
+                grade_course = input("Course name: ")
+                while True:
+                    grade_value = input("Grade (1-5): ")
+                    if grade_value in ["1", "2", "3", "4", "5"]:
+                        break
+                    print("Error: grade must be a number between 1 and 5. Try again.")
+
+                state["grade_student_name"] = grade_student
+                state["grade_course_name"] = grade_course
+                state["grade_value"] = grade_value
+                result = await app.ainvoke(state)
+                print(result["grade_result"])
+
+            elif command == "status":
+                status_student = input("Student name: ")
+                status_course = input("Course name: ")
+                status_value = input("Status (planned/ongoing/completed): ")
+                state["status_student_name"] = status_student
+                state["status_course_name"] = status_course
+                state["status_value"] = status_value
+                result = await app.ainvoke(state)
+                print(result["status_update_result"])
+
+            elif command == "group":
+                group_code = input("Group code: ")
+                state["filter_group"] = group_code
+                result = await app.ainvoke(state)
+                if not result["group_report"]:
+                    print(f"Error: Group {group_code} not found.")
+                else:
+                    print(result["group_report"])
+
+            elif command == "bulk":
+                bulk_group = input("Group code: ")
+                bulk_course = input("Course name: ")
+                state["bulk_group_code"] = bulk_group
+                state["bulk_course_name"] = bulk_course
+                result = await app.ainvoke(state)
+                if not result["bulk_enroll_result"]:
+                    print(f"Error: Group '{bulk_group}' or Course '{bulk_course}' not found.")
+                else:
+                    print(result["bulk_enroll_result"])
+
+            elif command == "courses":
+                state["show_courses"] = True
+                result = await app.ainvoke(state)
+                print(result["courses_list"])
+
+            elif command == "risk":
+                result = await app.ainvoke(state)
+                print(result["risk_report"])
+
+            else:
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/exit")
+
+
     
     if role == "student":
         student_number = input("Enter your student number: ")
@@ -555,82 +715,5 @@ async def main():
                 print(result["student_recommendation"])
         
         return
-
-
-    name = input("Enter student name or press Enter for all: ")
-    course = input("Enter course name or press Enter to skip: ")
-    enroll_name = input("Enter student name to enroll (or press Enter to skip): ")
-    enroll_course = input("Enter course to enroll in (or press Enter to skip): ")
-    show_courses = input("Show all courses? (yes/no): ")
-    grade_student = input("Enter student name to grade (or press Enter to skip): ")
-    grade_course = input("Enter course name: ")
-    grade_value = input("Enter grade (1-5): ")
-    student_profile = input("Enter student name to see his profile or press Enter to skip: ")
-    status_student = input("Enter student name to update status (or press Enter to skip): ")
-    status_course = input("Enter course name: ")
-    status_value = input("Enter status (planned/ongoing/completed): ")
-    group_code = input("Enter group code to see students (or press Enter to skip): ")
-    bulk_group = input("Enter group code for bulk enroll (or press Enter to skip): ")
-    bulk_course = input("Enter course name for bulk enroll: ")
-    initial_state = {
-        "students": [],
-        "student_data": "",
-        "course_id": 0,
-        "course_data": "",
-        "enrollments": [],
-        "is_allowed": True,
-        "bot_analyze_text": "",
-        "final_text": "",
-        "calendar_info":"",
-        "student_messages":"",
-        "filter_name": student_profile if student_profile else name,
-        "filter_course":course,
-        "enroll_course_name":"",
-        "enroll_student_name":"",
-        "enroll_result": "",
-        "enroll_student_name": enroll_name,
-        "enroll_course_name": enroll_course,
-        "show_courses": show_courses=="yes", 
-        "courses_list": "",
-        "grade_student_name": grade_student,
-        "grade_course_name": grade_course,
-        "grade_value": grade_value,
-        "grade_result": "",
-        "student_profile": "",
-        "status_student_name": status_student,
-        "status_course_name": status_course,
-        "status_value": status_value,
-        "status_update_result": "",
-        "risk_report":"",
-        "group_report":"",
-        "filter_group":group_code,
-        "bulk_group_code": bulk_group,
-        "bulk_course_name": bulk_course,
-        "bulk_enroll_result": ""
-    }
-
-    result = await app.ainvoke(initial_state)
-
-    if enroll_name and enroll_course:
-        print(result["enroll_result"])
-    elif course:
-        print(result["bot_analyze_text"])
-    elif name:
-        print(result["final_text"])
-        print(result["student_messages"])
-    elif show_courses.lower() == "yes":
-        print(result["courses_list"])
-    elif grade_student and grade_course:
-        print(result["grade_result"])
-    elif student_profile:
-        print(result["student_profile"])
-    elif status_student and status_course:
-        print(result["status_update_result"])
-    elif group_code:
-        print(result["group_report"])
-    elif bulk_group and bulk_course:
-        print(result["bulk_enroll_result"])
-    else:
-        print(result["risk_report"])
 
 asyncio.run(main())
