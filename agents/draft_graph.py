@@ -369,7 +369,12 @@ async def group_report_agent(state:State):
     tools = await mcp_client.get_tools()
     get_students_group_tool = next(t for t in tools if t.name == "get_students_by_group_tool")
     raw_students_group = await get_students_group_tool.ainvoke({"group_code":filter_group})
+    if not raw_students_group:
+        return {"group_report": f"Error: Group '{filter_group}' not found."}
     students = json.loads(raw_students_group[0]["text"])
+
+    if not students:
+        return {"group_report": f"Error: No students found in group '{filter_group}'."}
 
     new_issue = f"Students in group {filter_group}:\n"
     for student in students:
@@ -388,11 +393,21 @@ async def bulk_enroll_agent(state: State):
     
     get_students_group_tool = next(t for t in tools if t.name == "get_students_by_group_tool")
     raw_students_group = await get_students_group_tool.ainvoke({"group_code":bulk_group_code})
+    if not raw_students_group:
+        return {"bulk_enroll_result": f"Error: Group '{bulk_group_code}' not found."}
     students = json.loads(raw_students_group[0]["text"])
+    
+    if not students:
+        return {"bulk_enroll_result": f"Error: No students found in group '{bulk_group_code}'."}
     
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name":bulk_course_code})
+    if not raw_course_id:
+        return {"bulk_enroll_result": f"Error: Course '{bulk_course_code}' not found."}
     idcourse = json.loads(raw_course_id[0]["text"])
+    
+    if idcourse is None:
+        return {"bulk_enroll_result": f"Error: Course '{bulk_course_code}' not found."}
     
     success_count = 0
     student_enroll_tool = next(t for t in tools if t.name == "enroll_student_tool")
@@ -404,6 +419,7 @@ async def bulk_enroll_agent(state: State):
             success_count += 1
     new_issue = f"Enrolled {success_count} out of {len(students)} students"
     return {"bulk_enroll_result": new_issue}
+
 
 async def student_recommendation_agent(state: State):
     profile = state.get("student_profile", "")
