@@ -1,4 +1,6 @@
 from fastmcp import FastMCP
+from typing import Optional
+
 from database.db_connector import (
     get_all_students,
     get_student_by_course,
@@ -53,14 +55,15 @@ async def get_students_by_group_tool(group_code:str) ->list:
     return await get_students_by_group(group_code)
 
 @mcp.tool
-async def get_course_id_by_name_tool(course_name:str) ->int:
+async def get_course_id_by_name_tool(course_name:str) -> Optional[int]:
     """Get course id by course name"""
     return await get_course_id_by_name(course_name)
 
+
 @mcp.tool
-async def get_student_id_by_name_tool(fname:str ,lname:str) ->int:
+async def get_student_id_by_name_tool(fname:str, lname:str) -> Optional[int]:
     """Get student id by first and last name"""
-    return await get_student_id_by_name(fname,lname)
+    return await get_student_id_by_name(fname, lname)
 
 @mcp.tool
 async def update_enrollment_status_tool(student_id:int,course_id:int,status:str) ->str:

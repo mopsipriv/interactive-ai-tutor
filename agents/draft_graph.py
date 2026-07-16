@@ -189,15 +189,19 @@ async def enroll_agent(state: State):
         return {"enroll_result": ""}
     parts = enroll_student_name.split()
     if len(parts) < 2:
-        return {"enroll_result": ""}
+        return {"enroll_result": "Error: Student not found"}
     fname,lname = enroll_student_name.split()[:2]
     tools= await mcp_client.get_tools()
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname, "lname":lname})
+    if not raw_student_id:
+        return {"enroll_result": "Error: student not found"}
     idstudent = json.loads(raw_student_id[0]["text"])
 
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name": enroll_course_name})
+    if not raw_course_id:
+        return {"enroll_result": "Error: course not found"}
     idcourse = json.loads(raw_course_id[0]["text"])
 
     if idstudent is None:
@@ -209,7 +213,6 @@ async def enroll_agent(state: State):
     raw_enroll = await enroll_tool.ainvoke({"student_id":idstudent, "course_id":idcourse})
     enroll = raw_enroll[0]["text"]    
     return {"enroll_result": enroll}
-
 
 async def course_list_agent(state: State):
     new_issue=""
@@ -238,10 +241,14 @@ async def grade_agent(state: State):
     
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname, "lname":lname})
+    if not raw_student_id:
+        return {"grade_result": "Error: student not found"}
     idstudent = json.loads(raw_student_id[0]["text"])
     
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name":grade_course_name})
+    if not raw_course_id:
+        return {"grade_result": "Error: course not found"}
     idcourse = json.loads(raw_course_id[0]["text"])
     
     if idstudent is None:
@@ -263,12 +270,14 @@ async def profile_agent(state: State):
         return {"student_profile": ""}
     parts = filter_name.split()
     if len(parts) < 2:
-        return {"student_profile": ""}
+        return {"student_profile": "Error: please provide full name (first and last name)"}
     tools = await mcp_client.get_tools()
     fname,lname = filter_name.split()[:2]
    
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    if not raw_student_id:
+        return {"student_profile": f"Error: Student '{filter_name}' not found."}
     idstudent = json.loads(raw_student_id[0]["text"])
 
     get_profile_tool = next(t for t in tools if t.name == "get_student_profile_tool")
@@ -301,11 +310,16 @@ async def status_update_agent(state: State):
     fname,lname = status_student_name.split()[:2]
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    if not raw_student_id:
+        return {"status_update_result": "Error: student not found"}
     idstudent = json.loads(raw_student_id[0]["text"])
 
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name":status_course_name})
+    if not raw_course_id:
+        return {"status_update_result": "Error: course not found"}
     idcourse = json.loads(raw_course_id[0]["text"])
+    
     if idstudent is None:
         return {"status_update_result": "Error: student not found"}
     if idcourse is None:
@@ -575,7 +589,12 @@ async def main():
             elif command == "grade":
                 grade_student = input("Student name: ")
                 grade_course = input("Course name: ")
-                grade_value = input("Grade (1-5): ")
+                while True:
+                    grade_value = input("Grade (1-5): ")
+                    if grade_value in ["1", "2", "3", "4", "5"]:
+                        break
+                    print("Error: grade must be a number between 1 and 5. Try again.")
+
                 state["grade_student_name"] = grade_student
                 state["grade_course_name"] = grade_course
                 state["grade_value"] = grade_value
