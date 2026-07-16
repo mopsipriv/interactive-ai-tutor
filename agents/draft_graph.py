@@ -515,7 +515,7 @@ async def main():
             "risk_report": "", 
             "group_report": "",
             "filter_group": "", 
-            "bulk_group_code": "", ""
+            "bulk_group_code": "",
             "bulk_course_name": "",
             "bulk_enroll_result": "", 
             "eligibility_report": ""
@@ -567,10 +567,7 @@ async def main():
                 state["grade_course_name"] = grade_course
                 state["grade_value"] = grade_value
                 result = await app.ainvoke(state)
-                if not result["grade_result"]:
-                    print(f"Error: Student '{grade_student}', Course '{grade_course}' and Grade '{grade_value} not found'")
-                else:
-                    print(result["grade_result"])
+                print(result["grade_result"])
 
             elif command == "status":
                 status_student = input("Student name: ")
@@ -586,7 +583,10 @@ async def main():
                 group_code = input("Group code: ")
                 state["filter_group"] = group_code
                 result = await app.ainvoke(state)
-                print(result["group_report"])
+                if not result["group_report"]:
+                    print(f"Error: Group {group_code} not found.")
+                else:
+                    print(result["group_report"])
 
             elif command == "bulk":
                 bulk_group = input("Group code: ")
@@ -594,7 +594,10 @@ async def main():
                 state["bulk_group_code"] = bulk_group
                 state["bulk_course_name"] = bulk_course
                 result = await app.ainvoke(state)
-                print(result["bulk_enroll_result"])
+                if not result["bulk_enroll_result"]:
+                    print(f"Error: Group '{bulk_group}' or Course '{bulk_course}' not found.")
+                else:
+                    print(result["bulk_enroll_result"])
 
             elif command == "courses":
                 state["show_courses"] = True
