@@ -187,6 +187,9 @@ async def enroll_agent(state: State):
     enroll_course_name=state.get("enroll_course_name","")
     if enroll_student_name == "" or enroll_course_name == "":
         return {"enroll_result": ""}
+    parts = enroll_student_name.split()
+    if len(parts) < 2:
+        return {"enroll_result": ""}
     fname,lname = enroll_student_name.split()[:2]
     tools= await mcp_client.get_tools()
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
@@ -227,6 +230,9 @@ async def grade_agent(state: State):
     grade_value= state.get("grade_value","")
     if grade_student_name == "" or grade_course_name == "" or grade_value == "":
         return {"grade_result": ""}
+    parts = grade_student_name.split()
+    if len(parts) < 2:
+        return {"grade_result": "Error: Student or Course not found"}
     tools= await mcp_client.get_tools()
     fname,lname = grade_student_name.split()[:2]
     
@@ -254,6 +260,9 @@ async def profile_agent(state: State):
     new_issue=""
     filter_name = state.get("filter_name","")
     if filter_name == "":
+        return {"student_profile": ""}
+    parts = filter_name.split()
+    if len(parts) < 2:
         return {"student_profile": ""}
     tools = await mcp_client.get_tools()
     fname,lname = filter_name.split()[:2]
@@ -283,6 +292,10 @@ async def status_update_agent(state: State):
     status_value = state.get("status_value","")
     if status_student_name == "" or status_course_name == "" or status_value == "":
         return {"status_update_result": ""}
+    parts = status_student_name.split()
+    if len(parts) < 2:
+        return {"status_update_result": "Error: Student or Course not found"}
+    
     tools = await mcp_client.get_tools()
     
     fname,lname = status_student_name.split()[:2]
