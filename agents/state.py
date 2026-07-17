@@ -53,3 +53,5 @@ class State(TypedDict):
     eligibility_report: str
 
     student_recommendation: str
+
+    course_report: str

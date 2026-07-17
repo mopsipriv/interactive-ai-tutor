@@ -173,13 +173,18 @@ async def course_student_agent(state: State):
     if filter_course!="":
         get_students_course_tool = next(t for t in tools if t.name == "get_student_by_course_tool")
         raw_students_course = await get_students_course_tool.ainvoke({"course_name":filter_course})
+        if not raw_students_course:
+            return {"course_report": f"Error: Course '{filter_course}' not found."}
         students = json.loads(raw_students_course[0]["text"])
+
+        if not students:
+            return {"course_report": f"No students found on course '{filter_course}'."}
 
         new_issue = f"Students on course {filter_course}:\n"
         for student in students:
             new_issue += f"- {student['fname']} {student['lname']}: {student['status']}, grade: {student['grade']}\n"
 
-    return {"bot_analyze_text": new_issue}
+    return {"course_report": new_issue}
 
 
 async def enroll_agent(state: State):
@@ -369,7 +374,12 @@ async def group_report_agent(state:State):
     tools = await mcp_client.get_tools()
     get_students_group_tool = next(t for t in tools if t.name == "get_students_by_group_tool")
     raw_students_group = await get_students_group_tool.ainvoke({"group_code":filter_group})
+    if not raw_students_group:
+        return {"group_report": f"Error: Group '{filter_group}' not found."}
     students = json.loads(raw_students_group[0]["text"])
+
+    if not students:
+        return {"group_report": f"Error: No students found in group '{filter_group}'."}
 
     new_issue = f"Students in group {filter_group}:\n"
     for student in students:
@@ -388,11 +398,21 @@ async def bulk_enroll_agent(state: State):
     
     get_students_group_tool = next(t for t in tools if t.name == "get_students_by_group_tool")
     raw_students_group = await get_students_group_tool.ainvoke({"group_code":bulk_group_code})
+    if not raw_students_group:
+        return {"bulk_enroll_result": f"Error: Group '{bulk_group_code}' not found."}
     students = json.loads(raw_students_group[0]["text"])
+    
+    if not students:
+        return {"bulk_enroll_result": f"Error: No students found in group '{bulk_group_code}'."}
     
     get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
     raw_course_id = await get_course_id_tool.ainvoke({"course_name":bulk_course_code})
+    if not raw_course_id:
+        return {"bulk_enroll_result": f"Error: Course '{bulk_course_code}' not found."}
     idcourse = json.loads(raw_course_id[0]["text"])
+    
+    if idcourse is None:
+        return {"bulk_enroll_result": f"Error: Course '{bulk_course_code}' not found."}
     
     success_count = 0
     student_enroll_tool = next(t for t in tools if t.name == "enroll_student_tool")
@@ -404,6 +424,7 @@ async def bulk_enroll_agent(state: State):
             success_count += 1
     new_issue = f"Enrolled {success_count} out of {len(students)} students"
     return {"bulk_enroll_result": new_issue}
+
 
 async def student_recommendation_agent(state: State):
     profile = state.get("student_profile", "")
@@ -545,7 +566,8 @@ async def main():
             "bulk_group_code": "",
             "bulk_course_name": "",
             "bulk_enroll_result": "", 
-            "eligibility_report": ""
+            "eligibility_report": "",
+            "course_report": "" 
         }
 
         while True:
@@ -570,10 +592,7 @@ async def main():
                 course = input("Course name: ")
                 state["filter_course"] = course
                 result = await app.ainvoke(state)
-                if not result["bot_analyze_text"]:
-                    print(f"Error: Course '{course}' not found.")
-                else:
-                    print(result["bot_analyze_text"])
+                print(result["course_report"])
 
             elif command == "enroll":
                 enroll_name = input("Student name: ")
@@ -691,7 +710,8 @@ async def main():
             "bulk_group_code": "",
             "bulk_course_name": "",
             "bulk_enroll_result": "",
-            "eligibility_report": ""
+            "eligibility_report": "",
+            "course_report": "" 
         }
         while True:
             choice = input("What would you like to see? (profile / eligibility / recommend / exit): ")
