@@ -571,13 +571,15 @@ async def main():
         }
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
                 break
 
             state = base_state.copy()
+            tools = await mcp_client.get_tools()
+            log_tool = next(t for t in tools if t.name == "log_teacher_query_tool")
 
             if command == "profile":
                 name = input("Student name: ")
@@ -587,12 +589,24 @@ async def main():
                     print(f"Error: Student '{name}' not found.")
                 else:
                     print(result["student_profile"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"profile: {name}",
+                    "intent": "profile",
+                    "result": (result["student_profile"] or "not found")[:200]
+                })
 
             elif command == "course":
                 course = input("Course name: ")
                 state["filter_course"] = course
                 result = await app.ainvoke(state)
                 print(result["course_report"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"course: {course}",
+                    "intent": "course",
+                    "result": (result["course_report"] or "not found")[:200]
+                })
 
             elif command == "enroll":
                 enroll_name = input("Student name: ")
@@ -604,6 +618,12 @@ async def main():
                     print(f"Error: Student '{enroll_name}' and Course '{enroll_course}' not found.")
                 else:
                     print(result["enroll_result"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"enroll: {enroll_name} -> {enroll_course}",
+                    "intent": "enroll",
+                    "result": (result["enroll_result"] or "not found")[:200]
+                })
 
             elif command == "grade":
                 grade_student = input("Student name: ")
@@ -619,6 +639,12 @@ async def main():
                 state["grade_value"] = grade_value
                 result = await app.ainvoke(state)
                 print(result["grade_result"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"grade: {grade_student} -> {grade_course} = {grade_value}",
+                    "intent": "grade",
+                    "result": (result["grade_result"] or "not found")[:200]
+                })
 
             elif command == "status":
                 status_student = input("Student name: ")
@@ -629,6 +655,12 @@ async def main():
                 state["status_value"] = status_value
                 result = await app.ainvoke(state)
                 print(result["status_update_result"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"status: {status_student} -> {status_course} = {status_value}",
+                    "intent": "status",
+                    "result": (result["status_update_result"] or "not found")[:200]
+                })
 
             elif command == "group":
                 group_code = input("Group code: ")
@@ -638,6 +670,12 @@ async def main():
                     print(f"Error: Group {group_code} not found.")
                 else:
                     print(result["group_report"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"group: {group_code}",
+                    "intent": "group",
+                    "result": (result["group_report"] or "not found")[:200]
+                })
 
             elif command == "bulk":
                 bulk_group = input("Group code: ")
@@ -649,19 +687,47 @@ async def main():
                     print(f"Error: Group '{bulk_group}' or Course '{bulk_course}' not found.")
                 else:
                     print(result["bulk_enroll_result"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"bulk: {bulk_group} -> {bulk_course}",
+                    "intent": "bulk",
+                    "result": (result["bulk_enroll_result"] or "not found")[:200]
+                })
 
             elif command == "courses":
                 state["show_courses"] = True
                 result = await app.ainvoke(state)
                 print(result["courses_list"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": "courses: show all",
+                    "intent": "courses",
+                    "result": (result["courses_list"] or "")[:200]
+                })
 
             elif command == "risk":
                 result = await app.ainvoke(state)
                 print(result["risk_report"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": "risk: show report",
+                    "intent": "risk",
+                    "result": (result["risk_report"] or "")[:200]
+                })
+
+            elif command == "history":
+                history_tool = next(t for t in tools if t.name == "get_teacher_query_history_tool")
+                raw_history = await history_tool.ainvoke({"teacher_id": teacher["idteacher"], "limit": 10})
+                history = json.loads(raw_history[0]["text"]) if raw_history else []
+                if not history:
+                    print("No history found.")
+                else:
+                    print("Your recent queries:")
+                    for record in history:
+                        print(f"[{record['created_at']}] {record['intent']}: {record['query_text']}")
 
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/exit")
-
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/exit")
 
     
     if role == "student":

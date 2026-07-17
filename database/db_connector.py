@@ -1,4 +1,5 @@
 import aiomysql
+from datetime import datetime
 
 DB_CONFIG = {
     "host": "127.0.0.1",
@@ -246,3 +247,30 @@ async def set_student_password(student_id:int, password_hash:str):
         return "Student's password updated successfully"
     except Exception as e:
         return f"Error: {e}"
+    
+async def log_teacher_query(teacher_id:int, query_text:str, intent:str, result:str):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """INSERT INTO teacher_query_log (idteacher, query_text, intent, result, created_at) 
+                VALUES (%s, %s, %s, %s, %s) """,
+                (teacher_id, query_text, intent, result, datetime.now(),)
+            )
+            await conn.commit()
+            conn.close()
+        return "Logged successfully"
+    except Exception as e:
+        return f"Error: {e}"
+    
+async def get_teacher_query_history(teacher_id:int,limit=10):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT * FROM teacher_query_log WHERE idteacher= %s
+            ORDER BY created_at DESC LIMIT %s""",
+            (teacher_id,limit,)
+        )
+        result = await cur.fetchall()
+    conn.close()
+    return result if result else []
