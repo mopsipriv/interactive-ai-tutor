@@ -600,7 +600,11 @@ async def main():
                 course = input("Course name: ")
                 state["filter_course"] = course
                 result = await app.ainvoke(state)
-                print(result["course_report"])
+                if "not found" in result["course_report"]:
+                    print(result["course_report"])
+                    print("Tip: use 'courses' command to see all available courses.")
+                else:
+                    print(result["course_report"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
                     "query_text": f"course: {course}",
@@ -608,14 +612,16 @@ async def main():
                     "result": (result["course_report"] or "not found")[:200]
                 })
 
+
             elif command == "enroll":
                 enroll_name = input("Student name: ")
                 enroll_course = input("Course name: ")
                 state["enroll_student_name"] = enroll_name
                 state["enroll_course_name"] = enroll_course
                 result = await app.ainvoke(state)
-                if not result["enroll_result"]:
-                    print(f"Error: Student '{enroll_name}' and Course '{enroll_course}' not found.")
+                if "Error" in result["enroll_result"]:
+                    print(result["enroll_result"])
+                    print("Tip: use 'courses' command to see all available courses.")
                 else:
                     print(result["enroll_result"])
                 await log_tool.ainvoke({
@@ -624,6 +630,7 @@ async def main():
                     "intent": "enroll",
                     "result": (result["enroll_result"] or "not found")[:200]
                 })
+                
 
             elif command == "grade":
                 grade_student = input("Student name: ")
@@ -638,7 +645,11 @@ async def main():
                 state["grade_course_name"] = grade_course
                 state["grade_value"] = grade_value
                 result = await app.ainvoke(state)
-                print(result["grade_result"])
+                if "Error" in result["grade_result"]:
+                    print(result["grade_result"])
+                    print("Tip: use 'courses' command to see all available courses.")
+                else:
+                    print(result["grade_result"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
                     "query_text": f"grade: {grade_student} -> {grade_course} = {grade_value}",
@@ -654,7 +665,11 @@ async def main():
                 state["status_course_name"] = status_course
                 state["status_value"] = status_value
                 result = await app.ainvoke(state)
-                print(result["status_update_result"])
+                if "Error" in result["status_update_result"]:
+                    print(result["status_update_result"])
+                    print("Tip: use 'courses' command to see all available courses.")
+                else:
+                    print(result["status_update_result"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
                     "query_text": f"status: {status_student} -> {status_course} = {status_value}",
@@ -685,6 +700,7 @@ async def main():
                 result = await app.ainvoke(state)
                 if not result["bulk_enroll_result"]:
                     print(f"Error: Group '{bulk_group}' or Course '{bulk_course}' not found.")
+                    print("Tip: use 'courses' command to see all available courses.")
                 else:
                     print(result["bulk_enroll_result"])
                 await log_tool.ainvoke({
