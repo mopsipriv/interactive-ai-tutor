@@ -796,7 +796,10 @@ async def main():
             "course_report": "" 
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / exit): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / exit): ")
+
+            state = initial_state.copy()
+            tools = await mcp_client.get_tools()
 
             if choice == "exit":
                 print("Goodbye!")
@@ -815,7 +818,14 @@ async def main():
                 result = await app.ainvoke(initial_state)
                 print("Your personal recommendation:")
                 print(result["student_recommendation"])
-        
-        return
 
-asyncio.run(main())
+            elif choice == "courses":
+                state["show_courses"] = True
+                result = await app.ainvoke(state)
+                print(result["courses_list"])
+            
+            else:
+                print("Unknown command. Try: profile / eligibility / recommend / courses / exit")
+
+if __name__ == "__main__":
+    asyncio.run(main())
