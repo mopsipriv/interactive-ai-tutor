@@ -433,7 +433,7 @@ async def student_recommendation_agent(state: State):
     
     response = client.chat.completions.create(
         messages=[
-            {"role": "system", "content": "You are a friendly academic advisor AI. You receive a student's actual course data, eligibility status, and progress info. Reference SPECIFIC courses, grades, and situations by name from the data provided. Give concrete, actionable next steps (e.g. 'finish course X to unlock project Y'). Be encouraging but specific. Maximum 100 words."},
+            {"role": "system", "content": "You are a friendly academic advisor AI. You receive a student's actual course data, eligibility status, and progress info. Reference SPECIFIC courses, grades, and situations by name from the data provided. Give concrete, actionable next steps (e.g. 'finish course X to unlock project Y').  Be encouraging but specific.  Maximum 100 words."},
             {"role": "user", "content": f"Student profile:\n{profile}\n\nProject eligibility:\n{eligibility}\n\nProgress status:\n{progress}"}
         ],
         model="llama-3.3-70b-versatile",
@@ -660,7 +660,12 @@ async def main():
             elif command == "status":
                 status_student = input("Student name: ")
                 status_course = input("Course name: ")
-                status_value = input("Status (planned/ongoing/completed): ")
+                while True:
+                    status_value = input("Status (planned/ongoing/completed): ")
+                    if status_value in ["planned","ongoing","completed"]:
+                        break
+                    print("Error: status must be only planned or ongoing or completed. Try again")
+                    
                 state["status_student_name"] = status_student
                 state["status_course_name"] = status_course
                 state["status_value"] = status_value
