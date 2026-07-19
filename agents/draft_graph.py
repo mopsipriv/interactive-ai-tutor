@@ -514,6 +514,48 @@ async def student_plan_agent(state: State):
     return {"student_plan": new_issue}
 
 
+async def analytics_report_agent(state: State):
+    filter_analytics = state.get("filter_analytics","")
+    if filter_analytics == "":
+        return {"analytics_report": ""}
+    
+    tools = await mcp_client.get_tools()
+
+    if filter_analytics== "courses":
+        get_analytics_tool = next(t for t in tools if t.name == "get_course_analytics_tool")
+        raw_analytics = await get_analytics_tool.ainvoke({})
+        if not raw_analytics:
+            return {"analytics_report": "Error: no analytics data found."}
+        analytics = json.loads(raw_analytics[0]["text"])
+
+        new_issue = "=== Course Analytics ===\n"
+        for course in analytics:
+            total = course["total_students"]
+            completed = int(course["completed_count"])
+            avg = round(float(course["avg_grade"]), 1) if course["avg_grade"] else "N/A"
+            percent = round(completed / total * 100) if total > 0 else 0
+            new_issue += f"{course['course_code']} {course['course_name']}:\n"
+            new_issue += f"  Students: {total} | Avg grade: {avg} | Completed: {completed}/{total} ({percent}%)\n"
+    
+        return {"analytics_report": new_issue}
+
+    elif filter_analytics == "group":
+        filter_group = state.get("filter_group", "")
+        if filter_group == "":
+            return {"analytics_report": "Error: group code not provided."}
+        
+        get_gr_analytics_tool = next(t for t in tools if t.name == "get_group_analytics_tool")
+        raw_gr_analytics = await get_gr_analytics_tool.ainvoke({"group_code": filter_group})
+        if not raw_gr_analytics:
+            return {"analytics_report": f"Error: Group '{filter_group}' not found."}
+        analytics = json.loads(raw_gr_analytics[0]["text"])
+        
+        new_issue = f"=== Group Analytics: {filter_group} ===\n"
+        new_issue += f"Total students: {analytics['total_students']}\n"
+        new_issue += f"Average credits earned: {analytics['avg_credits_earned']}\n"
+        
+        return {"analytics_report": new_issue}
+
 def route_after_status(state: State):
     allowed = state.get("is_allowed",True)
 
@@ -546,6 +588,7 @@ graph.add_node("bulk_enroll_node",bulk_enroll_agent)
 graph.add_node("student_recommendation_note",student_recommendation_agent)
 graph.add_node("curriculum_node", curriculum_agent)
 graph.add_node("student_plan_node", student_plan_agent)
+graph.add_node("analytics_report_node", analytics_report_agent)
 
 
 graph.add_edge(START, "fetch_node")
@@ -568,6 +611,8 @@ graph.add_edge(START, "curriculum_node")
 graph.add_edge("curriculum_node", END)
 graph.add_edge(START, "student_plan_node")
 graph.add_edge("student_plan_node", END)
+graph.add_edge(START, "analytics_report_node")
+graph.add_edge("analytics_report_node", END)
 graph.add_edge("profile_node", "student_recommendation_note")
 graph.add_edge("eligibility_node", "student_recommendation_note")
 graph.add_edge("fetch_node", "risk_report_node")
@@ -647,11 +692,13 @@ async def main():
             "course_report": "",
             "filter_program": "",
             "curriculum_info": "",
-            "student_plan": ""
+            "student_plan": "",
+            "filter_analytics": "",
+            "analytics_report": ""
         }
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
@@ -842,8 +889,24 @@ async def main():
                     "result": result["curriculum_info"][:200]
                 })
 
+            elif command == "analytics":
+                print("Analytics type: (courses / group)")
+                analytics_type = input("Type: ")
+                state["filter_analytics"] = analytics_type
+                if analytics_type == "group":
+                    group = input("Group code: ")
+                    state["filter_group"] = group
+                result = await app.ainvoke(state)
+                print(result["analytics_report"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"analytics: {analytics_type}",
+                    "intent": "analytics",
+                    "result": result["analytics_report"][:200]
+                })
+
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/exit")
 
     
     if role == "student":
@@ -896,7 +959,9 @@ async def main():
             "course_report": "",
             "filter_program": "",
             "curriculum_info": "",
-            "student_plan": ""
+            "student_plan": "",
+            "filter_analytics": "",
+            "analytics_report": ""
         }
         while True:
             choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / exit): ")

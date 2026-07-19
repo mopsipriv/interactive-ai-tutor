@@ -332,3 +332,53 @@ async def get_student_curriculum_progress(student_id:int, program_code:str):
     return result if result else []
 
 
+async def get_course_analytics():
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT c.course_name, c.course_code,
+                COUNT(*) as total_students,
+                AVG(e.grade) as avg_grade,
+                SUM(CASE WHEN e.status = 'completed' THEN 1 ELSE 0 END) as completed_count
+                FROM enrollment e
+                JOIN course c ON e.idcourse = c.idcourse
+                GROUP BY e.idcourse, c.course_name, c.course_code
+                ORDER BY c.course_code"""
+        )
+        result = await cur.fetchall()
+    conn.close()
+    return result if result else []
+
+
+async def get_group_analytics(group_code: str):
+    students = await get_students_by_group(group_code)
+    if not students:
+        return []
+    
+    conn = await aiomysql.connect(**DB_CONFIG)
+    all_credits = []
+    
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        for student in students:
+            await cur.execute(
+                """SELECT SUM(c.credit) as credits_earned
+                FROM enrollment e
+                JOIN course c ON e.idcourse = c.idcourse
+                WHERE e.idstudent = %s AND e.status = 'completed'""",
+                (student["idstudent"],)
+            )
+            result = await cur.fetchone()
+            credits = result["credits_earned"] or 0
+            all_credits.append(credits)
+    
+    conn.close()
+    
+    avg_credits = sum(all_credits) / len(students)
+    
+    return {
+        "group_code": group_code,
+        "total_students": len(students),
+        "avg_credits_earned": round(avg_credits, 1)
+    }
+
+
