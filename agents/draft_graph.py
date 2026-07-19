@@ -7,7 +7,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_all_students, get_student_enrollments, get_student_by_course,get_course_id_by_name,get_student_id_by_name,enroll_student,get_all_courses,update_grade,get_student_profile,update_enrollment_status,get_students_by_group, get_teacher_by_email, get_student_by_number
+from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
