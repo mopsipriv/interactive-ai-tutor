@@ -433,7 +433,7 @@ async def student_recommendation_agent(state: State):
     
     response = client.chat.completions.create(
         messages=[
-            {"role": "system", "content": "You are a friendly academic advisor AI. You receive a student's actual course data, eligibility status, and progress info. Reference SPECIFIC courses, grades, and situations by name from the data provided. Give concrete, actionable next steps (e.g. 'finish course X to unlock project Y'). Be encouraging but specific. Maximum 100 words."},
+            {"role": "system", "content": "You are a friendly academic advisor AI. You receive a student's actual course data, eligibility status, and progress info. Reference SPECIFIC courses, grades, and situations by name from the data provided. Give concrete, actionable next steps (e.g. 'finish course X to unlock project Y').  Be encouraging but specific.  Maximum 100 words."},
             {"role": "user", "content": f"Student profile:\n{profile}\n\nProject eligibility:\n{eligibility}\n\nProgress status:\n{progress}"}
         ],
         model="llama-3.3-70b-versatile",
@@ -441,6 +441,77 @@ async def student_recommendation_agent(state: State):
     )
     return {"student_recommendation": response.choices[0].message.content}
 
+async def curriculum_agent(state: State):
+    filter_program = state.get("filter_program", "")
+    if filter_program == "":
+        return {"curriculum_info": ""}
+    
+    tools = await mcp_client.get_tools()
+
+    curriculum_tool = next(t for t in tools if t.name == "get_curriculum_tool")
+    raw_curriculum = await curriculum_tool.ainvoke({"program_code":filter_program})
+    if not raw_curriculum:
+        return {"curriculum_info": f"Error: Program '{filter_program}' not found."}
+    curriculum = json.loads(raw_curriculum[0]["text"])
+    new_issue = f"=== Curriculum: {filter_program} ===\n"
+    current_semester = None
+    for course in curriculum:
+        if course["semester"] != current_semester:
+            current_semester = course["semester"]
+            new_issue += f"\nSemester {current_semester}:\n"
+        new_issue += f"  - {course['course_name']} ({course['credit']}cr) [{course['course_type']}]\n"
+    
+    return {"curriculum_info": new_issue}
+
+
+async def student_plan_agent(state: State):
+    filter_name = state.get("filter_name","")
+    filter_program = state.get("filter_program","")
+    if filter_name == "" or filter_program == "" :
+        return {"student_plan":""}
+    
+    tools = await mcp_client.get_tools()
+
+    parts = filter_name.split()
+    if len(parts) < 2:
+        return {"student_plan": "Error: please provide full name"}
+    fname, lname = parts[:2]
+    get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
+    raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    if not raw_student_id:
+        return {"student_plan": "Error: student not found"}
+    idstudent = json.loads(raw_student_id[0]["text"])
+
+    get_student_by_curriculum_tool = next(t for t in tools if t.name == "get_student_curriculum_progress_tool")
+    raw_student_curriculum = await get_student_by_curriculum_tool.ainvoke({"student_id": idstudent, "program_code": filter_program})
+    if not raw_student_curriculum:
+        return {"student_plan": f"Error: No curriculum found for program '{filter_program}'."}
+    progress = json.loads(raw_student_curriculum[0]["text"])
+
+    new_issue = f"=== Study Plan: {filter_name} ({filter_program}) ===\n"
+    current_semester = None
+    for course in progress:
+        if course["semester"] != current_semester:
+            current_semester = course["semester"]
+            new_issue += f"\nSemester {current_semester}:\n"
+        
+        status = course["enrollment_status"]
+        if status == "completed":
+            icon = "✅"
+            detail = f"completed, grade: {course['grade']}"
+        elif status == "ongoing":
+            icon = "🔄"
+            detail = "ongoing"
+        elif status == "planned":
+            icon = "📋"
+            detail = "planned"
+        else:
+            icon = "❌"
+            detail = "not enrolled yet"
+        
+        new_issue += f"  {icon} {course['course_name']} ({course['credit']}cr) - {detail}\n"
+    
+    return {"student_plan": new_issue}
 
 
 def route_after_status(state: State):
@@ -473,6 +544,8 @@ graph.add_node("risk_report_node",risk_report_agent)
 graph.add_node("group_report_node",group_report_agent)
 graph.add_node("bulk_enroll_node",bulk_enroll_agent)
 graph.add_node("student_recommendation_note",student_recommendation_agent)
+graph.add_node("curriculum_node", curriculum_agent)
+graph.add_node("student_plan_node", student_plan_agent)
 
 
 graph.add_edge(START, "fetch_node")
@@ -491,6 +564,10 @@ graph.add_edge(START,"group_report_node")
 graph.add_edge("group_report_node",END)
 graph.add_edge(START,"bulk_enroll_node")
 graph.add_edge("bulk_enroll_node",END)
+graph.add_edge(START, "curriculum_node")
+graph.add_edge("curriculum_node", END)
+graph.add_edge(START, "student_plan_node")
+graph.add_edge("student_plan_node", END)
 graph.add_edge("profile_node", "student_recommendation_note")
 graph.add_edge("eligibility_node", "student_recommendation_note")
 graph.add_edge("fetch_node", "risk_report_node")
@@ -567,11 +644,14 @@ async def main():
             "bulk_course_name": "",
             "bulk_enroll_result": "", 
             "eligibility_report": "",
-            "course_report": "" 
+            "course_report": "",
+            "filter_program": "",
+            "curriculum_info": "",
+            "student_plan": ""
         }
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
@@ -600,7 +680,11 @@ async def main():
                 course = input("Course name: ")
                 state["filter_course"] = course
                 result = await app.ainvoke(state)
-                print(result["course_report"])
+                if "not found" in result["course_report"]:
+                    print(result["course_report"])
+                    print("Tip: use 'courses' command to see all available courses.")
+                else:
+                    print(result["course_report"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
                     "query_text": f"course: {course}",
@@ -608,14 +692,16 @@ async def main():
                     "result": (result["course_report"] or "not found")[:200]
                 })
 
+
             elif command == "enroll":
                 enroll_name = input("Student name: ")
                 enroll_course = input("Course name: ")
                 state["enroll_student_name"] = enroll_name
                 state["enroll_course_name"] = enroll_course
                 result = await app.ainvoke(state)
-                if not result["enroll_result"]:
-                    print(f"Error: Student '{enroll_name}' and Course '{enroll_course}' not found.")
+                if "Error" in result["enroll_result"]:
+                    print(result["enroll_result"])
+                    print("Tip: use 'courses' command to see all available courses.")
                 else:
                     print(result["enroll_result"])
                 await log_tool.ainvoke({
@@ -624,6 +710,7 @@ async def main():
                     "intent": "enroll",
                     "result": (result["enroll_result"] or "not found")[:200]
                 })
+                
 
             elif command == "grade":
                 grade_student = input("Student name: ")
@@ -638,7 +725,11 @@ async def main():
                 state["grade_course_name"] = grade_course
                 state["grade_value"] = grade_value
                 result = await app.ainvoke(state)
-                print(result["grade_result"])
+                if "Error" in result["grade_result"]:
+                    print(result["grade_result"])
+                    print("Tip: use 'courses' command to see all available courses.")
+                else:
+                    print(result["grade_result"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
                     "query_text": f"grade: {grade_student} -> {grade_course} = {grade_value}",
@@ -649,12 +740,21 @@ async def main():
             elif command == "status":
                 status_student = input("Student name: ")
                 status_course = input("Course name: ")
-                status_value = input("Status (planned/ongoing/completed): ")
+                while True:
+                    status_value = input("Status (planned/ongoing/completed): ")
+                    if status_value in ["planned","ongoing","completed"]:
+                        break
+                    print("Error: status must be only planned or ongoing or completed. Try again")
+                    
                 state["status_student_name"] = status_student
                 state["status_course_name"] = status_course
                 state["status_value"] = status_value
                 result = await app.ainvoke(state)
-                print(result["status_update_result"])
+                if "Error" in result["status_update_result"]:
+                    print(result["status_update_result"])
+                    print("Tip: use 'courses' command to see all available courses.")
+                else:
+                    print(result["status_update_result"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
                     "query_text": f"status: {status_student} -> {status_course} = {status_value}",
@@ -685,6 +785,7 @@ async def main():
                 result = await app.ainvoke(state)
                 if not result["bulk_enroll_result"]:
                     print(f"Error: Group '{bulk_group}' or Course '{bulk_course}' not found.")
+                    print("Tip: use 'courses' command to see all available courses.")
                 else:
                     print(result["bulk_enroll_result"])
                 await log_tool.ainvoke({
@@ -726,8 +827,23 @@ async def main():
                     for record in history:
                         print(f"[{record['created_at']}] {record['intent']}: {record['query_text']}")
 
+            elif command == "curriculum":
+                program = input("Program code (e.g. TVT): ")
+                state["filter_program"] = program
+                result = await app.ainvoke(state)
+                if "Error" in result["curriculum_info"]:
+                    print(result["curriculum_info"])
+                else:
+                    print(result["curriculum_info"])
+                await log_tool.ainvoke({
+                    "teacher_id": teacher["idteacher"],
+                    "query_text": f"curriculum: {program}",
+                    "intent": "curriculum",
+                    "result": result["curriculum_info"][:200]
+                })
+
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/exit")
 
     
     if role == "student":
@@ -777,10 +893,16 @@ async def main():
             "bulk_course_name": "",
             "bulk_enroll_result": "",
             "eligibility_report": "",
-            "course_report": "" 
+            "course_report": "",
+            "filter_program": "",
+            "curriculum_info": "",
+            "student_plan": ""
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / exit): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / exit): ")
+
+            state = initial_state.copy()
+            tools = await mcp_client.get_tools()
 
             if choice == "exit":
                 print("Goodbye!")
@@ -799,7 +921,19 @@ async def main():
                 result = await app.ainvoke(initial_state)
                 print("Your personal recommendation:")
                 print(result["student_recommendation"])
-        
-        return
 
-asyncio.run(main())
+            elif choice == "courses":
+                state["show_courses"] = True
+                result = await app.ainvoke(state)
+                print(result["courses_list"])
+
+            elif choice == "plan":
+                state["filter_program"] = "TVT"
+                result = await app.ainvoke(state)
+                print(result["student_plan"])
+            
+            else:
+                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / exit")
+
+if __name__ == "__main__":
+    asyncio.run(main())
