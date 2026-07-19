@@ -16,7 +16,9 @@ from database.db_connector import (
     get_courses_from_db,
     get_student_enrollments,
     get_teacher_query_history,
-    log_teacher_query
+    log_teacher_query,
+    get_curriculum,
+    get_student_curriculum_progress
 )
 
 mcp = FastMCP("Tutor Server")
@@ -96,6 +98,16 @@ async def log_teacher_query_tool(teacher_id:int, query_text:str, intent:str, res
 async def get_teacher_query_history_tool(teacher_id:int,limit=10)->list:
     """Function getting history"""
     return await get_teacher_query_history(teacher_id,limit)
+
+@mcp.tool
+async def get_curriculum_tool(program_code: str)->list:
+    """Get full curriculum for a program"""
+    return await get_curriculum(program_code)
+
+@mcp.tool
+async def get_student_curriculum_progress_tool(student_id:int , program_code:str)->list:
+    """Get student's progress through the curriculum"""
+    return await get_student_curriculum_progress(student_id, program_code)
 
 
 if __name__=="__main__":

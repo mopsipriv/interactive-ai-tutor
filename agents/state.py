@@ -55,3 +55,7 @@ class State(TypedDict):
     student_recommendation: str
 
     course_report: str
+
+    filter_program: str
+    curriculum_info: str
+    student_plan: str

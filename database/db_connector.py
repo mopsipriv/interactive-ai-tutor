@@ -274,3 +274,61 @@ async def get_teacher_query_history(teacher_id:int,limit=10):
         result = await cur.fetchall()
     conn.close()
     return result if result else []
+
+async def get_curriculum(program_code:str):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT cu.semester, cu.course_type, c.course_name, c.course_code, c.credit
+            FROM curriculum cu
+            JOIN course c ON cu.idcourse = c.idcourse
+            WHERE cu.program_code = %s
+            ORDER BY cu.semester """,
+            (program_code,)
+        )
+        result = await cur.fetchall()
+    conn.close()
+    return result if result else []
+
+async def get_student_curriculum_progress(student_id:int, program_code:str):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT cu.semester, cu.course_type, cu.idcourse, c.course_name, c.course_code, c.credit
+            FROM curriculum cu
+            JOIN course c ON cu.idcourse = c.idcourse
+            WHERE cu.program_code = %s
+            ORDER BY cu.semester""",
+            (program_code,)
+        )
+        curriculum = await cur.fetchall()
+        
+
+        await cur.execute(
+            """SELECT idcourse, status, grade
+            FROM enrollment
+            WHERE idstudent = %s""",
+            (student_id,)
+        )
+        enrollments = await cur.fetchall()
+    
+    conn.close()
+    
+    enrollment_map = {}
+    for e in enrollments:
+        enrollment_map[e["idcourse"]] = {"status": e["status"], "grade": e["grade"]}
+    
+    result = []
+    for course in curriculum:
+        idcourse = course["idcourse"]
+        if idcourse in enrollment_map:
+            course["enrollment_status"] = enrollment_map[idcourse]["status"]
+            course["grade"] = enrollment_map[idcourse]["grade"]
+        else:
+            course["enrollment_status"] = "not_enrolled"
+            course["grade"] = None
+        result.append(course)
+    
+    return result if result else []
+
+
