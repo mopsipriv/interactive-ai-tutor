@@ -59,3 +59,6 @@ class State(TypedDict):
     filter_program: str
     curriculum_info: str
     student_plan: str
+
+    filter_analytics: str
+    analytics_report: str
