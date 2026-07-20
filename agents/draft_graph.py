@@ -567,64 +567,85 @@ def route_after_status(state: State):
 
 graph=StateGraph(State)
 
-graph.add_node("fetch_node",fetch_students_agent)
+def router_by_command(state: State):
+    cmd = state.get("command", "")
+    routes = {
+        # Teacher commands
+        "profile": "profile_node",
+        "course": "course_students_node",
+        "enroll": "enroll_node",
+        "grade": "grade_node",
+        "status": "update_status_node",
+        "group": "group_report_node",
+        "bulk": "bulk_enroll_node",
+        "courses": "course_list_node",
+        "curriculum": "curriculum_node",
+        "analytics": "analytics_report_node",
+        # Commands requiring fetch first
+        "risk": "fetch_node",
+        # Student commands
+        "eligibility": "fetch_node",
+        "recommend": "profile_node",
+        "plan": "student_plan_node",
+    }
+    return routes.get(cmd, END)
+
+graph = StateGraph(State)
+
+# adding nodes
+graph.add_node("fetch_node", fetch_students_agent)
 graph.add_node("progress_node", progress_agent)
 graph.add_node("study_right_node", study_right_agent)
-graph.add_node("recommendation_node", recommendation_agent)
-graph.add_node("status_node",status_agent)
-graph.add_node("analytics_node",analytics_agent)
 graph.add_node("eligibility_node", eligibility_agent)
-graph.add_node("course_students_node",course_student_agent)
-graph.add_node("enroll_node",enroll_agent)
-graph.add_node("calendar_node",calendar_agent)
-graph.add_node("communication_node",communication_agent)
-graph.add_node("course_list_node", course_list_agent)
+graph.add_node("calendar_node", calendar_agent)
+graph.add_node("risk_report_node", risk_report_agent)
+graph.add_node("status_node", status_agent)
+graph.add_node("analytics_node", analytics_agent)
+graph.add_node("recommendation_node", recommendation_agent)
+graph.add_node("communication_node", communication_agent)
+graph.add_node("course_students_node", course_student_agent)
+graph.add_node("enroll_node", enroll_agent)
 graph.add_node("grade_node", grade_agent)
-graph.add_node("profile_node",profile_agent)
-graph.add_node("update_status_node",status_update_agent)
-graph.add_node("risk_report_node",risk_report_agent)
-graph.add_node("group_report_node",group_report_agent)
-graph.add_node("bulk_enroll_node",bulk_enroll_agent)
-graph.add_node("student_recommendation_note",student_recommendation_agent)
+graph.add_node("update_status_node", status_update_agent)
+graph.add_node("group_report_node", group_report_agent)
+graph.add_node("bulk_enroll_node", bulk_enroll_agent)
+graph.add_node("course_list_node", course_list_agent)
 graph.add_node("curriculum_node", curriculum_agent)
-graph.add_node("student_plan_node", student_plan_agent)
 graph.add_node("analytics_report_node", analytics_report_agent)
+graph.add_node("profile_node", profile_agent)
+graph.add_node("student_recommendation_node", student_recommendation_agent)
+graph.add_node("student_plan_node", student_plan_agent)
 
+# start
+graph.add_conditional_edges(START, router_by_command)
 
-graph.add_edge(START, "fetch_node")
-graph.add_edge(START, "course_students_node")
-graph.add_edge(START, "enroll_node")
-graph.add_edge("enroll_node", END)
-graph.add_edge(START, "course_list_node")
-graph.add_edge("course_list_node", END)
-graph.add_edge(START, "grade_node")
-graph.add_edge("grade_node", END)
-graph.add_edge(START,"profile_node")
-graph.add_edge("profile_node",END)
-graph.add_edge(START,"update_status_node")
-graph.add_edge("update_status_node",END)
-graph.add_edge(START,"group_report_node")
-graph.add_edge("group_report_node",END)
-graph.add_edge(START,"bulk_enroll_node")
-graph.add_edge("bulk_enroll_node",END)
-graph.add_edge(START, "curriculum_node")
-graph.add_edge("curriculum_node", END)
-graph.add_edge(START, "student_plan_node")
-graph.add_edge("student_plan_node", END)
-graph.add_edge(START, "analytics_report_node")
-graph.add_edge("analytics_report_node", END)
-graph.add_edge("profile_node", "student_recommendation_note")
-graph.add_edge("eligibility_node", "student_recommendation_note")
-graph.add_edge("fetch_node", "risk_report_node")
-graph.add_edge("risk_report_node", "status_node")
+# simple nodes
+simple_nodes = [
+    "enroll_node", "course_list_node", "grade_node",
+    "update_status_node", "group_report_node", "bulk_enroll_node",
+    "curriculum_node", "analytics_report_node", "student_plan_node",
+    "course_students_node"
+]
+for node in simple_nodes:
+    graph.add_edge(node, END)
+
+# profile/recommendation
+graph.add_edge("profile_node", "student_recommendation_node")
+graph.add_edge("student_recommendation_node", END)
+
+# risk/eligibility/recommend
 graph.add_edge("fetch_node", "progress_node")
-graph.add_edge("course_students_node", "status_node")
 graph.add_edge("fetch_node", "study_right_node")
-graph.add_edge("study_right_node", "status_node")     
-graph.add_edge("progress_node", "status_node")
 graph.add_edge("fetch_node", "eligibility_node")
-graph.add_edge("eligibility_node", "status_node")
 graph.add_edge("fetch_node", "calendar_node")
+graph.add_edge("fetch_node", "risk_report_node")
+
+graph.add_edge("progress_node", "status_node")
+graph.add_edge("study_right_node", "status_node")
+graph.add_edge("eligibility_node", "status_node")
+graph.add_edge("calendar_node", "status_node")
+graph.add_edge("risk_report_node", "status_node")
+
 graph.add_conditional_edges(
     "status_node",
     route_after_status,
@@ -634,11 +655,11 @@ graph.add_conditional_edges(
     }
 )
 graph.add_edge("analytics_node", "recommendation_node")
-graph.add_edge("analytics_node","communication_node")
-graph.add_edge("calendar_node", "status_node")
+graph.add_edge("analytics_node", "communication_node")
+graph.add_edge("recommendation_node", END)
 graph.add_edge("communication_node", END)
 
-app=graph.compile()
+app = graph.compile()
 
 async def main():
     role = input("Are you a teacher or student? (teacher/student): ")
@@ -694,7 +715,8 @@ async def main():
             "curriculum_info": "",
             "student_plan": "",
             "filter_analytics": "",
-            "analytics_report": ""
+            "analytics_report": "",
+            "command":""
         }
 
         while True:
@@ -706,6 +728,7 @@ async def main():
 
             state = base_state.copy()
             tools = await mcp_client.get_tools()
+            state["command"] = command
             log_tool = next(t for t in tools if t.name == "log_teacher_query_tool")
 
             if command == "profile":
@@ -961,13 +984,15 @@ async def main():
             "curriculum_info": "",
             "student_plan": "",
             "filter_analytics": "",
-            "analytics_report": ""
+            "analytics_report": "",
+            "command":""
         }
         while True:
             choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / exit): ")
 
             state = initial_state.copy()
             tools = await mcp_client.get_tools()
+            state["command"] = choice
 
             if choice == "exit":
                 print("Goodbye!")

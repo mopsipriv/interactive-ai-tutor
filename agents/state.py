@@ -62,3 +62,5 @@ class State(TypedDict):
 
     filter_analytics: str
     analytics_report: str
+
+    command: str
