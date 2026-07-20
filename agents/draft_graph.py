@@ -556,23 +556,21 @@ async def analytics_report_agent(state: State):
         new_issue += f"Average credits earned: {analytics['avg_credits_earned']}\n"
         
         return {"analytics_report": new_issue}
-
-def route_after_status(state: State):
-    cmd = state.get("command","")
-    if cmd =="recommend":
-        return "go_to_profile"
-    
-    allowed=state.get("is_allowed",True)
-    if not allowed:
-        return "go_to_analytics"
-    else:
-        return "go_to_end"
     
 
 def router_by_command(state: State):
     cmd = state.get("command", "")
+    role = state.get("user_role", "student")
+    
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk"]
+    student_commands = ["profile", "eligibility", "recommend", "courses", "plan"]
+    
+    if role == "student" and cmd not in student_commands:
+        return END
+    if role == "teacher" and cmd not in teacher_commands:
+        return END
+
     routes = {
-        # Teacher commands
         "profile": "profile_node",
         "course": "course_students_node",
         "enroll": "enroll_node",
@@ -583,14 +581,26 @@ def router_by_command(state: State):
         "courses": "course_list_node",
         "curriculum": "curriculum_node",
         "analytics": "analytics_report_node",
-        # Commands requiring fetch first
         "risk": "fetch_node",
-        # Student commands
         "eligibility": "fetch_node",
         "recommend": "fetch_node",
         "plan": "student_plan_node",
     }
     return routes.get(cmd, END)
+
+
+def route_after_status(state: State):
+    cmd = state.get("command", "")
+    if cmd == "recommend":
+        return "go_to_profile"
+    if cmd == "eligibility":
+        return "go_to_end"
+    
+    allowed = state.get("is_allowed", True)
+    if not allowed:
+        return "go_to_analytics"
+    else:
+        return "go_to_end"
 
 graph = StateGraph(State)
 
@@ -637,15 +647,10 @@ graph.add_edge("student_recommendation_node", END)
 
 # risk/eligibility/recommend
 graph.add_edge("fetch_node", "progress_node")
-graph.add_edge("fetch_node", "study_right_node")
-graph.add_edge("fetch_node", "eligibility_node")
-graph.add_edge("fetch_node", "calendar_node")
-graph.add_edge("fetch_node", "risk_report_node")
-
-graph.add_edge("progress_node", "status_node")
-graph.add_edge("study_right_node", "status_node")
-graph.add_edge("eligibility_node", "status_node")
-graph.add_edge("calendar_node", "status_node")
+graph.add_edge("progress_node", "study_right_node")
+graph.add_edge("study_right_node", "eligibility_node")
+graph.add_edge("eligibility_node", "calendar_node")
+graph.add_edge("calendar_node", "risk_report_node")
 graph.add_edge("risk_report_node", "status_node")
 
 graph.add_conditional_edges(
@@ -680,6 +685,7 @@ async def main():
         print(f"Welcome, {teacher['fname']} {teacher['lname']}!")
 
         base_state = {
+            "user_role": "teacher",
             "students": [], 
             "student_data": "", 
             "course_id": 0, 
@@ -949,6 +955,7 @@ async def main():
 
         student_full_name = f"{student['fname']} {student['lname']}"
         initial_state = {
+            "user_role": "student",
             "students": [],
             "student_data": "",
             "course_id": 0,
@@ -1021,7 +1028,8 @@ async def main():
                 print(result["courses_list"])
 
             elif choice == "plan":
-                state["filter_program"] = "TVT"
+                group_code = student.get("group_code", "TVT")
+                state["filter_program"] = "".join(filter(str.isalpha, group_code)) or "TVT"
                 result = await app.ainvoke(state)
                 print(result["student_plan"])
             
