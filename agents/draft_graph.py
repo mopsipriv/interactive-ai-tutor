@@ -557,8 +557,11 @@ async def analytics_report_agent(state: State):
         return {"analytics_report": new_issue}
 
 def route_after_status(state: State):
-    allowed = state.get("is_allowed",True)
-
+    cmd = state.get("command","")
+    if cmd =="recommend":
+        return "go_to_profile"
+    
+    allowed=state.get("is_allowed",True)
     if not allowed:
         return "go_to_analytics"
     else:
@@ -585,7 +588,7 @@ def router_by_command(state: State):
         "risk": "fetch_node",
         # Student commands
         "eligibility": "fetch_node",
-        "recommend": "profile_node",
+        "recommend": "fetch_node",
         "plan": "student_plan_node",
     }
     return routes.get(cmd, END)
