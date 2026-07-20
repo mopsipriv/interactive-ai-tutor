@@ -654,6 +654,7 @@ graph.add_conditional_edges(
     route_after_status,
     {
         "go_to_analytics": "analytics_node",
+        "go_to_profile": "profile_node",
         "go_to_end": END
     }
 )
