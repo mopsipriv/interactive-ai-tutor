@@ -999,16 +999,16 @@ async def main():
                 break
 
             if choice == "profile":
-                result = await app.ainvoke(initial_state)
+                result = await app.ainvoke(state)
                 print(result["student_profile"])
 
             elif choice == "eligibility":
-                result = await app.ainvoke(initial_state)
+                result = await app.ainvoke(state)
                 print("Your project eligibility:")
                 print(result["eligibility_report"])
 
             elif choice == "recommend":
-                result = await app.ainvoke(initial_state)
+                result = await app.ainvoke(state)
                 print("Your personal recommendation:")
                 print(result["student_recommendation"])
 
