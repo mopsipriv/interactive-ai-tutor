@@ -568,8 +568,6 @@ def route_after_status(state: State):
         return "go_to_end"
     
 
-graph=StateGraph(State)
-
 def router_by_command(state: State):
     cmd = state.get("command", "")
     routes = {
