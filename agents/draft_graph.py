@@ -26,37 +26,39 @@ load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     
 async def progress_agent(state: State):
-    students = state.get("students",[])
-    new_issue= ""
+    students = state.get("students", [])
+    new_issue = ""
     for student in students:
-        full_name= student["fname"]+" "+student["lname"]
-        progress= student["credits_expected"] - student["credits_earned"]
-        if progress>15:
-            new_issue+= f"Student:{full_name} has critical situation. Student does not have enought credits.\n"
-        elif progress>5 and progress<15:
-            new_issue+= f"Student:{full_name} has warning situation. Student does not have enought credits.\n"
+        full_name = student["fname"] + " " + student["lname"]
+        progress = student["credits_expected"] - student["credits_earned"]
+        if progress > 15:
+            new_issue += f"Student: {full_name} has critical situation. Student does not have enough credits.\n"
+        elif progress > 5 and progress < 15:
+            new_issue += f"Student: {full_name} has warning situation. Student does not have enough credits.\n"
         else:
-            new_issue+= f"Student:{full_name} has good situation. Student has enought credits.\n"
+            new_issue += f"Student: {full_name} has good situation. Student has enough credits.\n"
         
-    return {"bot_analyze_text": new_issue}
+    current_text = state.get("bot_analyze_text", "")
+    return {"bot_analyze_text": current_text + new_issue}
 
 
 async def study_right_agent(state: State):
-    students= state.get("students",[])
-    new_issue=""
+    students = state.get("students", [])
+    new_issue = ""
     for student in students:
-        full_name= student["fname"]+" "+student["lname"]
+        full_name = student["fname"] + " " + student["lname"]
         today = datetime.now()
         date_obj = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
-        left_study_right= (date_obj - today.date()).days / 30
-        if left_study_right<6:
-            new_issue+= f"Student:{full_name} has critical situation\n"
-        elif left_study_right<12:
-            new_issue+= f"Student:{full_name} has warning situation\n"
+        left_study_right = (date_obj - today.date()).days / 30
+        if left_study_right < 6:
+            new_issue += f"Student: {full_name} has critical situation (study right)\n"
+        elif left_study_right < 12:
+            new_issue += f"Student: {full_name} has warning situation (study right)\n"
         else:
-            new_issue+= f"Student:{full_name} has study right\n"
-    return {"bot_analyze_text": new_issue}
-
+            new_issue += f"Student: {full_name} has study right\n"
+            
+    current_text = state.get("bot_analyze_text", "")
+    return {"bot_analyze_text": current_text + new_issue}
 
 async def recommendation_agent(state: State):
     all_issues = state.get("bot_analyze_text","")
@@ -82,12 +84,14 @@ async def status_agent(state: State):
     
 
 async def analytics_agent(state: State):
-    allowed = state.get("is_allowed",True)
+    allowed = state.get("is_allowed", True)
     if allowed:
         verdict = "All checks passed. The student is cleared for enrollment.\n"
     else:
         verdict = "Enrollment Blocked. Student must contact the coordinator.\n"
-    return{"bot_analyze_text": verdict}
+        
+    current_text = state.get("bot_analyze_text", "")
+    return {"bot_analyze_text": current_text + verdict}
 
 
 async def fetch_students_agent(state: State):
