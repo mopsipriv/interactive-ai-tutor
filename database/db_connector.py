@@ -45,7 +45,7 @@ async def get_student_enrollments(student_id: int):
     conn.close()
     return list(result) if result else []
 
-async def check_eligibility(student_id: int, project_id: int):
+"""async def check_eligibility(student_id: int, project_id: int):
     conn = await aiomysql.connect(**DB_CONFIG)
     async with conn.cursor(aiomysql.DictCursor) as cur:
         await cur.execute(
@@ -54,7 +54,7 @@ async def check_eligibility(student_id: int, project_id: int):
         )
         result= await cur.fetchall()
     conn.close()
-    return list(result) if result else[]
+    return list(result) if result else[]"""
 
 async def get_all_students():
     conn = await aiomysql.connect(**DB_CONFIG)
@@ -88,8 +88,8 @@ async def enroll_student(student_id: int, course_id: int):
                 VALUES (%s, %s, 'planned')""",
                 (student_id, course_id)
             )
-        await conn.commit()
-        conn.close()
+            await conn.commit()
+            conn.close()
         return "Student enrolled successfully"
     except Exception as e:
         return f"Error: {e}"
