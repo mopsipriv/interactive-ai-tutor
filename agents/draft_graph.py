@@ -95,37 +95,34 @@ async def analytics_agent(state: State):
 
 
 async def fetch_students_agent(state: State):
-    filter_name = state.get("filter_name","")
+    filter_name = state.get("filter_name", "")
     tools = await mcp_client.get_tools()
     get_students_tool = next(t for t in tools if t.name == "get_students_tool")
     raw_result = await get_students_tool.ainvoke({})
     all_students = json.loads(raw_result[0]["text"])
     
+    if filter_name != "":
+        all_students = [s for s in all_students if (s["fname"] + " " + s["lname"]) == filter_name]
+    
     for student in all_students:
         enrollments = await get_student_enrollments(student["idstudent"])
         completed_credits = 0
         completed_courses = []
-        credits_expected = 0
         for enrollment in enrollments:
             if enrollment["status"] == "completed":
                 completed_courses.append(enrollment["idcourse"])
                 completed_credits += enrollment["credit"]
         student["completed_courses"] = completed_courses
         student["credits_earned"] = completed_credits
+        
         today = datetime.now()
         date_obj = datetime.strptime(student["valid_from"], "%Y-%m-%d").date()
-        days_passed= (today.date()-date_obj).days
-        semesters= days_passed/182
-        total_credits=semesters*30
-        student["credits_expected"]= total_credits
+        days_passed = (today.date() - date_obj).days
+        semesters = days_passed / 182
+        total_credits = semesters * 30
+        student["credits_expected"] = total_credits
 
-    if filter_name != "":
-        for student in all_students:
-            full_name = student["fname"] + " " + student["lname"]
-            if full_name == filter_name:
-                return {"students": [student]}
-    else:
-        return {"students": all_students}
+    return {"students": all_students}
 
     
 async def calendar_agent(state: State):
