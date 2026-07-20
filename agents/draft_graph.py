@@ -26,37 +26,39 @@ load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     
 async def progress_agent(state: State):
-    students = state.get("students",[])
-    new_issue= ""
+    students = state.get("students", [])
+    new_issue = ""
     for student in students:
-        full_name= student["fname"]+" "+student["lname"]
-        progress= student["credits_expected"] - student["credits_earned"]
-        if progress>15:
-            new_issue+= f"Student:{full_name} has critical situation. Student does not have enought credits.\n"
-        elif progress>5 and progress<15:
-            new_issue+= f"Student:{full_name} has warning situation. Student does not have enought credits.\n"
+        full_name = student["fname"] + " " + student["lname"]
+        progress = student["credits_expected"] - student["credits_earned"]
+        if progress > 15:
+            new_issue += f"Student: {full_name} has critical situation. Student does not have enough credits.\n"
+        elif progress > 5 and progress < 15:
+            new_issue += f"Student: {full_name} has warning situation. Student does not have enough credits.\n"
         else:
-            new_issue+= f"Student:{full_name} has good situation. Student has enought credits.\n"
+            new_issue += f"Student: {full_name} has good situation. Student has enough credits.\n"
         
-    return {"bot_analyze_text": new_issue}
+    current_text = state.get("bot_analyze_text", "")
+    return {"bot_analyze_text": current_text + new_issue}
 
 
 async def study_right_agent(state: State):
-    students= state.get("students",[])
-    new_issue=""
+    students = state.get("students", [])
+    new_issue = ""
     for student in students:
-        full_name= student["fname"]+" "+student["lname"]
+        full_name = student["fname"] + " " + student["lname"]
         today = datetime.now()
         date_obj = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
-        left_study_right= (date_obj - today.date()).days / 30
-        if left_study_right<6:
-            new_issue+= f"Student:{full_name} has critical situation\n"
-        elif left_study_right<12:
-            new_issue+= f"Student:{full_name} has warning situation\n"
+        left_study_right = (date_obj - today.date()).days / 30
+        if left_study_right < 6:
+            new_issue += f"Student: {full_name} has critical situation (study right)\n"
+        elif left_study_right < 12:
+            new_issue += f"Student: {full_name} has warning situation (study right)\n"
         else:
-            new_issue+= f"Student:{full_name} has study right\n"
-    return {"bot_analyze_text": new_issue}
-
+            new_issue += f"Student: {full_name} has study right\n"
+            
+    current_text = state.get("bot_analyze_text", "")
+    return {"bot_analyze_text": current_text + new_issue}
 
 async def recommendation_agent(state: State):
     all_issues = state.get("bot_analyze_text","")
@@ -82,46 +84,45 @@ async def status_agent(state: State):
     
 
 async def analytics_agent(state: State):
-    allowed = state.get("is_allowed",True)
+    allowed = state.get("is_allowed", True)
     if allowed:
         verdict = "All checks passed. The student is cleared for enrollment.\n"
     else:
         verdict = "Enrollment Blocked. Student must contact the coordinator.\n"
-    return{"bot_analyze_text": verdict}
+        
+    current_text = state.get("bot_analyze_text", "")
+    return {"bot_analyze_text": current_text + verdict}
 
 
 async def fetch_students_agent(state: State):
-    filter_name = state.get("filter_name","")
+    filter_name = state.get("filter_name", "")
     tools = await mcp_client.get_tools()
     get_students_tool = next(t for t in tools if t.name == "get_students_tool")
     raw_result = await get_students_tool.ainvoke({})
     all_students = json.loads(raw_result[0]["text"])
     
+    if filter_name != "":
+        all_students = [s for s in all_students if (s["fname"] + " " + s["lname"]) == filter_name]
+    
     for student in all_students:
         enrollments = await get_student_enrollments(student["idstudent"])
         completed_credits = 0
         completed_courses = []
-        credits_expected = 0
         for enrollment in enrollments:
             if enrollment["status"] == "completed":
                 completed_courses.append(enrollment["idcourse"])
                 completed_credits += enrollment["credit"]
         student["completed_courses"] = completed_courses
         student["credits_earned"] = completed_credits
+        
         today = datetime.now()
         date_obj = datetime.strptime(student["valid_from"], "%Y-%m-%d").date()
-        days_passed= (today.date()-date_obj).days
-        semesters= days_passed/182
-        total_credits=semesters*30
-        student["credits_expected"]= total_credits
+        days_passed = (today.date() - date_obj).days
+        semesters = days_passed / 182
+        total_credits = semesters * 30
+        student["credits_expected"] = total_credits
 
-    if filter_name != "":
-        for student in all_students:
-            full_name = student["fname"] + " " + student["lname"]
-            if full_name == filter_name:
-                return {"students": [student]}
-    else:
-        return {"students": all_students}
+    return {"students": all_students}
 
     
 async def calendar_agent(state: State):
@@ -555,23 +556,21 @@ async def analytics_report_agent(state: State):
         new_issue += f"Average credits earned: {analytics['avg_credits_earned']}\n"
         
         return {"analytics_report": new_issue}
-
-def route_after_status(state: State):
-    cmd = state.get("command","")
-    if cmd =="recommend":
-        return "go_to_profile"
-    
-    allowed=state.get("is_allowed",True)
-    if not allowed:
-        return "go_to_analytics"
-    else:
-        return "go_to_end"
     
 
 def router_by_command(state: State):
     cmd = state.get("command", "")
+    role = state.get("user_role", "student")
+    
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk"]
+    student_commands = ["profile", "eligibility", "recommend", "courses", "plan"]
+    
+    if role == "student" and cmd not in student_commands:
+        return END
+    if role == "teacher" and cmd not in teacher_commands:
+        return END
+
     routes = {
-        # Teacher commands
         "profile": "profile_node",
         "course": "course_students_node",
         "enroll": "enroll_node",
@@ -582,14 +581,26 @@ def router_by_command(state: State):
         "courses": "course_list_node",
         "curriculum": "curriculum_node",
         "analytics": "analytics_report_node",
-        # Commands requiring fetch first
         "risk": "fetch_node",
-        # Student commands
         "eligibility": "fetch_node",
         "recommend": "fetch_node",
         "plan": "student_plan_node",
     }
     return routes.get(cmd, END)
+
+
+def route_after_status(state: State):
+    cmd = state.get("command", "")
+    if cmd == "recommend":
+        return "go_to_profile"
+    if cmd == "eligibility":
+        return "go_to_end"
+    
+    allowed = state.get("is_allowed", True)
+    if not allowed:
+        return "go_to_analytics"
+    else:
+        return "go_to_end"
 
 graph = StateGraph(State)
 
@@ -636,15 +647,10 @@ graph.add_edge("student_recommendation_node", END)
 
 # risk/eligibility/recommend
 graph.add_edge("fetch_node", "progress_node")
-graph.add_edge("fetch_node", "study_right_node")
-graph.add_edge("fetch_node", "eligibility_node")
-graph.add_edge("fetch_node", "calendar_node")
-graph.add_edge("fetch_node", "risk_report_node")
-
-graph.add_edge("progress_node", "status_node")
-graph.add_edge("study_right_node", "status_node")
-graph.add_edge("eligibility_node", "status_node")
-graph.add_edge("calendar_node", "status_node")
+graph.add_edge("progress_node", "study_right_node")
+graph.add_edge("study_right_node", "eligibility_node")
+graph.add_edge("eligibility_node", "calendar_node")
+graph.add_edge("calendar_node", "risk_report_node")
 graph.add_edge("risk_report_node", "status_node")
 
 graph.add_conditional_edges(
@@ -679,6 +685,7 @@ async def main():
         print(f"Welcome, {teacher['fname']} {teacher['lname']}!")
 
         base_state = {
+            "user_role": "teacher",
             "students": [], 
             "student_data": "", 
             "course_id": 0, 
@@ -948,6 +955,7 @@ async def main():
 
         student_full_name = f"{student['fname']} {student['lname']}"
         initial_state = {
+            "user_role": "student",
             "students": [],
             "student_data": "",
             "course_id": 0,
@@ -1020,7 +1028,8 @@ async def main():
                 print(result["courses_list"])
 
             elif choice == "plan":
-                state["filter_program"] = "TVT"
+                group_code = student.get("group_code", "TVT")
+                state["filter_program"] = "".join(filter(str.isalpha, group_code)) or "TVT"
                 result = await app.ainvoke(state)
                 print(result["student_plan"])
             
