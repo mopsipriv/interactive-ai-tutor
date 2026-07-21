@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: peppi-mysql
+    env_file:
+      - agents/.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./database/peppi_db.sql:/docker-entrypoint-initdb.d/peppi_db.sql
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mcp_server:
+    build: .
+    container_name: peppi-mcp
+    env_file:
+      - agents/.env
+    command: fastmcp run mcp_server.py --transport http --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  app:
+    build: .
+    container_name: peppi-app
+    env_file:
+      - agents/.env
+    command: python -m agents.draft_graph
+    stdin_open: true
+    tty: true
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - MCP_URL=http://mcp_server:8000/mcp
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mcp_server:
+        condition: service_started
+
+volumes:
+  mysql_data:
