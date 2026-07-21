@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.git/
+.gitignore
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+node_modules/
+graph.png
+setup_password.py
+setup_student_password.py
+.vscode/

@@ -17,8 +17,8 @@ from database.auth import verify_password
 
 mcp_client = MultiServerMCPClient({
     "tutor_server": {
-        "url": "http://127.0.0.1:8000/mcp",
-        "transport": "streamable_http"
+        "url": os.getenv("MCP_URL", "http://127.0.0.1:8000/mcp"),
+        "transport": "sse"
     }
 })
 
