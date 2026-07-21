@@ -1,12 +1,16 @@
 import aiomysql
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DB_CONFIG = {
-    "host": "127.0.0.1",
-    "port": 3306,
-    "user": "root",
-    "password": "987654321",
-    "db": "mydb"
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", 3306)),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD"),
+    "db": os.getenv("DB_NAME", "peppi_db")
 }
 
 async def get_student_from_db(student_id: int):
