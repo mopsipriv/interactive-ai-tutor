@@ -1,8 +1,8 @@
-version: '3.8'
 
 services:
   mysql:
     image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     container_name: peppi-mysql
     env_file:
       - agents/.env
@@ -12,7 +12,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./database/peppi_db.sql:/docker-entrypoint-initdb.d/peppi_db.sql
+      - ./database/setup.sql:/docker-entrypoint-initdb.d/setup.sql
       - mysql_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
@@ -25,7 +25,7 @@ services:
     container_name: peppi-mcp
     env_file:
       - agents/.env
-    command: fastmcp run mcp_server.py --transport http --host 0.0.0.0 --port 8000
+    command: fastmcp run mcp_server.py --transport sse --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     environment:
@@ -52,7 +52,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
       - GROQ_API_KEY=${GROQ_API_KEY}
-      - MCP_URL=http://mcp_server:8000/mcp
+      - MCP_URL=http://mcp_server:8000/sse
       - PYTHONUNBUFFERED=1
     depends_on:
       mysql:
