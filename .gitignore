@@ -219,3 +219,4 @@ __marimo__/
 
 setup_password.py
 setup_student_password.py
+rag/chroma_db/

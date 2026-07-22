@@ -1,0 +1,12 @@
+Q: What is study right and how long do I have?
+A: Study right (opiskeluoikeus) determines how long you can study at the university.
+For bachelor's degree programs it is typically 4-5 years from enrollment date.
+Check your valid_until date in the system.
+
+Q: How many credits do I need per semester?
+A: To stay on track, you should complete approximately 30 credits per academic year,
+or about 15 credits per semester.
+
+Q: What courses do I need to complete before joining a project?
+A: For AI Chatbot Development project you need: Johdatus ohjelmointiin, 
+Tietokannat, and Tekoälyn ohjelmointi...
