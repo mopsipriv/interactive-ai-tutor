@@ -1,0 +1,11 @@
+TVT Program - Tietotekniikka Curriculum Guide
+
+Semester 1 - Foundation
+Students begin with mathematical foundations and introduction to programming.
+Matematiikan perusteet provides necessary mathematical background.
+Johdatus ohjelmointiin is the gateway course for all programming studies.
+Completing semester 1 courses is mandatory before advancing to semester 2.
+
+Semester 2 - Core Programming
+Ohjelmointi 1 builds on introduction course. Tietokannat teaches database fundamentals.
+These courses are prerequisites for most advanced courses...
