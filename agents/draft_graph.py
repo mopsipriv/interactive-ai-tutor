@@ -565,7 +565,6 @@ async def rag_agent(state:State):
         return {"rag_answer":""}
     
     context = retrieve(rag_query)
-    print(f"DEBUG context: {context[:200]}") 
     response = client.chat.completions.create(
         messages=[
             {"role": "system", "content": "You are a helpful academic advisor. Answer the question based ONLY on the provided context. If the context doesn't contain relevant information, say so. Be concise and specific."},
