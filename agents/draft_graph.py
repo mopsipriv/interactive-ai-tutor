@@ -14,7 +14,11 @@ from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
 from agents.state import State
 from database.auth import verify_password
 from rag.rag_retriever import retrieve
-
+import os
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+import warnings
+warnings.filterwarnings("ignore")
 
 mcp_client = MultiServerMCPClient({
     "tutor_server": {
@@ -22,6 +26,8 @@ mcp_client = MultiServerMCPClient({
         "transport": "sse"
     }
 })
+
+
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
