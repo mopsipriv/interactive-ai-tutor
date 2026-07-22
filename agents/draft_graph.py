@@ -559,16 +559,21 @@ async def analytics_report_agent(state: State):
         return {"analytics_report": new_issue}
     
 
-async def rag_agent(state:State):
-    rag_query = state.get("rag_query","")
+async def rag_agent(state: State):
+    rag_query = state.get("rag_query", "")
     if rag_query == "":
-        return {"rag_answer":""}
+        return {"rag_answer": ""}
     
     context = retrieve(rag_query)
+    
     response = client.chat.completions.create(
         messages=[
-            {"role": "system", "content": "You are a helpful academic advisor. Answer the question based ONLY on the provided context. If the context doesn't contain relevant information, say so. Be concise and specific."},
-            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {rag_query}"}
+            {"role": "system", "content": """You are a helpful academic advisor for a Finnish university tutoring system. 
+            Answer questions using ONLY the provided context below - do not use outside knowledge.
+            If the context contains relevant information, give a clear, complete answer with specific details (course names, dates, numbers).
+            If the context is truly unrelated to the question, say "I don't have specific information about that in my knowledge base, but here's what I found that might be related: [briefly mention what WAS found]"
+            Keep answers concise but complete - aim for 2-4 sentences unless the question requires a list."""},
+            {"role": "user", "content": f"Context from tutoring documents:\n{context}\n\nQuestion: {rag_query}"}
         ],
         model="llama-3.3-70b-versatile",
         max_completion_tokens=512,
