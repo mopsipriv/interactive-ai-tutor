@@ -1,9 +1,10 @@
 from sentence_transformers import SentenceTransformer
 import chromadb
+import os
 
 model = SentenceTransformer("all-MiniLM-L6-v2")
-
-client = chromadb.PersistentClient(path="./chroma_db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+client = chromadb.PersistentClient(path=os.path.join(BASE_DIR, "chroma_db"))
 collection = client.get_or_create_collection(name="tutor_docs")
 
 def retrieve(query: str, top_k: int = 3) -> str:

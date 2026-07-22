@@ -13,11 +13,12 @@ import json
 from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
 from agents.state import State
 from database.auth import verify_password
+from rag.rag_retriever import retrieve
 
 
 mcp_client = MultiServerMCPClient({
     "tutor_server": {
-        "url": os.getenv("MCP_URL", "http://127.0.0.1:8000/mcp"),
+        "url": os.getenv("MCP_URL", "http://127.0.0.1:8000/sse"),
         "transport": "sse"
     }
 })
@@ -558,12 +559,30 @@ async def analytics_report_agent(state: State):
         return {"analytics_report": new_issue}
     
 
+async def rag_agent(state:State):
+    rag_query = state.get("rag_query","")
+    if rag_query == "":
+        return {"rag_answer":""}
+    
+    context = retrieve(rag_query)
+    print(f"DEBUG context: {context[:200]}") 
+    response = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": "You are a helpful academic advisor. Answer the question based ONLY on the provided context. If the context doesn't contain relevant information, say so. Be concise and specific."},
+            {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {rag_query}"}
+        ],
+        model="llama-3.3-70b-versatile",
+        max_completion_tokens=512,
+    )
+    return {"rag_answer": response.choices[0].message.content}
+    
+
 def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
     
-    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk"]
-    student_commands = ["profile", "eligibility", "recommend", "courses", "plan"]
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask"]
+    student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask"]
     
     if role == "student" and cmd not in student_commands:
         return END
@@ -585,6 +604,7 @@ def router_by_command(state: State):
         "eligibility": "fetch_node",
         "recommend": "fetch_node",
         "plan": "student_plan_node",
+        "ask": "rag_node"
     }
     return routes.get(cmd, END)
 
@@ -627,6 +647,7 @@ graph.add_node("analytics_report_node", analytics_report_agent)
 graph.add_node("profile_node", profile_agent)
 graph.add_node("student_recommendation_node", student_recommendation_agent)
 graph.add_node("student_plan_node", student_plan_agent)
+graph.add_node("rag_node", rag_agent)
 
 # start
 graph.add_conditional_edges(START, router_by_command)
@@ -636,7 +657,7 @@ simple_nodes = [
     "enroll_node", "course_list_node", "grade_node",
     "update_status_node", "group_report_node", "bulk_enroll_node",
     "curriculum_node", "analytics_report_node", "student_plan_node",
-    "course_students_node"
+    "course_students_node", "rag_node"
 ]
 for node in simple_nodes:
     graph.add_edge(node, END)
@@ -725,11 +746,13 @@ async def main():
             "student_plan": "",
             "filter_analytics": "",
             "analytics_report": "",
-            "command":""
+            "command":"",
+            "rag_query": "",
+            "rag_answer": "",
         }
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
@@ -936,9 +959,15 @@ async def main():
                     "intent": "analytics",
                     "result": result["analytics_report"][:200]
                 })
+            
+            elif command == "ask":
+                question = input("Your question: ")
+                state["rag_query"] = question
+                result = await app.ainvoke(state)
+                print(result["rag_answer"])
 
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/exit")
 
     
     if role == "student":
@@ -995,10 +1024,12 @@ async def main():
             "student_plan": "",
             "filter_analytics": "",
             "analytics_report": "",
-            "command":""
+            "command":"",
+            "rag_query": "",
+            "rag_answer": "",
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / exit): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / exit ): ")
 
             state = initial_state.copy()
             tools = await mcp_client.get_tools()
@@ -1032,9 +1063,15 @@ async def main():
                 state["filter_program"] = "".join(filter(str.isalpha, group_code)) or "TVT"
                 result = await app.ainvoke(state)
                 print(result["student_plan"])
+
+            elif choice == "ask":
+                question = input("Your question: ")
+                state["rag_query"] = question
+                result = await app.ainvoke(state)
+                print(result["rag_answer"])
             
             else:
-                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / exit")
+                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / exit ")
 
 if __name__ == "__main__":
     asyncio.run(main())

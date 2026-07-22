@@ -64,3 +64,6 @@ class State(TypedDict):
     analytics_report: str
 
     command: str
+
+    rag_query: str
+    rag_answer: str
