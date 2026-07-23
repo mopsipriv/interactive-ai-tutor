@@ -7,7 +7,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number
+from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
@@ -799,7 +799,7 @@ async def main():
             print(f"⚠️  {critical_count} student(s) currently at risk. Type 'risk' to see details.")
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
@@ -1066,11 +1066,20 @@ async def main():
                 ask        - Ask a question about tutoring guidelines
                 help       - Show this help message
                 export     - Export reports
+                me         - Own information
                 exit       - Logout
                 """)
 
+            elif command == "me":
+                groups = await get_teacher_groups(teacher["idteacher"])
+                print(f"\n👤 {teacher['fname']} {teacher['lname']}")
+                print(f"📧 {teacher['email']}")
+                print("\nYour groups:")
+                for group in groups:
+                    print(f"  - {group['group_code']}: {group['student_count']} students")
+
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/exit")
 
     
     if role == "student":
