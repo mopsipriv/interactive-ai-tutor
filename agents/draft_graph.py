@@ -591,8 +591,8 @@ def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
     
-    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask"]
-    student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask"]
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help"]
+    student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help"]
     
     if role == "student" and cmd not in student_commands:
         return END
@@ -768,7 +768,7 @@ async def main():
         }
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
@@ -990,8 +990,28 @@ async def main():
                 result = await app.ainvoke(state)
                 print(result["rag_answer"])
 
+            elif command == "help":
+                print("""
+                Available commands:
+                profile    - View student's full profile
+                course     - List students enrolled in a course
+                enroll     - Enroll a student to a course
+                grade      - Update student's grade (1-5)
+                status     - Update enrollment status (planned/ongoing/completed)
+                group      - List all students in a group
+                bulk       - Enroll entire group to a course
+                courses    - Show all available courses
+                curriculum - View program curriculum by semester
+                analytics  - View course or group analytics
+                risk       - Show at-risk students report
+                history    - View your recent query history
+                ask        - Ask a question about tutoring guidelines
+                help       - Show this help message
+                exit       - Logout
+                """)
+
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/exit")
 
     
     if role == "student":
@@ -1053,7 +1073,7 @@ async def main():
             "rag_answer": "",
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / exit ): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / exit ): ")
 
             state = initial_state.copy()
             tools = await mcp_client.get_tools()
@@ -1093,9 +1113,22 @@ async def main():
                 state["rag_query"] = question
                 result = await app.ainvoke(state)
                 print(result["rag_answer"])
+
+            elif choice == "help":
+                print("""
+                Available commands:
+                profile    - View your academic profile
+                eligibility - Check your project eligibility
+                recommend  - Get AI-powered study recommendation
+                courses    - View all available courses
+                plan       - View your study plan progress
+                ask        - Ask a question about your studies
+                help       - Show this help message
+                exit       - Logout
+                """)
             
             else:
-                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / exit ")
+                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / exit ")
 
 if __name__ == "__main__":
     asyncio.run(main())
