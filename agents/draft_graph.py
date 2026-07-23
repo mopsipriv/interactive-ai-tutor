@@ -7,7 +7,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number
+from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
@@ -105,8 +105,13 @@ async def analytics_agent(state: State):
 async def fetch_students_agent(state: State):
     filter_name = state.get("filter_name", "")
     tools = await mcp_client.get_tools()
-    get_students_tool = next(t for t in tools if t.name == "get_students_tool")
-    raw_result = await get_students_tool.ainvoke({})
+    teacher_id = state.get("teacher_id", 0)
+    if teacher_id:
+        get_students_tool = next(t for t in tools if t.name == "get_students_by_teacher_tool")
+        raw_result = await get_students_tool.ainvoke({"teacher_id": teacher_id})
+    else:
+        get_students_tool = next(t for t in tools if t.name == "get_students_tool")
+        raw_result = await get_students_tool.ainvoke({})
     all_students = json.loads(raw_result[0]["text"])
     
     if filter_name != "":
@@ -624,7 +629,9 @@ def router_by_command(state: State):
         "plan": "student_plan_node",
         "ask": "rag_node"
     }
-    return routes.get(cmd, END)
+    
+    result = routes.get(cmd, END)
+    return result
 
 
 def route_after_status(state: State):
@@ -632,6 +639,8 @@ def route_after_status(state: State):
     if cmd == "recommend":
         return "go_to_profile"
     if cmd == "eligibility":
+        return "go_to_end"
+    if cmd == "risk":
         return "go_to_end"
     
     allowed = state.get("is_allowed", True)
@@ -778,6 +787,7 @@ async def main():
             "command":"",
             "rag_query": "",
             "rag_answer": "",
+            "teacher_id": teacher["idteacher"]
         }
 
         quick_state = base_state.copy()
@@ -789,7 +799,7 @@ async def main():
             print(f"⚠️  {critical_count} student(s) currently at risk. Type 'risk' to see details.")
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
@@ -954,6 +964,7 @@ async def main():
                 })
 
             elif command == "risk":
+                state["command"] = command
                 result = await run_agent_with_timer(app, state)
                 print(result["risk_report"])
                 await log_tool.ainvoke({
@@ -1055,11 +1066,20 @@ async def main():
                 ask        - Ask a question about tutoring guidelines
                 help       - Show this help message
                 export     - Export reports
+                me         - Own information
                 exit       - Logout
                 """)
 
+            elif command == "me":
+                groups = await get_teacher_groups(teacher["idteacher"])
+                print(f"\n👤 {teacher['fname']} {teacher['lname']}")
+                print(f"📧 {teacher['email']}")
+                print("\nYour groups:")
+                for group in groups:
+                    print(f"  - {group['group_code']}: {group['student_count']} students")
+
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/exit")
 
     
     if role == "student":
