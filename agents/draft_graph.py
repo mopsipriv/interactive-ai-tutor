@@ -599,7 +599,7 @@ def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
     
-    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help"]
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export"]
     student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help"]
     
     if role == "student" and cmd not in student_commands:
@@ -789,7 +789,7 @@ async def main():
             print(f"⚠️  {critical_count} student(s) currently at risk. Type 'risk' to see details.")
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
@@ -1011,6 +1011,32 @@ async def main():
                 result = await run_agent_with_timer(app, state)
                 print(result["rag_answer"])
 
+            elif command == "export":
+                print("Export type: (risk / analytics / courses)")
+                export_type = input("Type: ")
+                
+                quick_state = base_state.copy()
+                quick_state["command"] = export_type
+                
+                if export_type == "analytics":
+                    quick_state["filter_analytics"] = "courses"
+                
+                export_result = await app.ainvoke(quick_state)
+                
+                field_map = {
+                    "risk": "risk_report",
+                    "analytics": "analytics_report", 
+                    "courses": "courses_list"
+                }
+                
+                content = export_result.get(field_map.get(export_type, ""), "No data")
+                filename = f"report_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.txt"
+                
+                with open(filename, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print(f"Report saved to {filename}")
+
+
             elif command == "help":
                 print("""
                 Available commands:
@@ -1028,11 +1054,12 @@ async def main():
                 history    - View your recent query history
                 ask        - Ask a question about tutoring guidelines
                 help       - Show this help message
+                export     - Export reports
                 exit       - Logout
                 """)
 
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/exit")
 
     
     if role == "student":
