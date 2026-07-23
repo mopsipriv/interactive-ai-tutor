@@ -767,6 +767,14 @@ async def main():
             "rag_answer": "",
         }
 
+        quick_state = base_state.copy()
+        quick_state["command"] = "risk"
+        quick_result = await app.ainvoke(quick_state)
+        risk_text = quick_result.get("risk_report", "")
+        critical_count = risk_text.count("🔴")
+        if critical_count > 0:
+            print(f"⚠️  {critical_count} student(s) currently at risk. Type 'risk' to see details.")
+
         while True:
             command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/exit): ")
 
