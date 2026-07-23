@@ -1,0 +1,10 @@
+TVT1003 - Johdatus ohjelmointiin (Introduction to Programming)
+This is the foundational programming course. Students learn basic programming 
+concepts using C. This course is prerequisite for all advanced programming 
+courses. Students who struggle here should seek extra tutoring immediately.
+Recommended semester: 1. Credits: 5. Category: mandatory.
+
+TVT1006 - Tietokannat (Databases)
+Students learn relational database design and SQL. This course is required 
+for AI Chatbot Development project. Prerequisites: TVT1003.
+Recommended semester: 2. Credits: 5. Category: mandatory.
