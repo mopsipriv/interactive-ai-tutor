@@ -14,11 +14,12 @@ from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
 from agents.state import State
 from database.auth import verify_password
 from rag.rag_retriever import retrieve
-import os
+
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import warnings
 warnings.filterwarnings("ignore")
+import time
 
 mcp_client = MultiServerMCPClient({
     "tutor_server": {
@@ -586,6 +587,13 @@ async def rag_agent(state: State):
     )
     return {"rag_answer": response.choices[0].message.content}
     
+async def run_agent_with_timer(app, state):
+    print("Processing...", end="", flush=True)
+    start = time.time()
+    result = await app.ainvoke(state)
+    elapsed = round(time.time() - start, 1)
+    print(f" done ({elapsed}s)")
+    return result
 
 def router_by_command(state: State):
     cmd = state.get("command", "")
@@ -790,7 +798,7 @@ async def main():
             if command == "profile":
                 name = input("Student name: ")
                 state["filter_name"] = name
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 if not result["student_profile"]:
                     print(f"Error: Student '{name}' not found.")
                 else:
@@ -805,7 +813,7 @@ async def main():
             elif command == "course":
                 course = input("Course name: ")
                 state["filter_course"] = course
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 if "not found" in result["course_report"]:
                     print(result["course_report"])
                     print("Tip: use 'courses' command to see all available courses.")
@@ -824,7 +832,7 @@ async def main():
                 enroll_course = input("Course name: ")
                 state["enroll_student_name"] = enroll_name
                 state["enroll_course_name"] = enroll_course
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 if "Error" in result["enroll_result"]:
                     print(result["enroll_result"])
                     print("Tip: use 'courses' command to see all available courses.")
@@ -854,7 +862,7 @@ async def main():
                 state["grade_student_name"] = grade_student
                 state["grade_course_name"] = grade_course
                 state["grade_value"] = grade_value
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 if "Error" in result["grade_result"]:
                     print(result["grade_result"])
                     print("Tip: use 'courses' command to see all available courses.")
@@ -879,7 +887,7 @@ async def main():
                 state["status_student_name"] = status_student
                 state["status_course_name"] = status_course
                 state["status_value"] = status_value
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 if "Error" in result["status_update_result"]:
                     print(result["status_update_result"])
                     print("Tip: use 'courses' command to see all available courses.")
@@ -895,7 +903,7 @@ async def main():
             elif command == "group":
                 group_code = input("Group code: ")
                 state["filter_group"] = group_code
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 if not result["group_report"]:
                     print(f"Error: Group {group_code} not found.")
                 else:
@@ -916,7 +924,7 @@ async def main():
                     continue
                 state["bulk_group_code"] = bulk_group
                 state["bulk_course_name"] = bulk_course
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 if not result["bulk_enroll_result"]:
                     print(f"Error: Group '{bulk_group}' or Course '{bulk_course}' not found.")
                     print("Tip: use 'courses' command to see all available courses.")
@@ -931,7 +939,7 @@ async def main():
 
             elif command == "courses":
                 state["show_courses"] = True
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print(result["courses_list"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
@@ -941,7 +949,7 @@ async def main():
                 })
 
             elif command == "risk":
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print(result["risk_report"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
@@ -964,7 +972,7 @@ async def main():
             elif command == "curriculum":
                 program = input("Program code (e.g. TVT): ")
                 state["filter_program"] = program
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 if "Error" in result["curriculum_info"]:
                     print(result["curriculum_info"])
                 else:
@@ -983,7 +991,7 @@ async def main():
                 if analytics_type == "group":
                     group = input("Group code: ")
                     state["filter_group"] = group
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print(result["analytics_report"])
                 await log_tool.ainvoke({
                     "teacher_id": teacher["idteacher"],
@@ -995,7 +1003,7 @@ async def main():
             elif command == "ask":
                 question = input("Your question: ")
                 state["rag_query"] = question
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print(result["rag_answer"])
 
             elif command == "help":
@@ -1092,34 +1100,34 @@ async def main():
                 break
 
             if choice == "profile":
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print(result["student_profile"])
 
             elif choice == "eligibility":
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print("Your project eligibility:")
                 print(result["eligibility_report"])
 
             elif choice == "recommend":
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print("Your personal recommendation:")
                 print(result["student_recommendation"])
 
             elif choice == "courses":
                 state["show_courses"] = True
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print(result["courses_list"])
 
             elif choice == "plan":
                 group_code = student.get("group_code", "TVT")
                 state["filter_program"] = "".join(filter(str.isalpha, group_code)) or "TVT"
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print(result["student_plan"])
 
             elif choice == "ask":
                 question = input("Your question: ")
                 state["rag_query"] = question
-                result = await app.ainvoke(state)
+                result = await run_agent_with_timer(app, state)
                 print(result["rag_answer"])
 
             elif choice == "help":
