@@ -29,12 +29,18 @@ mcp = FastMCP("Tutor Server")
 @mcp.tool
 async def get_students_tool() -> list:
     """Get all students from the database"""
-    return await get_all_students()
+    students = await get_all_students()
+    for s in students:
+        s.pop("password_hash", None)
+    return students
 
 @mcp.tool
 async def get_student_by_course_tool(course_name: str) -> list:
     """Get students enrolled in a specific course"""
-    return await get_student_by_course(course_name)
+    students = await get_student_by_course(course_name)
+    for s in students:
+        s.pop("password_hash",None)
+    return students
 
 @mcp.tool
 async def get_all_courses_tool() -> list:
@@ -44,7 +50,10 @@ async def get_all_courses_tool() -> list:
 @mcp.tool
 async def get_student_profile_tool(student_id:int) -> list:
     """Get full profile of a student including all courses"""
-    return await get_student_profile(student_id)
+    students = await get_student_profile(student_id)
+    for s in students:
+        s.pop("password_hash", None)
+    return students
 
 @mcp.tool
 async def enroll_student_tool(student_id:int, course_id:int) ->str:
@@ -59,7 +68,10 @@ async def update_grade_tool(student_id:int, course_id:int, grade:int) ->str:
 @mcp.tool
 async def get_students_by_group_tool(group_code:str) ->list:
     """Get all students by their group"""
-    return await get_students_by_group(group_code)
+    students = await get_students_by_group(group_code)
+    for s in students:
+        s.pop("password_hash",None)
+    return students
 
 @mcp.tool
 async def get_course_id_by_name_tool(course_name:str) -> Optional[int]:
@@ -80,7 +92,10 @@ async def update_enrollment_status_tool(student_id:int,course_id:int,status:str)
 @mcp.tool
 async def get_student_from_db_tool(student_id: int) ->list:
     """Get a single student by their id"""
-    return await get_student_from_db(student_id)
+    student = await get_student_from_db(student_id)
+    if student:
+        student.pop("password_hash",None)
+    return student
 
 @mcp.tool
 async def get_courses_from_db_tool(course_id: int) ->list:
@@ -123,9 +138,12 @@ async def get_group_analytics_tool(group_code: str) -> dict:
     return await get_group_analytics(group_code)
 
 @mcp.tool
-async def get_students_by_teacher_tool(teacher_id: int)->list:
+async def get_students_by_teacher_tool(teacher_id: int) -> list:
     """Get students belonging to this teacher's groups"""
-    return await get_students_by_teacher(teacher_id)
+    students = await get_students_by_teacher(teacher_id)
+    for s in students:
+        s.pop("password_hash", None)
+    return students
 
 
 if __name__=="__main__":
