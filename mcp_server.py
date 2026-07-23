@@ -20,7 +20,8 @@ from database.db_connector import (
     get_curriculum,
     get_student_curriculum_progress,
     get_course_analytics,
-    get_group_analytics
+    get_group_analytics,
+    get_students_by_teacher
 )
 
 mcp = FastMCP("Tutor Server")
@@ -120,6 +121,11 @@ async def get_course_analytics_tool() -> list:
 async def get_group_analytics_tool(group_code: str) -> dict:
     """Get analytics for a specific group - avg credits earned"""
     return await get_group_analytics(group_code)
+
+@mcp.tool
+async def get_students_by_teacher_tool(teacher_id: int)->list:
+    """Get students belonging to this teacher's groups"""
+    return await get_students_by_teacher(teacher_id)
 
 
 if __name__=="__main__":

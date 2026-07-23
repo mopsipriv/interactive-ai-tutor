@@ -386,3 +386,17 @@ async def get_group_analytics(group_code: str):
     }
 
 
+async def get_students_by_teacher(teacher_id: int):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT DISTINCT s.*
+            FROM student s
+            JOIN student_group sg ON s.idstudent = sg.idstudent
+            JOIN group_cohort gc ON sg.idgroup = gc.idgroup_cohort
+            WHERE gc.idteacher = %s""",
+            (teacher_id,)
+        )
+        result = await cur.fetchall()
+    conn.close()
+    return result if result else []

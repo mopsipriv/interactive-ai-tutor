@@ -105,8 +105,13 @@ async def analytics_agent(state: State):
 async def fetch_students_agent(state: State):
     filter_name = state.get("filter_name", "")
     tools = await mcp_client.get_tools()
-    get_students_tool = next(t for t in tools if t.name == "get_students_tool")
-    raw_result = await get_students_tool.ainvoke({})
+    teacher_id = state.get("teacher_id", 0)
+    if teacher_id:
+        get_students_tool = next(t for t in tools if t.name == "get_students_by_teacher_tool")
+        raw_result = await get_students_tool.ainvoke({"teacher_id": teacher_id})
+    else:
+        get_students_tool = next(t for t in tools if t.name == "get_students_tool")
+        raw_result = await get_students_tool.ainvoke({})
     all_students = json.loads(raw_result[0]["text"])
     
     if filter_name != "":
@@ -624,7 +629,9 @@ def router_by_command(state: State):
         "plan": "student_plan_node",
         "ask": "rag_node"
     }
-    return routes.get(cmd, END)
+    
+    result = routes.get(cmd, END)
+    return result
 
 
 def route_after_status(state: State):
@@ -632,6 +639,8 @@ def route_after_status(state: State):
     if cmd == "recommend":
         return "go_to_profile"
     if cmd == "eligibility":
+        return "go_to_end"
+    if cmd == "risk":
         return "go_to_end"
     
     allowed = state.get("is_allowed", True)
@@ -778,6 +787,7 @@ async def main():
             "command":"",
             "rag_query": "",
             "rag_answer": "",
+            "teacher_id": teacher["idteacher"]
         }
 
         quick_state = base_state.copy()
@@ -954,6 +964,7 @@ async def main():
                 })
 
             elif command == "risk":
+                state["command"] = command
                 result = await run_agent_with_timer(app, state)
                 print(result["risk_report"])
                 await log_tool.ainvoke({

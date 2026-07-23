@@ -67,3 +67,8 @@ class State(TypedDict):
 
     rag_query: str
     rag_answer: str
+
+    teacher_id:int
+
+    user_role: str
+    teacher_id: int
