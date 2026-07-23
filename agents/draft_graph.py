@@ -701,7 +701,13 @@ graph.add_edge("communication_node", END)
 app = graph.compile()
 
 async def main():
-    role = input("Are you a teacher or student? (teacher/student): ")
+    print("""
+╔═══════════════════════════════════════════╗
+║         AI Tutor Assistant v1.0           ║
+║     Peppi-like Academic Records System    ║
+╚═══════════════════════════════════════════╝
+""")
+    role = input("Login as: (teacher / student): ")
 
     if role == "teacher":
         email = input("Enter your email: ")
@@ -832,6 +838,10 @@ async def main():
                     if grade_value in ["1", "2", "3", "4", "5"]:
                         break
                     print("Error: grade must be a number between 1 and 5. Try again.")
+                confirm = input(f"Set grade {grade_value} for '{grade_student}' in '{grade_course}'? (yes/no): ")
+                if confirm.lower() != "yes":
+                    print("Cancelled.")
+                    continue
 
                 state["grade_student_name"] = grade_student
                 state["grade_course_name"] = grade_course
@@ -892,6 +902,10 @@ async def main():
             elif command == "bulk":
                 bulk_group = input("Group code: ")
                 bulk_course = input("Course name: ")
+                confirm = input(f"Enroll all students from '{bulk_group}' to '{bulk_course}'? (yes/no): ")
+                if confirm.lower() != "yes":
+                    print("Cancelled.")
+                    continue
                 state["bulk_group_code"] = bulk_group
                 state["bulk_course_name"] = bulk_course
                 result = await app.ainvoke(state)
