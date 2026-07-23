@@ -718,7 +718,12 @@ async def main():
     role = input("Login as: (teacher / student): ")
 
     if role == "teacher":
-        email = input("Enter your email: ")
+        while True:
+            email = input("Enter your email: ").strip()
+            if "@" in email and "." in email:
+                break
+            print("Error: invalid email format. Please try again.")
+
         password = input("Enter your password: ")
         teacher = await get_teacher_by_email(email)
         if teacher is None:
