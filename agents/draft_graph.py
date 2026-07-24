@@ -600,12 +600,97 @@ async def run_agent_with_timer(app, state):
     print(f" done ({elapsed}s)")
     return result
 
+async def request_course_agent(state: State):
+    request_course = state.get("request_course_name","")
+    filter_name = state.get("filter_name","")
+    if request_course == "" or filter_name == "":
+        return {"request_result":""}
+
+    tools = await mcp_client.get_tools()
+
+    parts = filter_name.split()
+    if len(parts) < 2:
+        return {"request_result": "Error: please provide full name"}
+    fname, lname = parts[:2]
+    get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
+    raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    if not raw_student_id:
+        return {"request_result": "Error: student not found"}
+    idstudent = json.loads(raw_student_id[0]["text"])
+
+    get_course_id_tool = next(t for t in tools if t.name == "get_course_id_by_name_tool")
+    raw_course_id = await get_course_id_tool.ainvoke({"course_name":request_course})
+    if not raw_course_id:
+        return {"request_result": f"Error: Course '{request_course}' not found."}
+    idcourse = json.loads(raw_course_id[0]["text"])
+
+    create_enrollment_tool = next(t for t in tools if t.name == "create_enrollment_request_tool")
+    raw_create_enrollment = await create_enrollment_tool.ainvoke({"student_id": idstudent, "course_id": idcourse})
+    if not raw_create_enrollment:
+        return {"request_result":"Error creating request"}
+    result_text = raw_create_enrollment[0]["text"]
+
+    return {"request_result": result_text}
+
+
+async def view_requests_agent(state:State):
+    teacher_id = state.get("teacher_id",0)
+    if not teacher_id:
+        return {"pending_requests_list": "Error: Teacher ID is missing"}
+    
+    tools = await mcp_client.get_tools()
+    get_requests_tool = next(t for t in tools if t.name == "get_pending_requests_tool")
+    raw_requests = await get_requests_tool.ainvoke({"teacher_id":teacher_id})
+    if not raw_requests:
+        return {"pending_requests_list":"Error viewing requests"}
+    requests = json.loads(raw_requests[0]["text"])
+    if not requests or isinstance(requests, str):
+        return {"pending_requests_list": "No pending enrollment requests found."}
+
+
+    lines = ["=== Pending Enrollment Requests ==="]
+    for idx, r in enumerate(requests, 1):
+        req_date = str(r["requested_at"]).split()[0]
+        lines.append(
+            f"{idx}. {r['fname']} {r['lname']} -> {r['course_name']} ({r['course_code']}) - requested {req_date}"
+        )
+
+    return {"pending_requests_list": "\n".join(lines)}
+    
+
+async def handle_request_agent(state:State):
+    request_id = state.get("request_id","")
+    request_action = state.get("request_action","")
+    if request_id == "" or request_action == "":
+        return {"request_action_result":""}
+
+    tools = await mcp_client.get_tools()
+
+    if request_action == "approve":
+        approve_tool = next(t for t in tools if t.name == "approve_request_tool")
+        raw_approve = await approve_tool.ainvoke({"request_id":request_id})
+        if not raw_approve:
+            return {"request_action_result":"Error. Can not approve"}
+        approve = raw_approve[0]["text"]
+        return {"request_action_result": approve}
+
+    if request_action == "reject":
+        reject_tool = next(t for t in tools if t.name == "reject_request_tool")
+        raw_reject = await reject_tool.ainvoke({"request_id": request_id})
+        if not raw_reject:
+            return {"request_action_result": "Error. Can not reject"}
+        reject = raw_reject[0]["text"]
+        return {"request_action_result": reject}
+
+    return {"request_action_result": "Error: Unknown action"}
+
+
 def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
     
-    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export"]
-    student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help"]
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export", "requests", "approve"]
+    student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help","request"]
     
     if role == "student" and cmd not in student_commands:
         return END
@@ -627,7 +712,10 @@ def router_by_command(state: State):
         "eligibility": "fetch_node",
         "recommend": "fetch_node",
         "plan": "student_plan_node",
-        "ask": "rag_node"
+        "ask": "rag_node",
+        "request": "request_course_node",
+        "requests": "view_requests_node",
+        "approve": "handle_request_node",
     }
     
     result = routes.get(cmd, END)
@@ -675,6 +763,9 @@ graph.add_node("profile_node", profile_agent)
 graph.add_node("student_recommendation_node", student_recommendation_agent)
 graph.add_node("student_plan_node", student_plan_agent)
 graph.add_node("rag_node", rag_agent)
+graph.add_node("request_course_node", request_course_agent)
+graph.add_node("view_requests_node", view_requests_agent)
+graph.add_node("handle_request_node", handle_request_agent)
 
 # start
 graph.add_conditional_edges(START, router_by_command)
@@ -684,7 +775,8 @@ simple_nodes = [
     "enroll_node", "course_list_node", "grade_node",
     "update_status_node", "group_report_node", "bulk_enroll_node",
     "curriculum_node", "analytics_report_node", "student_plan_node",
-    "course_students_node", "rag_node"
+    "course_students_node", "rag_node", "request_course_node",
+    "view_requests_node", "handle_request_node"
 ]
 for node in simple_nodes:
     graph.add_edge(node, END)
@@ -787,7 +879,13 @@ async def main():
             "command":"",
             "rag_query": "",
             "rag_answer": "",
-            "teacher_id": teacher["idteacher"]
+            "teacher_id": teacher["idteacher"],
+            "request_course_name":"",
+            "request_result": "",
+            "pending_requests_list":"",
+            "request_id": 0,
+            "request_action": "",
+            "request_action_result": ""
         }
 
         quick_state = base_state.copy()
@@ -799,7 +897,7 @@ async def main():
             print(f"⚠️  {critical_count} student(s) currently at risk. Type 'risk' to see details.")
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/exit): ")
 
             if command == "exit":
                 print("Goodbye!")
@@ -1067,6 +1165,8 @@ async def main():
                 help       - Show this help message
                 export     - Export reports
                 me         - Own information
+                requests   - See all requests
+                approve    - Approve requests to course for student
                 exit       - Logout
                 """)
 
@@ -1078,8 +1178,20 @@ async def main():
                 for group in groups:
                     print(f"  - {group['group_code']}: {group['student_count']} students")
 
+            elif command == "requests":
+                result = await run_agent_with_timer(app, state)
+                print(result["pending_requests_list"])
+
+            elif command == "approve":
+                req_id = input("Request ID: ")
+                action = input("Approve or reject? (approve/reject): ")
+                state["request_id"] = int(req_id)
+                state["request_action"] = action
+                result = await run_agent_with_timer(app, state)
+                print(result["request_action_result"])
+
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/exit")
 
     
     if role == "student":
@@ -1100,6 +1212,7 @@ async def main():
             "students": [],
             "student_data": "",
             "course_id": 0,
+            "teacher_id":0,
             "course_data": "",
             "enrollments": [],
             "is_allowed": True,
@@ -1139,9 +1252,15 @@ async def main():
             "command":"",
             "rag_query": "",
             "rag_answer": "",
+            "request_course_name":"",
+            "request_result": "",
+            "pending_requests_list":"",
+            "request_id": 0,
+            "request_action": "",
+            "request_action_result": ""
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / exit ): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / exit ): ")
 
             state = initial_state.copy()
             tools = await mcp_client.get_tools()
@@ -1194,9 +1313,15 @@ async def main():
                 help       - Show this help message
                 exit       - Logout
                 """)
+
+            elif choice == "request":
+                course_name = input("Course to request: ")
+                state["request_course_name"] = course_name
+                result = await run_agent_with_timer(app, state)
+                print(result["request_result"])
             
             else:
-                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / exit ")
+                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / request / exit ")
 
 if __name__ == "__main__":
     asyncio.run(main())

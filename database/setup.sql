@@ -200,3 +200,14 @@ INSERT INTO curriculum (program_code, program_name, semester, idcourse, course_t
 ('TVT', 'Tietotekniikka', 3, 5, 'mandatory'),
 ('TVT', 'Tietotekniikka', 3, 7, 'elective'),
 ('TVT', 'Tietotekniikka', 4, 11, 'mandatory');
+
+CREATE TABLE IF NOT EXISTS enrollment_request (
+    idrequest INT AUTO_INCREMENT PRIMARY KEY,
+    idstudent INT NOT NULL,
+    idcourse INT NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    requested_at DATETIME,
+    reviewed_at DATETIME,
+    FOREIGN KEY (idstudent) REFERENCES student(idstudent),
+    FOREIGN KEY (idcourse) REFERENCES course(idcourse)
+);
