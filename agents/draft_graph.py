@@ -301,8 +301,11 @@ async def profile_agent(state: State):
 
     get_profile_tool = next(t for t in tools if t.name == "get_student_profile_tool")
     raw_profile = await get_profile_tool.ainvoke({"student_id":idstudent})
-    
+    if not raw_profile:
+        return {"student_profile": f"Student: {fname} {lname}\nNo courses enrolled yet."}
     student_profile = json.loads(raw_profile[0]["text"])
+    if not student_profile:
+        return {"student_profile": f"Student: {fname} {lname}\nNo courses enrolled yet."}
 
     if student_profile:
         first = student_profile[0] 
