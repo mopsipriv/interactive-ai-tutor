@@ -642,18 +642,19 @@ async def view_requests_agent(state:State):
     get_requests_tool = next(t for t in tools if t.name == "get_pending_requests_tool")
     raw_requests = await get_requests_tool.ainvoke({"teacher_id":teacher_id})
     if not raw_requests:
-        return {"pending_requests_list":"Error viewing requests"}
+        return {"pending_requests_list": "No pending requests found."}
     requests = json.loads(raw_requests[0]["text"])
-    if not requests or isinstance(requests, str):
+    if not requests:
         return {"pending_requests_list": "No pending enrollment requests found."}
 
 
     lines = ["=== Pending Enrollment Requests ==="]
-    for idx, r in enumerate(requests, 1):
-        req_date = str(r["requested_at"]).split()[0]
+    for r in requests:
+        req_date = str(r["requested_at"]).split("T")[0]
         lines.append(
-            f"{idx}. {r['fname']} {r['lname']} -> {r['course_name']} ({r['course_code']}) - requested {req_date}"
+            f"[Request ID: {r['idrequest']}] {r['fname']} {r['lname']} → {r['course_name']} ({r['course_code']}) | {req_date}"
         )
+    lines.append("\nTo approve/reject: use command 'approve' and enter the Request ID shown above.")
 
     return {"pending_requests_list": "\n".join(lines)}
     
