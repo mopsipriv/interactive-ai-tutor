@@ -416,3 +416,94 @@ async def get_teacher_groups(teacher_id: int):
         result = await cur.fetchall()
     conn.close()
     return result if result else []
+
+async def create_enrollment_request(student_id:int, course_id:int):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """INSERT INTO enrollment_request (idstudent, idcourse, status,requested_at)
+                VALUES(%s,%s,'pending',%s)""",
+                (student_id, course_id, datetime.now(),)
+            )
+            await conn.commit()
+            conn.close()
+        return "Create successfully"
+    except Exception as e:
+        return f"Error: {e}"
+
+
+async def get_pending_requests(teacher_id: int):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT er.idrequest, er.idstudent, s.fname, s.lname, er.idcourse, 
+                      c.course_code, c.course_name, er.status, er.requested_at
+            FROM enrollment_request er
+            JOIN student s ON er.idstudent = s.idstudent
+            JOIN course c ON er.idcourse = c.idcourse
+            JOIN student_group sg ON s.idstudent = sg.idstudent
+            JOIN group_cohort gc ON sg.idgroup = gc.idgroup_cohort
+            WHERE er.status = 'pending' AND gc.idteacher = %s
+            ORDER BY er.requested_at ASC""",
+            (teacher_id,)
+        )
+        result = await cur.fetchall()
+    conn.close()
+    return result if result else []
+
+async def approve_request(request_id: int):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT idstudent, idcourse 
+                   FROM enrollment_request 
+                   WHERE idrequest = %s AND status = 'pending'""",
+                (request_id,)
+            )
+            req = await cur.fetchone()
+
+            if not req:
+                conn.close()
+                return "Error: Request not found or already processed"
+
+            student_id = req["idstudent"]
+            course_id = req["idcourse"]
+
+            await cur.execute(
+                """UPDATE enrollment_request 
+                   SET status = 'approved', reviewed_at = %s 
+                   WHERE idrequest = %s""",
+                (datetime.now(), request_id)
+            )
+
+            await cur.execute(
+                """INSERT INTO enrollment (idstudent, idcourse, status) 
+                   VALUES (%s, %s, 'ongoing')""",
+                (student_id, course_id)
+            )
+
+            await conn.commit()
+            conn.close()
+        return "Request approved and student enrolled successfully"
+    except Exception as e:
+        return f"Error: {e}"
+
+
+async def reject_request(request_id:int):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """UPDATE enrollment_request
+                SET status= 'rejected', reviewed_at=%s
+                WHERE idrequest=%s""",
+                (datetime.now(),request_id,)
+            )
+            await conn.commit()
+            conn.close()
+        return "Request is rejected successfully"
+    except Exception as e:
+        return f"Error: {e}"
+    

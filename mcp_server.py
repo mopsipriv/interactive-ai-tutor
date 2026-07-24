@@ -21,7 +21,11 @@ from database.db_connector import (
     get_student_curriculum_progress,
     get_course_analytics,
     get_group_analytics,
-    get_students_by_teacher
+    get_students_by_teacher,
+    create_enrollment_request,
+    get_pending_requests,
+    approve_request,
+    reject_request
 )
 
 mcp = FastMCP("Tutor Server")
@@ -90,11 +94,11 @@ async def update_enrollment_status_tool(student_id:int,course_id:int,status:str)
     return await update_enrollment_status(student_id,course_id,status)
 
 @mcp.tool
-async def get_student_from_db_tool(student_id: int) ->list:
+async def get_student_from_db_tool(student_id: int) -> dict | str:
     """Get a single student by their id"""
     student = await get_student_from_db(student_id)
-    if student:
-        student.pop("password_hash",None)
+    if isinstance(student, dict):
+        student.pop("password_hash", None)
     return student
 
 @mcp.tool
@@ -113,7 +117,7 @@ async def log_teacher_query_tool(teacher_id:int, query_text:str, intent:str, res
     return await log_teacher_query(teacher_id,query_text,intent,result)
 
 @mcp.tool
-async def get_teacher_query_history_tool(teacher_id:int,limit=10)->list:
+async def get_teacher_query_history_tool(teacher_id:int,limit: int=10)->list:
     """Function getting history"""
     return await get_teacher_query_history(teacher_id,limit)
 
@@ -144,6 +148,26 @@ async def get_students_by_teacher_tool(teacher_id: int) -> list:
     for s in students:
         s.pop("password_hash", None)
     return students
+
+@mcp.tool
+async def create_enrollment_request_tool(student_id:int,course_id:int)-> str:
+    """Create enrollment request to the course"""
+    return await create_enrollment_request(student_id,course_id)
+    
+@mcp.tool
+async def get_pending_requests_tool(teacher_id:int)-> list:
+    """Get pending requests courses"""
+    return await get_pending_requests(teacher_id)
+    
+@mcp.tool
+async def approve_request_tool(request_id:int)->str:
+    """Approve request for course"""
+    return await approve_request(request_id)
+    
+@mcp.tool
+async def reject_request_tool(request_id:int)->str:
+    """Reject request for course"""
+    return await reject_request(request_id)
 
 
 if __name__=="__main__":

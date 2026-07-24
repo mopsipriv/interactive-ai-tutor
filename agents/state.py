@@ -72,3 +72,10 @@ class State(TypedDict):
 
     user_role: str
     teacher_id: int
+
+    request_course_name: str
+    request_result: str
+    pending_requests_list: str
+    request_id: int
+    request_action: str
+    request_action_result: str
