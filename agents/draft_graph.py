@@ -7,12 +7,12 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups
+from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
 from agents.state import State
-from database.auth import verify_password
+from database.auth import verify_password, hash_password
 from rag.rag_retriever import retrieve
 
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
@@ -301,6 +301,7 @@ async def profile_agent(state: State):
 
     get_profile_tool = next(t for t in tools if t.name == "get_student_profile_tool")
     raw_profile = await get_profile_tool.ainvoke({"student_id":idstudent})
+    
     student_profile = json.loads(raw_profile[0]["text"])
 
     if student_profile:
@@ -1211,6 +1212,7 @@ async def main():
                 me         - Own information
                 requests   - See all requests
                 approve    - Approve requests to course for student
+                password   - Change password
                 exit       - Logout
                 """)
 
@@ -1234,8 +1236,22 @@ async def main():
                 result = await run_agent_with_timer(app, state)
                 print(result["request_action_result"])
 
+            elif command == "password":
+                old_password = input("Current password: ")
+                if not verify_password(old_password, teacher["password_hash"]):
+                    print("Error: incorrect current password.")
+                    continue
+                new_password = input("New password: ")
+                confirm_password = input("Confirm new password: ")
+                if new_password != confirm_password:
+                    print("Error: passwords do not match.")
+                    continue
+                new_hash = hash_password(new_password)
+                await update_teacher_password(teacher["idteacher"], new_hash)
+                print("Password updated successfully!")
+
             else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/exit")
+                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/password/exit")
 
     
     if role == "student":
@@ -1305,7 +1321,7 @@ async def main():
             "my_requests_list": ""
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / exit ): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ): ")
 
             state = initial_state.copy()
             tools = await mcp_client.get_tools()
@@ -1358,6 +1374,7 @@ async def main():
                 request     - Request enrollment in a course
                 my_requests - View status of your enrollment requests
                 help        - Show this help message
+                password    - Change password
                 exit        - Logout
             """)
 
@@ -1377,9 +1394,24 @@ async def main():
             elif choice == "my_requests":
                 result = await run_agent_with_timer(app, state)
                 print(result["my_requests_list"])
+
+            elif choice == "password":
+                old_password = input("Current password: ")
+                if not verify_password(old_password, student["password_hash"]):
+                    print("Error: incorrect current password.")
+                    continue
+                new_password = input("New password: ")
+                confirm_password = input("Confirm new password: ")
+                if new_password != confirm_password:
+                    print("Error: passwords do not match.")
+                    continue
+                new_hash = hash_password(new_password)
+                await update_student_password(student["idstudent"], new_hash)
+                print("Password updated successfully!")
+            
             
             else:
-                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / exit ")
+                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ")
 
 if __name__ == "__main__":
     asyncio.run(main())

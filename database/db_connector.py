@@ -521,4 +521,32 @@ async def get_student_requests(student_id:int):
         result = await cur.fetchall()
     conn.close()
     return result if result else []
+
+async def update_teacher_password(teacher_id: int, new_hash: str):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                "UPDATE teacher SET password_hash = %s WHERE idteacher = %s",
+                (new_hash, teacher_id)
+            )
+            await conn.commit()
+        conn.close()
+        return "Password updated successfully"
+    except Exception as e:
+        return f"Error: {e}"
+
+async def update_student_password(student_id: int, new_hash: str):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                "UPDATE student SET password_hash = %s WHERE idstudent = %s",
+                (new_hash, student_id)
+            )
+            await conn.commit()
+        conn.close()
+        return "Password updated successfully"
+    except Exception as e:
+        return f"Error: {e}"
     
