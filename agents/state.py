@@ -79,3 +79,5 @@ class State(TypedDict):
     request_id: int
     request_action: str
     request_action_result: str
+
+    my_requests_list: str

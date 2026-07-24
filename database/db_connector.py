@@ -506,4 +506,19 @@ async def reject_request(request_id:int):
         return "Request is rejected successfully"
     except Exception as e:
         return f"Error: {e}"
+
+async def get_student_requests(student_id:int):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT er.idrequest, c.course_name, c.course_code, er.status, er.requested_at, er.reviewed_at
+            FROM enrollment_request er
+            JOIN course c ON er.idcourse = c.idcourse
+            WHERE er.idstudent = %s
+            ORDER BY er.requested_at DESC""",
+            (student_id,)
+        )
+        result = await cur.fetchall()
+    conn.close()
+    return result if result else []
     

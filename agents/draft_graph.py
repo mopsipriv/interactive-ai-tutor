@@ -685,13 +685,54 @@ async def handle_request_agent(state:State):
 
     return {"request_action_result": "Error: Unknown action"}
 
+async def my_requests_agent(state:State):
+    filter_name = state.get("filter_name","")
+    if filter_name == "":
+        return {"my_requests_list": ""}
+
+    tools = await mcp_client.get_tools()
+
+    parts = filter_name.split()
+    if len(parts) < 2:
+        return {"my_requests_list": "Error: please provide full name"}
+    fname, lname = parts[:2]
+    get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
+    raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
+    if not raw_student_id:
+        return {"my_requests_list": "Error: student not found"}
+    idstudent = json.loads(raw_student_id[0]["text"])
+
+    student_requests_tool = next(t for t in tools if t.name == "get_student_requests_tool")
+    raw_student_requests= await student_requests_tool.ainvoke({"student_id":idstudent})
+    if not raw_student_requests:
+        return {"my_requests_list": "Error: Request list is not available"}
+    student_requests = json.loads(raw_student_requests[0]["text"])
+
+    if not student_requests:
+        return {"my_requests_list": "You have no enrollment requests yet."}
+    
+    lines = ["=== Your Enrollment Requests ==="]
+    for r in student_requests:
+        if r["status"] == "approved":
+            icon = "✅"
+        elif r["status"] == "rejected":
+            icon = "❌"
+        else:
+            icon = "⏳"
+        
+        req_date = str(r["requested_at"]).split("T")[0]
+        lines.append(f"{icon} {r['course_name']} ({r['course_code']}) - {r['status']} | requested {req_date}")
+    
+    return {"my_requests_list": "\n".join(lines)}
+
+
 
 def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
     
     teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export", "requests", "approve"]
-    student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help","request"]
+    student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help","request", "my_requests"]
     
     if role == "student" and cmd not in student_commands:
         return END
@@ -717,6 +758,7 @@ def router_by_command(state: State):
         "request": "request_course_node",
         "requests": "view_requests_node",
         "approve": "handle_request_node",
+        "my_requests": "my_requests_node"
     }
     
     result = routes.get(cmd, END)
@@ -767,6 +809,7 @@ graph.add_node("rag_node", rag_agent)
 graph.add_node("request_course_node", request_course_agent)
 graph.add_node("view_requests_node", view_requests_agent)
 graph.add_node("handle_request_node", handle_request_agent)
+graph.add_node("my_requests_node", my_requests_agent)
 
 # start
 graph.add_conditional_edges(START, router_by_command)
@@ -777,7 +820,7 @@ simple_nodes = [
     "update_status_node", "group_report_node", "bulk_enroll_node",
     "curriculum_node", "analytics_report_node", "student_plan_node",
     "course_students_node", "rag_node", "request_course_node",
-    "view_requests_node", "handle_request_node"
+    "view_requests_node", "handle_request_node", "my_requests_node"
 ]
 for node in simple_nodes:
     graph.add_edge(node, END)
@@ -1258,10 +1301,11 @@ async def main():
             "pending_requests_list":"",
             "request_id": 0,
             "request_action": "",
-            "request_action_result": ""
+            "request_action_result": "",
+            "my_requests_list": ""
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / exit ): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / exit ): ")
 
             state = initial_state.copy()
             tools = await mcp_client.get_tools()
@@ -1304,16 +1348,18 @@ async def main():
 
             elif choice == "help":
                 print("""
-                Available commands:
-                profile    - View your academic profile
+            Available commands:
+                profile     - View your academic profile
                 eligibility - Check your project eligibility
-                recommend  - Get AI-powered study recommendation
-                courses    - View all available courses
-                plan       - View your study plan progress
-                ask        - Ask a question about your studies
-                help       - Show this help message
-                exit       - Logout
-                """)
+                recommend   - Get AI-powered study recommendation
+                courses     - View all available courses
+                plan        - View your study plan progress
+                ask         - Ask a question about your studies
+                request     - Request enrollment in a course
+                my_requests - View status of your enrollment requests
+                help        - Show this help message
+                exit        - Logout
+            """)
 
             elif choice == "request":
                 courses_state = initial_state.copy()
@@ -1327,9 +1373,13 @@ async def main():
                 state["request_course_name"] = course_name
                 result = await run_agent_with_timer(app, state)
                 print(result["request_result"])
+
+            elif choice == "my_requests":
+                result = await run_agent_with_timer(app, state)
+                print(result["my_requests_list"])
             
             else:
-                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / request / exit ")
+                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / exit ")
 
 if __name__ == "__main__":
     asyncio.run(main())
