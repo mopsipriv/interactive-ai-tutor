@@ -867,20 +867,25 @@ async def main():
     role = input("Login as: (teacher / student): ")
 
     if role == "teacher":
-        while True:
-            email = input("Enter your email: ").strip()
-            if "@" in email and "." in email:
-                break
-            print("Error: invalid email format. Please try again.")
-
-        password = input("Enter your password: ")
+        email = input("Enter your email: ")
         teacher = await get_teacher_by_email(email)
         if teacher is None:
-            print("Access denied. Teacher not found")
+            print("Access denied. Teacher not found.")
             return
-        if not verify_password(password, teacher["password_hash"]):
-            print("Access denied. Wrong password")
-            return
+        
+        attempts = 0
+        while attempts < 3:
+            password = input("Enter your password: ")
+            if verify_password(password, teacher["password_hash"]):
+                break
+            attempts += 1
+            remaining = 3 - attempts
+            if remaining > 0:
+                print(f"Wrong password. {remaining} attempt(s) remaining.")
+            else:
+                print("Access denied. Too many failed attempts.")
+                return
+        
         print(f"Welcome, {teacher['fname']} {teacher['lname']}!")
 
         base_state = {
@@ -1259,14 +1264,24 @@ async def main():
     
     if role == "student":
         student_number = input("Enter your student number: ")
-        password = input("Enter your password: ")
         student = await get_student_by_number(student_number)
         if student is None:
-            print("Access denied. Student not found")
+            print("Access denied. Student not found.")
             return
-        if not verify_password(password, student["password_hash"]):
-            print("Access denied. Wrong password")
-            return
+        
+        attempts = 0
+        while attempts < 3:
+            password = input("Enter your password: ")
+            if verify_password(password, student["password_hash"]):
+                break
+            attempts += 1
+            remaining = 3 - attempts
+            if remaining > 0:
+                print(f"Wrong password. {remaining} attempt(s) remaining.")
+            else:
+                print("Access denied. Too many failed attempts.")
+                return
+        
         print(f"Welcome, {student['fname']} {student['lname']}!")
 
         student_full_name = f"{student['fname']} {student['lname']}"
