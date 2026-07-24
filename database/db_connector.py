@@ -506,4 +506,47 @@ async def reject_request(request_id:int):
         return "Request is rejected successfully"
     except Exception as e:
         return f"Error: {e}"
+
+async def get_student_requests(student_id:int):
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT er.idrequest, c.course_name, c.course_code, er.status, er.requested_at, er.reviewed_at
+            FROM enrollment_request er
+            JOIN course c ON er.idcourse = c.idcourse
+            WHERE er.idstudent = %s
+            ORDER BY er.requested_at DESC""",
+            (student_id,)
+        )
+        result = await cur.fetchall()
+    conn.close()
+    return result if result else []
+
+async def update_teacher_password(teacher_id: int, new_hash: str):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                "UPDATE teacher SET password_hash = %s WHERE idteacher = %s",
+                (new_hash, teacher_id)
+            )
+            await conn.commit()
+        conn.close()
+        return "Password updated successfully"
+    except Exception as e:
+        return f"Error: {e}"
+
+async def update_student_password(student_id: int, new_hash: str):
+    try:
+        conn = await aiomysql.connect(**DB_CONFIG)
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                "UPDATE student SET password_hash = %s WHERE idstudent = %s",
+                (new_hash, student_id)
+            )
+            await conn.commit()
+        conn.close()
+        return "Password updated successfully"
+    except Exception as e:
+        return f"Error: {e}"
     

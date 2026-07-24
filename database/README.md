@@ -1,40 +1,54 @@
-## Database Setup
+# Interactive AI Tutor
 
-### Requirements
-- MySQL 8.0+
-- MySQL Workbench
+An AI-powered tutoring assistant for university tutors and students, built with LangGraph, MCP, and Groq LLM. Simulates a Peppi-like academic records system.
 
-### How to run
+## Features
 
-1. Open MySQL Workbench
-2. Connect to local instance
-3. Open SQL editor (Ctrl+T)
-4. Open file: peppi_db.sql
-5. Execute all (Ctrl+Shift+Enter)
-6. Refresh schemas — mydb should appear
+**Teachers:**
+- Monitor student progress, credits, study rights, and project eligibility
+- Enroll students, update grades and enrollment status
+- View analytics (course stats, group performance)
+- View curriculum by semester
+- Approve or reject student enrollment requests
+- AI-generated risk reports and student recommendations
+- Query history logging
+- Export reports
 
-### Schema overview
-- teacher — sends and receives bot queries
-- student — belongs to group_cohort
-- course — has credits and category
-- enrollment — student course history with grades
-- project — has requirements (courses needed)
-- project_requirement — which courses needed per project
-- project_group — students who passed eligibility check
-- group_cohort — student group tied to teacher
-- student_group — student ↔ group mapping
-- teacher_query_log — bot query history
+**Students:**
+- View own academic profile and study plan
+- Check project eligibility
+- Get AI-powered study recommendations (RAG-based)
+- Request enrollment in courses
+- Track status of enrollment requests
+- Ask questions about curriculum and tutoring guidelines
 
-### Test eligibility query
-SELECT 
-    s.fname, s.lname, c.course_name,
-    CASE WHEN e.status = 'completed' 
-         THEN 'done' ELSE 'missing' 
-    END AS eligibility
-FROM project_requirement pr
-JOIN course c ON pr.idcourse = c.idcourse
-LEFT JOIN enrollment e 
-    ON e.idcourse = pr.idcourse 
-    AND e.idstudent = 1
-JOIN student s ON s.idstudent = 1
-WHERE pr.idproject = 1;
+## Tech stack
+
+LangGraph (20+ agents) · MCP (15+ tools) · MySQL · Groq (Llama 3.3) · RAG (Chroma + sentence-transformers) · bcrypt authentication · Docker · CI/CD
+
+## Run with Docker
+
+```bash
+docker-compose up -d mysql mcp_server
+
+docker run -it --rm --network interactive-ai-tutor_default \
+  --env-file agents/.env \
+  -e DB_HOST=mysql -e DB_USER=root -e DB_PASSWORD=admin \
+  -e DB_NAME=peppi_db -e MCP_URL=http://peppi-mcp:8000/sse \
+  interactive-ai-tutor-app python -m agents.draft_graph
+```
+
+## Run locally
+
+```bash
+# Terminal 1
+fastmcp run mcp_server.py --transport sse
+
+# Terminal 2
+python -m agents.draft_graph
+```
+
+## Status
+
+✅ LangGraph + MCP, MySQL, bcrypt auth, teacher/student roles, analytics, curriculum, RAG, enrollment requests, Docker, CI/CD
+🔜 Telegram/OpenClaw integration

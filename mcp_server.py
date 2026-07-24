@@ -25,7 +25,8 @@ from database.db_connector import (
     create_enrollment_request,
     get_pending_requests,
     approve_request,
-    reject_request
+    reject_request,
+    get_student_requests
 )
 
 mcp = FastMCP("Tutor Server")
@@ -168,6 +169,11 @@ async def approve_request_tool(request_id:int)->str:
 async def reject_request_tool(request_id:int)->str:
     """Reject request for course"""
     return await reject_request(request_id)
+
+@mcp.tool
+async def get_student_requests_tool(student_id: int) -> list:
+    """Get all enrollment requests for a student"""
+    return await get_student_requests(student_id)
 
 
 if __name__=="__main__":
