@@ -1316,7 +1316,14 @@ async def main():
                 """)
 
             elif choice == "request":
-                course_name = input("Course to request: ")
+                courses_state = initial_state.copy()
+                courses_state["command"] = "courses"
+                courses_state["show_courses"] = True
+                courses_result = await run_agent_with_timer(app, courses_state)
+                print("Available courses:")
+                print(courses_result["courses_list"])
+                
+                course_name = input("\nEnter course name to request: ")
                 state["request_course_name"] = course_name
                 result = await run_agent_with_timer(app, state)
                 print(result["request_result"])
