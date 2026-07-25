@@ -32,7 +32,22 @@ mcp_client = MultiServerMCPClient({
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-    
+
+
+def split_full_name(full_name: str):
+    """
+    Splits a full name into (fname, lname).
+    First word = first name, everything else = last name.
+    Returns (None, None) if name has fewer than 2 words.
+    """
+    parts = full_name.strip().split()
+    if len(parts) < 2:
+        return None, None
+    fname = parts[0]
+    lname = " ".join(parts[1:])
+    return fname, lname
+
+
 async def progress_agent(state: State):
     students = state.get("students", [])
     new_issue = ""
@@ -206,10 +221,9 @@ async def enroll_agent(state: State):
     enroll_course_name=state.get("enroll_course_name","")
     if enroll_student_name == "" or enroll_course_name == "":
         return {"enroll_result": ""}
-    parts = enroll_student_name.split()
-    if len(parts) < 2:
+    fname, lname = split_full_name(enroll_student_name)
+    if fname is None:
         return {"enroll_result": "Error: Student not found"}
-    fname,lname = enroll_student_name.split()[:2]
     tools= await mcp_client.get_tools()
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname, "lname":lname})
@@ -252,11 +266,10 @@ async def grade_agent(state: State):
     grade_value= state.get("grade_value","")
     if grade_student_name == "" or grade_course_name == "" or grade_value == "":
         return {"grade_result": ""}
-    parts = grade_student_name.split()
-    if len(parts) < 2:
+    fname, lname = split_full_name(grade_student_name)
+    if fname is None:
         return {"grade_result": "Error: Student or Course not found"}
     tools= await mcp_client.get_tools()
-    fname,lname = grade_student_name.split()[:2]
     
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname, "lname":lname})
@@ -287,11 +300,10 @@ async def profile_agent(state: State):
     filter_name = state.get("filter_name","")
     if filter_name == "":
         return {"student_profile": ""}
-    parts = filter_name.split()
-    if len(parts) < 2:
+    fname, lname = split_full_name(filter_name)
+    if fname is None:
         return {"student_profile": "Error: please provide full name (first and last name)"}
     tools = await mcp_client.get_tools()
-    fname,lname = filter_name.split()[:2]
    
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
@@ -324,13 +336,12 @@ async def status_update_agent(state: State):
     status_value = state.get("status_value","")
     if status_student_name == "" or status_course_name == "" or status_value == "":
         return {"status_update_result": ""}
-    parts = status_student_name.split()
-    if len(parts) < 2:
+    fname, lname = split_full_name(status_student_name)
+    if fname is None:
         return {"status_update_result": "Error: Student or Course not found"}
     
     tools = await mcp_client.get_tools()
     
-    fname,lname = status_student_name.split()[:2]
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
     if not raw_student_id:
@@ -573,6 +584,9 @@ async def analytics_report_agent(state: State):
         new_issue += f"Average credits earned: {analytics['avg_credits_earned']}\n"
         
         return {"analytics_report": new_issue}
+
+    else:
+        return {"analytics_report": f"Error: Unknown analytics type '{filter_analytics}'. Use 'courses' or 'group'."}
     
 
 async def rag_agent(state: State):
@@ -612,10 +626,10 @@ async def request_course_agent(state: State):
 
     tools = await mcp_client.get_tools()
 
-    parts = filter_name.split()
-    if len(parts) < 2:
+    fname, lname = split_full_name(filter_name)
+    if fname is None:
         return {"request_result": "Error: please provide full name"}
-    fname, lname = parts[:2]
+    
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
     if not raw_student_id:
@@ -697,10 +711,10 @@ async def my_requests_agent(state:State):
 
     tools = await mcp_client.get_tools()
 
-    parts = filter_name.split()
-    if len(parts) < 2:
+    fname, lname = split_full_name(filter_name)
+    if fname is None:
         return {"my_requests_list": "Error: please provide full name"}
-    fname, lname = parts[:2]
+    
     get_student_id_tool = next(t for t in tools if t.name == "get_student_id_by_name_tool")
     raw_student_id = await get_student_id_tool.ainvoke({"fname":fname,"lname":lname})
     if not raw_student_id:
@@ -1239,7 +1253,13 @@ async def main():
 
             elif command == "approve":
                 req_id = input("Request ID: ")
+                if not req_id.isdigit():
+                    print("Error: Request ID must be a number.")
+                    continue
                 action = input("Approve or reject? (approve/reject): ")
+                if action not in ("approve", "reject"):
+                    print("Error: please type 'approve' or 'reject'.")
+                    continue
                 state["request_id"] = int(req_id)
                 state["request_action"] = action
                 result = await run_agent_with_timer(app, state)
