@@ -19,6 +19,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import warnings
 warnings.filterwarnings("ignore")
 import time
+import getpass
+
 mcp_client = MultiServerMCPClient({
     "tutor_server": {
         "url": os.getenv("MCP_URL", "http://127.0.0.1:8000/sse"),
@@ -661,9 +663,10 @@ async def view_requests_agent(state:State):
     return {"pending_requests_list": "\n".join(lines)}
     
 
-async def handle_request_agent(state:State):
+async def handle_request_agent(state: State):
     request_id = state.get("request_id","")
     request_action = state.get("request_action","")
+    teacher_id = state.get("teacher_id", 0)
     if request_id == "" or request_action == "":
         return {"request_action_result":""}
 
@@ -671,7 +674,7 @@ async def handle_request_agent(state:State):
 
     if request_action == "approve":
         approve_tool = next(t for t in tools if t.name == "approve_request_tool")
-        raw_approve = await approve_tool.ainvoke({"request_id":request_id})
+        raw_approve = await approve_tool.ainvoke({"request_id": request_id, "teacher_id": teacher_id})
         if not raw_approve:
             return {"request_action_result":"Error. Can not approve"}
         approve = raw_approve[0]["text"]
@@ -679,7 +682,7 @@ async def handle_request_agent(state:State):
 
     if request_action == "reject":
         reject_tool = next(t for t in tools if t.name == "reject_request_tool")
-        raw_reject = await reject_tool.ainvoke({"request_id": request_id})
+        raw_reject = await reject_tool.ainvoke({"request_id": request_id, "teacher_id": teacher_id})
         if not raw_reject:
             return {"request_action_result": "Error. Can not reject"}
         reject = raw_reject[0]["text"]
@@ -873,7 +876,7 @@ async def main():
         
         attempts = 0
         while attempts < 3:
-            password = input("Enter your password: ")
+            password = getpass.getpass("Enter your password: ")
             if verify_password(password, teacher["password_hash"]):
                 break
             attempts += 1
@@ -1135,7 +1138,7 @@ async def main():
                         print(f"[{record['created_at']}] {record['intent']}: {record['query_text']}")
 
             elif command == "curriculum":
-                program = input("Program code (e.g. TVT): ")
+                program = input("Program code (e.g. TVT2025S-OHJ or DIN2025S): ")
                 state["filter_program"] = program
                 result = await run_agent_with_timer(app, state)
                 if "Error" in result["curriculum_info"]:
@@ -1243,12 +1246,12 @@ async def main():
                 print(result["request_action_result"])
 
             elif command == "password":
-                old_password = input("Current password: ")
+                old_password = getpass.getpass("Current password: ")
                 if not verify_password(old_password, teacher["password_hash"]):
                     print("Error: incorrect current password.")
                     continue
-                new_password = input("New password: ")
-                confirm_password = input("Confirm new password: ")
+                new_password = getpass.getpass("New password: ")
+                confirm_password = getpass.getpass("Confirm new password: ")
                 if new_password != confirm_password:
                     print("Error: passwords do not match.")
                     continue
@@ -1269,7 +1272,7 @@ async def main():
         
         attempts = 0
         while attempts < 3:
-            password = input("Enter your password: ")
+            password = getpass.getpass("Enter your password: ")
             if verify_password(password, student["password_hash"]):
                 break
             attempts += 1
@@ -1367,8 +1370,7 @@ async def main():
                 print(result["courses_list"])
 
             elif choice == "plan":
-                group_code = student.get("group_code", "TVT")
-                state["filter_program"] = "".join(filter(str.isalpha, group_code)) or "TVT"
+                state["filter_program"] = student.get("study_right", "TVT2025S-OHJ")
                 result = await run_agent_with_timer(app, state)
                 print(result["student_plan"])
 
@@ -1412,12 +1414,12 @@ async def main():
                 print(result["my_requests_list"])
 
             elif choice == "password":
-                old_password = input("Current password: ")
+                old_password = getpass.getpass("Current password: ")
                 if not verify_password(old_password, student["password_hash"]):
                     print("Error: incorrect current password.")
                     continue
-                new_password = input("New password: ")
-                confirm_password = input("Confirm new password: ")
+                new_password = getpass.getpass("New password: ")
+                confirm_password = getpass.getpass("Confirm new password: ")
                 if new_password != confirm_password:
                     print("Error: passwords do not match.")
                     continue

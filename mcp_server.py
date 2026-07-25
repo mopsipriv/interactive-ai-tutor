@@ -161,14 +161,14 @@ async def get_pending_requests_tool(teacher_id:int)-> list:
     return await get_pending_requests(teacher_id)
     
 @mcp.tool
-async def approve_request_tool(request_id:int)->str:
+async def approve_request_tool(request_id:int, teacher_id:int)->str:
     """Approve request for course"""
-    return await approve_request(request_id)
+    return await approve_request(request_id, teacher_id)
     
 @mcp.tool
-async def reject_request_tool(request_id:int)->str:
+async def reject_request_tool(request_id:int, teacher_id:int)->str:
     """Reject request for course"""
-    return await reject_request(request_id)
+    return await reject_request(request_id, teacher_id)
 
 @mcp.tool
 async def get_student_requests_tool(student_id: int) -> list:

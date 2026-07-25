@@ -452,8 +452,29 @@ async def get_pending_requests(teacher_id: int):
     conn.close()
     return result if result else []
 
-async def approve_request(request_id: int):
+async def verify_request_ownership(request_id: int, teacher_id: int):
+    """Check that a pending request belongs to a student in this teacher's group"""
+    conn = await aiomysql.connect(**DB_CONFIG)
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute(
+            """SELECT er.idrequest
+               FROM enrollment_request er
+               JOIN student s ON er.idstudent = s.idstudent
+               JOIN student_group sg ON s.idstudent = sg.idstudent
+               JOIN group_cohort gc ON sg.idgroup = gc.idgroup_cohort
+               WHERE er.idrequest = %s AND gc.idteacher = %s""",
+            (request_id, teacher_id)
+        )
+        result = await cur.fetchone()
+    conn.close()
+    return result is not None
+
+async def approve_request(request_id: int, teacher_id: int):
     try:
+        owns = await verify_request_ownership(request_id, teacher_id)
+        if not owns:
+            return "Error: You can only approve requests from your own students"
+
         conn = await aiomysql.connect(**DB_CONFIG)
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
@@ -491,15 +512,19 @@ async def approve_request(request_id: int):
         return f"Error: {e}"
 
 
-async def reject_request(request_id:int):
+async def reject_request(request_id: int, teacher_id: int):
     try:
+        owns = await verify_request_ownership(request_id, teacher_id)
+        if not owns:
+            return "Error: You can only reject requests from your own students"
+
         conn = await aiomysql.connect(**DB_CONFIG)
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
                 """UPDATE enrollment_request
                 SET status= 'rejected', reviewed_at=%s
                 WHERE idrequest=%s""",
-                (datetime.now(),request_id,)
+                (datetime.now(), request_id,)
             )
             await conn.commit()
             conn.close()
