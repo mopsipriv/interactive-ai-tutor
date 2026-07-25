@@ -1,0 +1,476 @@
+AI Tutor Assistant - Course Descriptions
+TVT2025S-OHJ Program at OAMK
+
+========================================
+TVT2025S-OHJ - YEAR 1 COURSES
+========================================
+
+Course: Matematiikan perusteet tietotekniikassa 1
+Code: IN00EH18
+Credits: 3
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa sieventää lausekkeita ja ratkaista perusyhtälöitä sekä yhtälöryhmiä. Opiskelija osaa tunnistaa erilaisia funktioita ja ratkaista eri funktioiden yhtälöitä.
+Sisältö: Murtolukusäännöt, potenssilaskusäännöt, polynomit, Pascalin kolmio, yhtälöt, 1. ja 2. asteen yhtälöt, murtolukuyhtälöt, juuriyhtälöt, yhtälöparit, funktiot ja niiden yhtälöt, kuvaaja, suoran yhtälö, käänteisfunktio, yhdistetty funktio, eksponenttifunktio, logaritmifunktio, eksponenttiyhtälöt, logaritmiyhtälöt, trigonometriset funktiot, trigonometria, trigonometriset yhtälöt.
+
+---
+
+Course: Digitaalitekniikan perusteet tietotekniikassa
+Code: IN00EH20
+Credits: 3
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa digitaalilogiikan ja -laskennan perusteet ja osaa tehdä loogisia laskutoimituksia binäärilogiikan lauseilla sekä numeerisia laskuja eri lukujärjestelmissä. Opiskelija osaa tulkita kombinaatiologiikan piirirakenteita ja suunnitella niitä käyttäen porttipiirejä. Opiskelija pystyy työskentelemään ryhmässä ja elektroniikan laboratorioympäristössä sekä rakentamaan yksinkertaisia logiikkapiirejä ja tutkimaan niiden toimintaa perusmittalaitteilla.
+Sisältö: Binaari- ja heksadesimaaliaritmetiikka, Boolen algebra ja yksinkertaisten logiikkasovellusten toteutus porttipiirien avulla laboratoriossa.
+
+---
+
+Course: Johdatus ohjelmointiin
+Code: IN00CS84
+Credits: 5
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa toteuttaa määrittelyn mukaisia tietokoneohjelmia käyttäen hyviä ohjelmointitapoja. Opiskelija osaa ratkaista pienimuotoisia ongelmia ja toteuttaa niiden ratkaisut ohjelmointikielellä. Opiskelija osaa käyttää valinta- ja toistorakenteita ohjelman toimintojen ohjaamiseen sekä hyödyntää taulukkorakennetta, tietuerakennetta ja aliohjelmia.
+Sisältö: Ohjelmoinnin peruskäsitteet alkaen muuttujista, tietotyypeistä sekä valinta- ja toistorakenteista. Tiedon käsittely taulukoiden, merkkijonojen, tietueiden ja aliohjelmien avulla. Ohjelman vianetsintä (debuggaus). Hyvät ohjelmointitavat.
+
+---
+
+Course: Digi- ja tietotekniset taidot
+Code: YY00DU47
+Credits: 3
+Year: 1
+Language: Finnish and English
+Programs: TVT2025S-OHJ, DIN2025S
+
+Opiskelija käyttää opiskelussa tarvittavia tietoteknisiä välineitä ja OAMK:n tietoteknistä ympäristöä opiskelun tukena. Opiskelija ymmärtää verkkotyöskentelyn perusperiaatteet ja mahdollisuudet sekä tunnistaa omat tietotekniset taitonsa ja kehittämistarpeensa. Opiskelija soveltaa työvälineohjelmia asiakirjojen, raporttien ja visuaalisten esitysten luomisessa saavutettavuus ja tekijänoikeudet huomioiden.
+Sisältö: Tietokoneen peruskäyttö, työvälineohjelmistot, tietoturva ja tietosuoja, tekijänoikeudet, saavutettavuus.
+
+---
+
+Course: Ammatillinen kehittyminen ja työelämätaidot
+Code: YY00DU46
+Credits: 5
+Year: 1
+Language: Finnish and English
+Programs: TVT2025S-OHJ, DIN2025S
+
+Opiskelija tuntee oppimisympäristön tarjoamat mahdollisuudet ja palvelut sekä tutkinnon sisällön ja vaatimukset. Opiskelija suunnittelee ja seuraa opintojensa edistymistä valmistuakseen tavoiteajassa. Opiskelija kehittää oppimis-, opiskelu- ja työskentelytaitojaan sekä suunnittelee uraansa. Opiskelija tunnistaa omat vahvuutensa ja kehittämiskohteensa sekä arvioi yhteisöllisen oppimisen ja ryhmätyötaitojaan.
+Sisältö: Oppimaan oppimisen tiedot ja taidot ammattikorkeakoulun oppimisympäristöissä, opiskelu- ja hyvinvointipalvelut, opiskelijan oikeudet ja velvollisuudet, tutkinnon opetussuunnitelma, henkilökohtaisen opinto- ja urasuunnitelman laatiminen, työnhaun verkostot, kansainvälistymismahdollisuudet, jatkuva oppiminen, monialainen ja monikulttuurinen työyhteisö, kestävyysnäkökulmat koulutuksessa.
+
+---
+
+Course: Sähköturvallisuus ja elektroniikan perusteet
+Code: IN00CS82
+Credits: 5
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa nimetä virtapiirien perussuureet ja soveltaa peruslakeja yksinkertaisten virtapiirien ominaisuuksien selvittämiseksi. Opiskelija tunnistaa sähköön liittyvät vaaratekijät laboratorio-oloissa ja osaa suojautua niiltä. Opiskelija osaa käyttää turvallisesti tavanomaisia laboratoriomittalaitteita sekä laskea elektronisten piirien jännitteitä ja virtoja.
+Sisältö: Turvallinen toiminta laboratoriossa. Yleismittarin, funktiogeneraattorin, oskilloskoopin sekä spektrianalysaattorin käyttö. Tasa- ja vaihtosähkön perusteet. Ohmin laki ja Kirchoffin lait. Vastus, kondensaattori ja kela. RLC-sarjapiiri. Muuntaja. Diodi. Tasasuuntaus. Transistori kytkimenä ja vahvistimena. Operaatiovahvistin ja sen sovellutuksia. Digitaali-analogiarajapinnan perusteet.
+
+---
+
+Course: Työelämän viestintätaidot
+Code: YY00DU50
+Credits: 3
+Year: 1
+Language: Finnish
+Programs: TVT2025S-OHJ, DIN2025S
+
+Opiskelija kirjoittaa oman alansa opiskelu- ja työelämätilanteisiin tarkoituksenmukaisia tekstejä. Opiskelija toimii vuorovaikutuksessa monialaissa työryhmissä ja vuorovaikuttaa digitaalisissa ja kasvokkaisissa toimintaympäristöissä. Opiskelija ymmärtää omat vahvuutensa ja kehittämiskohteensa viestijänä.
+Sisältö: Asiatekstit ja työelämän tekstit, tiedon ja lähteiden käyttö, tiedonhaku, ryhmäviestintä, argumentointi, viestintärohkeus, oman alan viestintätilanteet, työnhaun viestintä, erilaiset viestintäkanavat.
+
+---
+
+Course: Tietotekniikan sovellusprojekti
+Code: IN00EP47
+Credits: 9
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa toteuttaa mikroprosessorisovelluksen, joka monitoroi ympäristöään sensorien avulla ja ohjaa mikroprosessoriin kytkettyä laitteistoa sensorien signaalien perusteella. Opiskelija osaa toimia projektin prosessimallin mukaisesti osana tiimiä sekä suunnitella, toteuttaa ja dokumentoida sulautetun järjestelmän sovelluksen.
+Sisältö: Mikrokontrollerin rakenne ja toimintaperiaate. Yksinkertaisen sulautetun ohjelman suunnittelu ja dokumentointi lohkokaaviona ja toteutus C/C++-kielellä (3 op). Sulautetun järjestelmän komponentit ja välineet, sovellussuunnittelu ja toteutus, projektinhallinnan perusteet (6 op).
+
+---
+
+Course: Vektorit ja kompleksiluvut
+Code: IN00EP46
+Credits: 3
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa hyödyntää käytännön projektissa yhtälöiden ratkaisutaitoja ja vektorialgebraa sekä kompleksilukujen perusteita.
+Sisältö: Vektorit ja kompleksilukujen perusteet sovellettuna projektin tarpeisiin.
+
+---
+
+Course: Matematiikan perusteet tietotekniikassa 2
+Code: IN00EH21
+Credits: 3
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija hallitsee differentiaalilaskennan ja integraalin perusteet ja osaa ratkaista derivointiin ja integrointiin liittyviä tehtäviä myös numeerisesti. Opiskelija osaa hyödyntää näitä taitoja ohjelmoinnissa.
+Sisältö: Differentiaali- ja integraalilaskenta sovelluksineen.
+
+---
+
+Course: Tietokannat ja rajapinnat
+Code: IN00DL11
+Credits: 5
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa suunnitella ja toteuttaa relaatiotietokantoja sekä hallita niitä SQL-kieltä käyttäen. Opiskelija osaa tehdä relaatiotietokantoja hyödyntäviä sovelluksia.
+Sisältö: Relaatiotietokannat ja niiden hallinta SQL-kielen avulla. Relaatiotietokantojen hallintajärjestelmät. Palvelin-asiakasmalli. HTTP-rajapintojen toteuttaminen.
+
+---
+
+Course: Olio-ohjelmointi ja oliopohjainen suunnittelu
+Code: IN00CS88
+Credits: 5
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa toteuttaa omia luokkia ja käyttää valmiita luokkakirjastoja. Opiskelija osaa suunnitella yksinkertaisia olioilla toteutettavia ohjelmia ja dokumentoida ohjelman UML-luokkakaavioin sekä toteuttaa yksinkertaisia käyttöliittymäapplikaatioita Qt Widget -sovelluksen avulla.
+Sisältö: Olio-ohjelmoinnin peruskäsitteet luokka ja olio. Olioiden yhteistoiminta erilaisten oliopohjaisuuteen liittyvien yhteyssuhteiden mukaisesti. Kapselointi, tiedon kätkentä, periytyminen ja polymorfismi. Oliopohjaisen luokkakirjaston käyttö. Graafisen käyttöliittymän suunnittelu ja ohjelmointi.
+
+---
+
+Course: Ohjelmistokehityksen sovellusprojekti
+Code: IN00ED14
+Credits: 15
+Year: 1
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija tunnistaa ja ymmärtää ohjelmistokehityksen perusvaiheet: määrittely, suunnittelu, toteutus ja testaus. Opiskelija osaa laatia ohjelmistokehitysprojektissa tarvittavia dokumentteja, tulkita ja laatia oliopohjaisen mallinnuskielen kaavioita sekä toteuttaa graafisen sovelluksen ja tietokanta-arkkitehtuurin. Opiskelija osaa kirjoittaa projektiin liittyviä dokumentteja englanniksi.
+Sisältö: Ohjelmistokehitysprosessin eri vaiheet ja niiden dokumentointi. Oliopohjainen mallintaminen ja olio-ohjelmointi. Ohjelmistotestaaminen kehitysprosessin eri vaiheissa. Versiohallintatyökalun käyttö. Käyttöliittymä- ja tietokantasuunnittelu. Projektin viestintä kirjallisesti erilaisissa viestintätilanteissa.
+
+---
+
+========================================
+TVT2025S-OHJ - YEAR 2 COURSES
+========================================
+
+Course: Web-sovellusten perusteet
+Code: IN00DL12
+Credits: 5
+Year: 2
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija kehittää web-sivuston HTML- ja CSS-kielillä. Opiskelija luo selaimessa ajettavia ohjelmia JavaScript-kielellä olio-ohjelmoinnin periaatteiden mukaisesti ja toteuttaa asynkronisia kutsuja selaimesta.
+Sisältö: HTML- ja CSS-ohjelmointi. JavaScript olio-ohjelmointi. JavaScript selainohjelmointi.
+
+---
+
+Course: Pilvipalvelut
+Code: IN00CT04
+Credits: 5
+Year: 2
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa hyödyntää pilvipalveluita ohjelmistoratkaisujen toteuttamisessa. Opiskelija tuntee yleisimmät pilvipalvelutermit, -konseptit ja -trendit sekä osaa kuvata pilvipalveluiden toimintaperiaatteet. Opiskelija tuntee pilvipalveluiden tyypilliset hyvät ja huonot puolet sekä niihin liittyvät haasteet.
+Sisältö: Modernit pilvipalvelutekniikat, -ominaisuudet ja käyttökohteet. Yleiset pilvipalvelut ja virtuaaliset verkkopalvelimet. Suositut pilvipalvelualustat kokonaisen infrastruktuurin rakentamiseen. Laskenta pilvipalveluissa.
+
+---
+
+Course: Ohjelmistotestaus
+Code: IN00FB05
+Credits: 5
+Year: 2
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija hyödyntää testausta osana ohjelmistokehitysprosessia ja toteuttaa toimenpiteitä sovelluksen laadun varmistamiseksi. Opiskelija soveltaa sopivaa menetelmää testatessaan ohjelmistoja sekä suunnittelee ja toteuttaa testauksen ja analysoi ja raportoi tulokset. Opiskelija toteuttaa automaattisia testejä ja hyödyntää testausta ketterässä ohjelmistoprojektissa.
+Sisältö: Testauksen rooli ohjelmistokehityksessä, laadunvarmistus, validointi ja verifiointi, ohjelmistotestauksen menetelmät, ohjelmistotestausprosessi, automaattinen testaus, testaus osana ketterää ohjelmistokehitystä.
+
+---
+
+Course: English for Working Life
+Code: YY00DU52
+Credits: 3
+Year: 2
+Language: English
+Programs: TVT2025S-OHJ, DIN2025S
+
+Opiskelija vuorovaikuttaa tarkoituksenmukaisesti monikulttuurisissa alansa työympäristöissä englannin kielellä sekä suullisesti että kirjallisesti. Opiskelija käyttää alansa englanninkielisiä lähteitä ja tunnistaa englannin kielen osaamisensa ja kehittämiskohteensa. Tavoitteena on kielitaito, joka vastaa vähintään eurooppalaisen viitekehyksen tasoa B2.1.
+Sisältö: Rohkeus viestiä englannin kielellä, koulutuksen ja alan keskeinen sanasto, alan kirjalliset ja suulliset viestintätilanteet, alan englanninkieliset lähteet ja julkaisut, kansainvälisyys ja monikulttuurisuus.
+
+---
+
+Course: Web-ohjelmoinnin sovellusprojekti
+Code: IN00ED15
+Credits: 15
+Year: 2
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa luoda web-ohjelmiston JavaScript-ohjelmointikielellä ja hyödyntää siinä JavaScript-pohjaista käyttöliittymäkirjastoa tai -ohjelmointikehystä. Opiskelija osaa suunnitella ja toteuttaa ohjelmistotestausta ja hyödyntää hyviä käytäntöjä ohjelmistokehityksessä. Opiskelija tuntee ketterän ohjelmistokehitysprosessin ja osaa esitellä projektinsa englanniksi.
+Sisältö: JavaScript-sovelluskehitys hyödyntämällä käyttöliittymäkirjastoja ja ohjelmointikehyksiä (5 op). Ohjelmistotestauksen eri vaiheet ja ohjelmistojen laatukonseptit tiimityössä (2 op). Projektityöskentely agile-kehitysprosessia käyttäen (7 op). Projektiesitys englanniksi (1 op).
+
+---
+
+Course: Fysiikan perusteet tietotekniikassa
+Code: IN00EH22
+Credits: 3
+Year: 2
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija tuntee fysiikan peruskäsitteet, perussuureet ja yksikköjärjestelmät. Opiskelija hallitsee kinematiikan ja dynamiikan periaatteet sekä ymmärtää ja osaa soveltaa Newtonin lakeja. Opiskelija ymmärtää voiman, työn, energian ja liikemäärän käsitteet ja osaa suorittaa fysiikan mittauksia ja analysoida mittaustuloksia.
+Sisältö: Fysiikan perusteet, SI-järjestelmä, kinematiikka, dynamiikka, voima, työ, energia, fysiikan mittaukset.
+
+---
+
+Course: Mobiiliohjelmointi natiiviteknologioilla
+Code: IN00CT07
+Credits: 5
+Year: 2
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa toteuttaa mobiilisovelluksia natiiviteknologioita käyttäen. Opiskelija tietää mobiililaitteiden ja alustojen erityiset rajoitukset sekä mahdollisuudet sovelluksia suunniteltaessa.
+Sisältö: Sovellusten toteuttaminen Android-alustalle. Android-luokkakirjasto. Graafisen käyttöliittymäsovelluksen suunnittelu mobiililaitteelle. Graafiset elementit ja tyylit. Näkymien käyttäminen. Mobiililaitteen laiterajapinnat.
+
+---
+
+Course: Web- ja hybriditeknologiat mobiiliohjelmoinnissa
+Code: IN00CT08
+Credits: 5
+Year: 2
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa kehittää järjestelmäriippumattomia mobiilisovelluksia web-teknologioita käyttämällä. Opiskelija tietää web-teknologioilla toteutetun mobiilisovelluksen mahdollisuudet ja rajoitukset.
+Sisältö: Sovellusten toteuttaminen hybriditeknologioita käyttäen. HTTP-rajapintojen toteuttaminen ja testaus. Rajapinnat pilvipalveluissa. Skaalautuvat käyttöliittymät.
+
+---
+
+Course: Mobiilikehitysprojekti
+Code: IN00ED17
+Credits: 15
+Year: 2
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa suunnitella, toteuttaa ja testata Android-käyttöjärjestelmässä toimivan mobiilisovelluksen sekä toimia osana kehitystiimiä käyttäen ketteriä ohjelmistokehitysmenetelmiä. Opiskelija osaa tunnistaa ja etsiä alaan liittyviä liiketoimintamahdollisuuksia sekä soveltaa matematiikkaa erilaisissa ohjelmointitehtävissä.
+Sisältö: Kehittynyt Android-ohjelmointi (3 op): mobiilipalveluiden arkkitehtuurit, graafiset käyttöliittymät ja tietoliikenne. Liiketoimintaosaaminen (3 op): liiketoimintamallit ja ansaintalogiikka, yritys- ja toimiala-analyysit. Ohjelmistotekniikan matematiikka (3 op): todennäköisyyslaskennan ja tilastollisen päättelyn perusteet. Mobiiliprojekti (6 op): projektimuotoinen ryhmätyö mobiilisovelluksen kehittämiseen ketterillä menetelmillä.
+
+---
+
+========================================
+TVT2025S-OHJ - YEAR 3 COURSES
+========================================
+
+Course: Linux Administration
+Code: IN00DU04
+Credits: 5
+Year: 3
+Language: English
+Program: TVT2025S-OHJ
+
+Opiskelija osaa suorittaa ylläpitotehtäviä Linux-käyttöjärjestelmälle.
+Sisältö: Kotitehtäviä Linux-virtuaalikoneilla, komentorivitulkki, datan prosessointi, ohjelmien asentaminen ja -kääntäminen, tyypilliset verkkopalvelut, verkkoliikenteen tarkastelu, kontit, komentorivitulkin ohjelmointi, palvelimen ylläpito.
+
+---
+
+Course: Advanced Software Development Techniques
+Code: IN00CT12
+Credits: 5
+Year: 3
+Language: English
+Program: TVT2025S-OHJ
+
+The student understands how an Operating System acts as an interface between a computer user and hardware. The student understands how the OS performs basic tasks such as file management, memory management, process management, and input and output handling. The student is able to describe the benefits of multi-threaded programming and can design and implement multi-threaded applications.
+Topics include: structure and services of a modern computer operating system, multithreaded concepts and programming, usage of 3rd party libraries.
+
+---
+
+Course: Components of IoT Application
+Code: IN00ED20
+Credits: 5
+Year: 3
+Language: English
+Program: TVT2025S-OHJ
+
+Opiskelija ymmärtää IP-protokollaperheen perusteet. Opiskelija osaa toteuttaa socket-yhteyden kahden tietokoneen välille internetin yli ja siirtää dataa HTTP-, MQTT-, CoAP- tai muuta IoT-protokollaa hyödyntäen. Opiskelija osaa selittää näiden protokollien erot ja käyttää protokolla-analysaattoria.
+Sisältö: IP-protokollaperhe. Socket-ohjelmointikirjaston käyttäminen tiedonsiirtoon. Client-Server- ja publish-subscribe-tyylisten IoT-protokollien ominaisuudet ja käyttö. Protokolla-analysaattorin (Wireshark) peruskäyttö.
+
+---
+
+Course: Soveltava matematiikka ja fysiikka ohjelmoinnissa
+Code: IN00CT09
+Credits: 5
+Year: 3
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa differentiaaliyhtälöiden perusteet ja osaa ratkaista differentiaaliyhtälöihin liittyviä tehtäviä myös numeerisesti. Opiskelija tietää Fourier-analyysin perusteet ja osaa analysoida ohjelmistotekniikan soveltavia tehtäviä ja mittauksia fysiikan sekä matematiikan avulla.
+Sisältö: Differentiaaliyhtälöt sovelluksineen ja Fourier-analyysi (2,5 op). Fysiikan mittaukset, simulointi ja näytteistys sekä pyörimisliike, teorioiden ja mittausten hyödyntäminen sovelluksissa (2,5 op).
+
+---
+
+Course: Svenska för arbetslivet
+Code: YY00DU51
+Credits: 3
+Year: 3
+Language: Finnish
+Programs: TVT2025S-OHJ, DIN2025S
+
+Opiskelija vuorovaikuttaa kirjallisesti ja suullisesti työelämän yleisissä ja alakohtaisissa viestintätilanteissa ruotsiksi. Opiskelija tunnistaa ruotsin kielen osaamisensa ja kehittymiskohteensa. Tavoitteena on kielitaito, joka vastaa vähintään eurooppalaisen viitekehyksen tasoa B1.1.
+Sisältö: Rohkeus viestiä ruotsin kielellä, alan kirjalliset ja suulliset vuorovaikutustilanteet ja alan keskeinen sanasto, ruotsinkielinen ja pohjoismainen toimintakulttuuri ja verkostot.
+
+---
+
+Course: Java-ohjelmointi
+Code: IN00FA96
+Credits: 3
+Year: 3
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija toteuttaa yksinkertaisia Java-ohjelmia hyödyntäen muuttujia, ehtoja, silmukoita ja metodeja. Opiskelija kuvaa ja toteuttaa olion luokkana sekä käyttää olio-ohjelmoinnin peruskäsitteitä kuten periytymistä ja kapselointia. Opiskelija hyödyntää Javan perus-API:a ja toteuttaa perusalgoritmeja kuten lajittelua ja hakua.
+Sisältö: Java-kielen perusrakenne ja syntaksi, muuttujat, tietotyypit ja perusoperaatiot, ohjelmointirakenteet, metodit ja funktiot, olio-ohjelmoinnin peruskäsitteet, perustietorakenteet, perusalgoritmit, virheenkorjaus ja testaaminen, rajapinnat, abstraktit luokat, tiedostojen käsittely, johdatus GUI-ohjelmointiin.
+
+---
+
+Course: Yrittäjyys
+Code: IN00ED21
+Credits: 3
+Year: 3
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija tuntee yrittäjyyden päämääritelmät ja sisällöt sekä yrittäjyyden ja innovaatioprosessin päävaiheet liikeideasta uuden yrityksen luomiseen. Opiskelija tietää tuotekehityksen ja IPR:n hallinnan pääperiaatteet osana uutta liiketoimintaa. Opiskelija osaa etsiä ja tunnistaa liiketoimintamahdollisuuksia erityisesti omalta osaamisalueeltaan.
+Sisältö: Yrittäjyyden määritelmät, yrittäjähenkinen käyttäytyminen, yrittäjyyden merkitys yhteiskunnassa sekä tukiverkostot. Liiketoimintamahdollisuuksien etsintä, tunnistaminen ja arvioiminen. Liiketoimintamalli ja liiketoimintasuunnitelma. Tuotekehitys ja IPR osana liiketoimintaa.
+
+---
+
+Course: Viestintä tutkimus- ja kehittämistyössä
+Code: YY00DU53
+Credits: 3
+Year: 3
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa kirjoittaa opinnäytetyön kirjallisen raportin ja noudattaa siinä tekstilajin käytäntöjä. Opiskelija lukee kriittisesti erilaisia tekstejä ja käyttää lähteitä tarkoituksenmukaisesti. Opiskelija viestii kirjallisesti ja suullisesti tutkimus- tai kehittämistyöstään asiantuntijana erilaisille kohderyhmille.
+Sisältö: Opinnäytetyön kirjallinen ja suullinen raportointi, havainnollistaminen tekstissä ja puhe-esityksessä, lähdekritiikki, akateeminen lukutaito, lähdeviittauskäytännöt, asiantuntijana esiintyminen, tiedottaminen ja asiantuntijuuden jakaminen.
+
+---
+
+Course: Yritys- tai hankelähtöinen tuotekehitysprojekti 1
+Code: IN00CT17
+Credits: 10
+Year: 3
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa soveltaa projektissa aikaisemmilla opintojaksoilla hankkimaansa osaamista ja toteuttaa projektin määrittelyyn, suunnitteluun, testaukseen ja toteutukseen liittyvät tehtävät. Opiskelija hankkii projektissa tarvittavan tiedon hyödyntäen laaja-alaisesti eri lähteitä ja toteuttaa tuotekehitysprojektin kohdeyrityksen laatuvaatimusten mukaisesti. Opiskelija kerää projektin eri vaiheista dokumentaatiot ja laatii kirjallisen raportin posterin ja loppuraportin muodossa.
+Sisältö: Opintokokonaisuuden aikana toteutetaan yritys- tai hankelähtöinen tuotekehitysprojekti projektityöskentelymallien mukaisesti.
+
+---
+
+Course: Ammattitaidon syventäminen 1
+Code: IN00FM22
+Credits: 10
+Year: 3
+Programs: TVT2025S-OHJ, DIN2025S
+
+Opintojakso on vaihtoehto yrityslähtöisille projekteille, jos opiskelijalla ei ole yrityspaikkaa. Opintojakson sisältö vaihtelee ajankohtaisten ja tulevaisuuden teknologioiden mukaisesti, ja tavoitteena on syventää opiskelijan ammatillista osaamista. Toteutuksessa voidaan keskittyä esimerkiksi tekoälyyn eri näkökulmista tai muihin ajankohtaisiin työelämäteemoihin. Tarkempi sisältö ja toteutus ilmoitetaan opiskelijoille hyvissä ajoin ennen ilmoittautumista.
+
+---
+
+========================================
+TVT2025S-OHJ - YEAR 4 COURSES
+========================================
+
+Course: Yritys- tai hankelähtöinen tuotekehitysprojekti 2
+Code: IN00CT18
+Credits: 10
+Year: 4
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija osaa soveltaa projektissa aikaisemmilla opintojaksoilla hankkimaansa osaamista ja toteuttaa projektin määrittelyyn, suunnitteluun, testaukseen ja toteutukseen liittyvät tehtävät. Jatko yritys- tai hankelähtöiselle tuotekehitysprojektille 1:lle. Opiskelija hankkii projektissa tarvittavan tiedon hyödyntäen laaja-alaisesti eri lähteitä ja toteuttaa projektin kohdeyrityksen laatuvaatimusten mukaisesti.
+Sisältö: Opintokokonaisuuden aikana toteutetaan yritys- tai hankelähtöinen tuotekehitysprojekti projektityöskentelymallien mukaisesti.
+
+---
+
+Course: Ammattitaidon syventäminen 2
+Code: IN00FM23
+Credits: 10
+Year: 4
+Programs: TVT2025S-OHJ, DIN2025S
+
+Opintojakso on vaihtoehto yrityslähtöisille projekteille, jos opiskelijalla ei ole yrityspaikkaa. Kuten Ammattitaidon syventäminen 1, sisältö vaihtelee ajankohtaisten teknologioiden mukaisesti ja tavoitteena on syventää ammatillista osaamista entisestään. Tarkempi sisältö ja toteutus ilmoitetaan opiskelijoille hyvissä ajoin ennen ilmoittautumista.
+
+---
+
+Course: Product Design and Implementation
+Code: ID00BQ11
+Credits: 15
+Year: 3
+Language: English
+Programs: TVT2025S-OHJ (elective), DIN2025S (free-choice)
+
+In this project-based course the student can use modern technologies, tools and methods for product design and development. The student acquires skills including idea generation, creative problem solving, creative design process, rapid prototyping and product architecture. The student can lead a team or work as a team member in a development team.
+Topics include: competence with new tools and methods for product design, confidence in creating new products, awareness of multiple functions in creating a product such as strategy, product management, environmental safety and project management, coordinating interdisciplinary tasks, working in a multicultural development team.
+
+---
+
+Course: Harjoittelu
+Code: IN00CT02
+Credits: 30
+Year: 4
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Harjoittelun suoritettuaan opiskelija tuntee oman ammattialansa keskeiset käytännön työtehtävät ja osaa soveltaa oppimiaan tietoja ja taitoja käytännössä. Opiskelija omaa todellisuuteen perustuvan näkemyksen alan vaatimuksista ja käytännöistä.
+Sisältö: Opiskelijakohtaisesti sovittavat työtehtävät. Oman työpanoksen merkityksen ymmärtäminen, työelämän pelisäännöt, vuorovaikutustaidot, ryhmätyö- ja projektitaidot, urasuunnittelutaidot. Harjoittelu toteutetaan alan yrityksissä tai organisaatioissa.
+
+---
+
+Course: Opinnäytetyö
+Code: T009015
+Credits: 15
+Year: 4
+Language: Finnish
+Program: TVT2025S-OHJ
+
+Opiskelija valitsee opinnäytetyölleen tarkoituksenmukaisen aiheen ja sen rajauksen, työn tavoitteen ja perustelee valintansa. Opiskelija käyttää tietoa valitusta aiheesta ja arvioi lähteitä kriittisesti. Opiskelija kokoaa opinnäytetyöhönsä tietoperustan tutkimus- tai asiantuntijatiedosta. Opiskelija valitsee ja perustelee tarkoituksenmukaisen tutkimus- tai kehittämismenetelmän, analysoi hankkimaansa aineistoa ja saavuttaa määritellyt tavoitteet. Opiskelija työskentelee eettisesti ja vastuullisesti.
+Sisältö: Opinnäytetyön aiheen täsmentäminen, opinnäytetyön toteuttaminen, raportointi ja ohjaukseen osallistuminen.
+
+---
+
+========================================
+TVT2025S-OHJ PROGRAM OVERVIEW
+========================================
+
+Program: Tietotekniikan tutkinto-ohjelma, Ohjelmistokehityksen suuntautumisvaihtoehto
+Code: TVT2025S-OHJ
+Degree: Insinööri (AMK)
+Credits: 240
+Duration: 4 years
+Start: Autumn 2025
+Language: Finnish
+
+Valmistuttuaan insinööriksi opiskelijalla on monipuoliset tiedot ja taidot toimia ohjelmistokehitys- ja asiantuntijatehtävissä nopeasti kehittyvillä ja kansainvälisillä tietoteknologian aloilla. Teknisen osaamisen lisäksi opintoihin kuuluu viestintää, kieliä, matemaattisia aineita, yrittäjyyttä ja taloutta. Näitä opiskellaan yhdistettyinä ammattiaineiden opintoihin integroiduissa opintojaksoissa.
+
+Ohjelmistokehityksessä opiskellaan ohjelmointia, ohjelmistokehitystä, web- ja mobiilisovellusten kehittämistä, palvelinohjelmointia, IoT-järjestelmien ohjelmistojen kehittämistä ja ohjelmistoprosessien hallintaa. Opiskelijat voivat opiskella myös robotiikkaa ja tekoälyä.
+
+Ensimmäisen lukuvuoden jälkeen opiskelijat jaetaan ryhmiin suuntautumisvaihtoehtojen perusteella. Yrityslähtöiset tuotekehitysprojektit ovat tärkeä osa opintoja, joissa teknisen oppimisen rinnalla opitaan työskentelemään tiimeissä ja ymmärtämään aktiivisen tiedonhaun tärkeys nopeasti kehittyvällä alalla.
