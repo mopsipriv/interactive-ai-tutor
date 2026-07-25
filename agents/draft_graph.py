@@ -14,13 +14,11 @@ from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
 from agents.state import State
 from database.auth import verify_password, hash_password
 from rag.rag_retriever import retrieve
-
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import warnings
 warnings.filterwarnings("ignore")
 import time
-
 mcp_client = MultiServerMCPClient({
     "tutor_server": {
         "url": os.getenv("MCP_URL", "http://127.0.0.1:8000/sse"),
