@@ -470,11 +470,11 @@ async def curriculum_agent(state: State):
         return {"curriculum_info": f"Error: Program '{filter_program}' not found."}
     curriculum = json.loads(raw_curriculum[0]["text"])
     new_issue = f"=== Curriculum: {filter_program} ===\n"
-    current_semester = None
+    current_year = None
     for course in curriculum:
-        if course["semester"] != current_semester:
-            current_semester = course["semester"]
-            new_issue += f"\nSemester {current_semester}:\n"
+        if course["year_of_study"] != current_year:
+            current_year = course["year_of_study"]
+            new_issue += f"\nYear {current_year}:\n"
         new_issue += f"  - {course['course_name']} ({course['credit']}cr) [{course['course_type']}]\n"
     
     return {"curriculum_info": new_issue}
@@ -505,11 +505,11 @@ async def student_plan_agent(state: State):
     progress = json.loads(raw_student_curriculum[0]["text"])
 
     new_issue = f"=== Study Plan: {filter_name} ({filter_program}) ===\n"
-    current_semester = None
+    current_year = None
     for course in progress:
-        if course["semester"] != current_semester:
-            current_semester = course["semester"]
-            new_issue += f"\nSemester {current_semester}:\n"
+        if course["year_of_study"] != current_year:
+            current_year = course["year_of_study"]
+            new_issue += f"\nYear {current_year}:\n"
         
         status = course["enrollment_status"]
         if status == "completed":

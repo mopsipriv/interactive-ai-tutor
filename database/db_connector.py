@@ -283,11 +283,11 @@ async def get_curriculum(program_code:str):
     conn = await aiomysql.connect(**DB_CONFIG)
     async with conn.cursor(aiomysql.DictCursor) as cur:
         await cur.execute(
-            """SELECT cu.semester, cu.course_type, c.course_name, c.course_code, c.credit
+            """SELECT cu.year_of_study, cu.course_type, c.course_name, c.course_code, c.credit
             FROM curriculum cu
             JOIN course c ON cu.idcourse = c.idcourse
             WHERE cu.program_code = %s
-            ORDER BY cu.semester """,
+            ORDER BY cu.year_of_study """,
             (program_code,)
         )
         result = await cur.fetchall()
@@ -298,11 +298,11 @@ async def get_student_curriculum_progress(student_id:int, program_code:str):
     conn = await aiomysql.connect(**DB_CONFIG)
     async with conn.cursor(aiomysql.DictCursor) as cur:
         await cur.execute(
-            """SELECT cu.semester, cu.course_type, cu.idcourse, c.course_name, c.course_code, c.credit
+            """SELECT cu.year_of_study, cu.course_type, cu.idcourse, c.course_name, c.course_code, c.credit
             FROM curriculum cu
             JOIN course c ON cu.idcourse = c.idcourse
             WHERE cu.program_code = %s
-            ORDER BY cu.semester""",
+            ORDER BY cu.year_of_study""",
             (program_code,)
         )
         curriculum = await cur.fetchall()
