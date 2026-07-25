@@ -1,0 +1,567 @@
+AI Tutor Assistant - Course Descriptions
+TVT2025S-OHJ and DIN2025S Programs at OAMK
+
+========================================
+SHARED COURSES (Both Programs)
+========================================
+
+Course: Ammatillinen kehittyminen ja työelämätaidot
+Code: YY00DU46
+Credits: 5
+Year: 1
+Language: Finnish and English
+Programs: TVT2025S-OHJ, DIN2025S
+
+This course helps students understand the learning environment, degree requirements, and services available at OAMK. Students plan and monitor their study progress to graduate on schedule. The course develops learning, study and working skills, and career planning abilities. Students analyze their own strengths and development areas. The course covers collaborative learning, multicultural work community skills, and student wellbeing. Students learn about quality feedback systems and sustainability in education.
+Topics include: learning skills in university of applied sciences, student rights and responsibilities, personal study and career plan, work-life networks, internationalization opportunities, continuous learning, and wellbeing.
+
+---
+
+Course: Digi- ja tietotekniset taidot
+Code: YY00DU47
+Credits: 3
+Year: 1
+Language: Finnish and English
+Programs: TVT2025S-OHJ, DIN2025S
+
+Students learn to use ICT tools needed in studies and understand OAMK's digital environment. The course covers basic principles of online collaboration and students identify their own ICT skills and development needs. Students apply productivity software for creating documents, reports, visual presentations, diagrams and calculations with attention to accessibility and copyright. Students recognize basic cybersecurity concepts and data protection rights.
+Topics include: basic computer use, productivity software, information security and data protection, copyright, accessibility.
+
+---
+
+Course: English for Working Life
+Code: YY00DU52
+Credits: 3
+Year: 1
+Language: English
+Programs: TVT2025S-OHJ, DIN2025S
+
+Students interact appropriately in multicultural working environments in their field using English, both orally and in writing. Students use English-language sources in their field and recognize their own language skills and development needs. The target level is at least B2.1 of the Common European Framework of Reference for Languages.
+Topics include: communication confidence in English, field-specific vocabulary, oral and written communication situations, international and multicultural contexts.
+
+---
+
+Course: Ammattitaidon syventäminen 1
+Code: IN00FM22
+Credits: 10
+Year: 3
+Programs: TVT2025S-OHJ, DIN2025S
+
+This course is an alternative to company-oriented projects for students who do not have a company placement. The content varies according to current and future technologies, with the goal of deepening the student's professional competence. The course may focus on topics such as artificial intelligence from various perspectives or other current themes relevant to working life. The exact content and implementation are announced to students well in advance. Day group implementation is on campus and blended group implementation is online according to the schedule.
+
+---
+
+Course: Ammattitaidon syventäminen 2
+Code: IN00FM23
+Credits: 10
+Year: 4
+Programs: TVT2025S-OHJ, DIN2025S
+
+This course is an alternative to company-oriented projects for students who do not have a company placement. Like Ammattitaidon syventäminen 1, the content varies according to current and future technologies. The goal is to further deepen the student's professional competence. The course may cover artificial intelligence from various perspectives or other topical themes in working life. The exact content and implementation are announced to students well in advance before enrollment.
+
+---
+
+Course: Svenska för arbetslivet
+Code: YY00DU51
+Credits: 3
+Year: 3
+Language: Finnish
+Programs: TVT2025S-OHJ, DIN2025S
+
+Students interact in writing and orally in general and field-specific working life communication situations in Swedish. Students recognize their Swedish language skills and development needs. The target level corresponds to at least B1.1 of the Common European Framework of Reference for Languages.
+Topics include: confidence in communicating in Swedish, written and oral interaction in the field, field-specific vocabulary, Swedish-speaking and Nordic work culture and networks.
+
+---
+
+========================================
+DIN2025S - YEAR 1 COURSES
+========================================
+
+Course: Mathematics for Programmers
+Code: ID00EK08
+Credits: 5
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students understand different types of polynomials and equations, and can reduce polynomials and solve various equations. Students understand the basic principles of differential and integral calculation, and can calculate derivatives and integrals of various functions.
+Topics include: fundamental mathematics, functions and equations, differential and integral calculation with applications.
+
+---
+
+Course: Introduction to Programming and Software Development
+Code: ID00CS34
+Credits: 5
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students are able to write solution algorithms for given problems using the chosen programming language. Students identify the typical phases and activities in the software development process and know the high level differences of the most common processes. Students recognize the need and use of different tools during software development.
+Topics include: structure of computer programs, operators, assignments, control flow statements, functions, arrays, strings, simple classes and objects, software development processes, tools and roles.
+
+---
+
+Course: Computer Devices and Operating Systems
+Code: ID00CS37
+Credits: 5
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students can describe the components and architecture of a computer and its operating principle. Students understand the role of the operating system in a computer and can identify the most common operating systems. Students are able to perform administrative activities related to the Linux operating system.
+Topics include: CPU and main memory, execution of instructions and programs, peripheral devices, command line shell, data processing, installing and compiling software, basics of networking, shell scripting and server administration.
+
+---
+
+Course: HTML and CSS Programming
+Code: ID00CS38
+Credits: 5
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students are able to design and implement static web pages and configure and deploy a web server to host a static website. Students know the concepts of usability and user experience.
+Topics include: HTML, CSS, web server configuration and deployment to cloud, user interface design principles and design tools.
+Prerequisites: Previous courses of Degree Programme in Information Technology or equivalent skills.
+
+---
+
+Course: Internet Programming and Databases
+Code: ID00DH72
+Credits: 5
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students are able to design the structure of a database using ER-modelling, create a database and make a web application which uses the database, and carry out common database server administration procedures.
+Topics include: relational databases, database management systems, database design and maintenance, ER-modelling, referential integrity, normalization, SQL language, client-side and server-side code, backend programming with modern technology.
+
+---
+
+Course: Object Oriented Browser Programming
+Code: ID00CS41
+Credits: 5
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students are able to write programs using basic functional programming principles and design and implement programs using Object Oriented programming principles. Students are able to write programs executed by the browser which manipulate the DOM.
+Topics include: object oriented style, classes, methods and visibility, encapsulation, interfaces, inheritance and composition, functional programming basics, browser programming and DOM manipulation.
+
+---
+
+Course: Physics for Programmers
+Code: ID00EK07
+Credits: 5
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students understand the nature of physics as a science, know SI units and can convert quantities. Students can carry out physical observations, understand random and systematic errors, and analyze results. Students can solve problems using vectors and understand the fundamentals of kinematics and dynamics.
+Topics include: physics as a science, scientific method, SI units, observations and simulation, vectors, kinematics and dynamics, direct and rotational motion.
+
+---
+
+Course: Web Programming Project
+Code: ID00DW07
+Credits: 15
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students are able to work in a project team and follow a basic software development process. Students know what documents are produced in different phases of development and what methods and tools are used. Students are able to design and implement dynamic web applications using frontend and backend technologies. Students present their project work in English.
+Topics include: agile project work, software lifecycle models, version control, database communication, JavaScript HTTP requests, presentation and poster writing in English.
+
+---
+
+Course: Finnish Language 1: Survive!
+Code: YY00DU55
+Credits: 3
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students learn basic Finnish for survival situations. The target level is A1 of the Common European Framework of Reference for Languages.
+Topics include: greetings, numbers, basic shopping phrases, introductions, and everyday essential Finnish.
+
+---
+
+Course: Finnish Language 2: Move on!
+Code: YY00DU56
+Credits: 3
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students are able to communicate in simple everyday situations in Finnish. Students identify some differences between spoken and written Finnish and can understand and write simple short messages. The target level is A1.1 of the Common European Framework of Reference for Languages.
+Topics include: weather, seasons and months, family vocabulary, adjectives and colors, t-plural, genitive, possessive clause, consonant gradation in verb type 1.
+
+---
+
+Course: Finnish Language 3: Speak!
+Code: YY00DU57
+Credits: 3
+Year: 1
+Language: English
+Program: DIN2025S
+
+Students are able to talk about everyday topics and express themselves in leisure time situations. The target level is A1.2 of the Common European Framework of Reference for Languages.
+Topics include: describing appearance, describing an ordinary day, asking and telling the time, shopping phrases, partitive case, verb types 2-5.
+
+---
+
+========================================
+DIN2025S - YEAR 2 COURSES
+========================================
+
+Course: Web Development Frameworks
+Code: ID00CS44
+Credits: 5
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students are able to design and implement full stack web applications with web application frameworks and libraries. Students understand the benefits of using a framework when building a complex web application and can describe what a web application framework is.
+Topics include: single page application architecture, programming with React and Node.js, unit testing.
+
+---
+
+Course: Cloud Services
+Code: ID00CS45
+Credits: 5
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students are able to use the features offered by modern cloud services when implementing software solutions. Students know common cloud service terms, concepts and trends, and can describe basic principles of cloud services. Students can name typical advantages, disadvantages and challenges of cloud services.
+Topics include: modern cloud service techniques, features and use cases, cloud services and virtual private servers, popular platforms for cloud infrastructure, cloud computing.
+
+---
+
+Course: Software Testing
+Code: ID00ER99
+Credits: 5
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students can design and implement software testing and clearly analyze and report testing results. Students know the basic principles of testing and can apply different methods as part of the software development process. Students utilize test automation in software testing.
+Topics include: role of testing in software development, quality assurance, validation and verification, software testing methods, testing planning, implementation, analysis and reporting, testing in agile software development, automated testing.
+
+---
+
+Course: Advanced Web Applications Project
+Code: ID00CS47
+Credits: 15
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students can describe the architecture of software structure and operations when developing applications. Students are able to document the development process using relevant modelling language diagrams. Students can plan software testing, design and implement tests, and use tests to support development. Students understand software quality and quality assurance best practices. Students can create web applications with JavaScript and know how an Agile development process works.
+Topics include: software structures and UML in software design, software testing in all phases, quality concepts and practices, JavaScript-based development stack, agile software project development basics, writing technical documents in English.
+
+---
+
+Course: Mobile Programming with Native Technologies
+Code: ID00CS48
+Credits: 5
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students are able to implement mobile applications with native technologies. Students can recognize special restrictions of mobile platforms and specialities of mobile devices.
+Topics include: application implementation on Android platform using Java and XML, Android class framework, designing and implementing graphical user interface for mobile devices, graphical elements and styles, using views and activities, mobile device interfaces.
+Prerequisites: Previous courses of Degree Programme in Information Technology or equivalent skills.
+
+---
+
+Course: Web- and Hybrid Technologies in Mobile Programming
+Code: ID00CS49
+Credits: 5
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students are able to implement hybrid mobile applications and recognize special restrictions and possibilities of hybrid technologies. Students are able to design and implement HTTP interfaces.
+Topics include: implementing applications using hybrid technologies, designing, implementing and testing HTTP APIs, deploying interfaces to the cloud, scalable user interfaces.
+Prerequisites: Previous courses of Degree Programme in Information Technology or equivalent skills.
+
+---
+
+Course: Applied Mathematics and Physics in Programming
+Code: ID00CS50
+Credits: 5
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students know the basics of differential calculation and are able to solve differential equations numerically. Students know the basics of Fourier analysis and are able to utilize the theory and measurements of physics in application development.
+Topics include: differential equation calculation with applications, Fourier analysis, physical measurements, simulation and monitoring sensor position, theory and measurements of physics in application development.
+Prerequisites: Previous courses of Degree Programme in Information Technology or equivalent skills.
+
+---
+
+Course: Mobile Development Project
+Code: ID00ES00
+Credits: 12
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students apply earlier learned skills in Android mobile application and service design, testing and development in an Agile software development project. Students can design a large mobile service in a group using Agile methods. Students create project documentation and web content in English and communicate in a professional multicultural team.
+Topics include: Advanced Android Programming (mobile service architectures, GUI and network application development), Project Work (implementing a mobile service using Agile methods), Mathematics for Software Engineering (probability and statistics, statistical analysis, distributions and estimation).
+
+---
+
+Course: Työelämän viestintätaidot
+Code: YY00DU50
+Credits: 3
+Year: 1
+Language: Finnish
+Programs: TVT2025S-OHJ, DIN2025S (Finnish degree students)
+
+Students write purposeful texts for study and working life situations in their field. Students interact in multidisciplinary working groups and communicate effectively in both digital and face-to-face environments. Students understand their own strengths and development areas as communicators.
+Topics include: professional and working life texts, information retrieval, group communication, argumentation, communication confidence, job search communication, various communication channels.
+
+---
+
+Course: Taitavaksi kokousviestijäksi
+Code: YY00ED71
+Credits: 3
+Year: 2
+Language: Finnish
+Program: DIN2025S (Finnish degree students)
+
+Students master meeting techniques and communicate purposefully in meeting situations both online and face-to-face. Students can influence decisions, guide discussion, write meeting documents and communicate decisions through various channels.
+Topics include: basics of meeting techniques, goal-oriented interaction, online communication, document preparation, communication strategies for various working situations.
+
+---
+
+Course: Finnish Language 4: Write!
+Code: YY00DU58
+Credits: 3
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students can understand short simple texts and write simple sentences. The target level is A1.3 of the Common European Framework of Reference for Languages.
+Topics include: living environment and accommodation, vehicles and traveling vocabulary, local cases, demonstrative pronouns, imperative form, word types.
+
+---
+
+Course: Finnish Language 5: Everyday Life
+Code: YY00EJ16
+Credits: 4
+Year: 2
+Language: English
+Program: DIN2025S
+
+Students can manage simple social encounters and routine everyday situations in Finnish and understand and write simple texts with common vocabulary. The target level is A2.1 of the Common European Framework of Reference for Languages.
+Topics include: everyday conversations at a doctor's office, workplace and in studies, Finnish language structures including object, word types, consonant gradation in verb types 3 and 4.
+
+---
+
+========================================
+DIN2025S - YEAR 3 COURSES
+========================================
+
+Course: Advanced Software Development Techniques
+Code: ID00DU06
+Credits: 5
+Year: 3
+Language: English
+Program: DIN2025S
+
+Students understand how an Operating System acts as an interface between a computer user and hardware. Students understand how the OS performs basic tasks such as file management, memory management, process management, and input/output handling. Students are able to describe the benefits of multi-threaded programming and can design and implement multi-threaded applications.
+Topics include: structure and services of a modern operating system, multithreaded concepts and programming, usage of 3rd party libraries.
+
+---
+
+Course: Components of IoT Application
+Code: ID00CS53
+Credits: 5
+Year: 3
+Language: English
+Program: DIN2025S
+
+Students know the components and common architectures of typical Internet of Things systems and applications. Students can name IoT application areas and examples. Students know the basics of common IP family networking protocols and services used in IoT systems and understand IoT security and privacy challenges.
+Topics include: IoT security and privacy challenges, IP protocol family and IoT related services, cloud service solutions, common IoT development platforms.
+Prerequisites: General programming skills and basics of command line.
+
+---
+
+Course: Data Storage and Data Analysis
+Code: ID00CS54
+Credits: 5
+Year: 3
+Language: English
+Program: DIN2025S
+
+Students can utilize typical data storage formats and databases suitable for IoT applications. Students recognize programming languages suitable for data mining, understand basic theories of statistical analysis, and are able to use machine learning platforms and tools.
+Topics include: data formats, SQL and NoSQL databases, programming languages and tools for data analysis, utilization of statistical methods, basics of machine learning.
+
+---
+
+Course: English Communication in Research and Development
+Code: YY00DV86
+Credits: 3
+Year: 3
+Language: English
+Program: DIN2025S
+
+Students communicate as experts with different target groups about research and development topics. Students understand academic texts and use relevant sources. Students develop academic writing competence and recognize their own skills and development needs.
+Topics include: reporting in professional context orally and in writing, thesis work, information sources and communications in research and development, media and source criticism, reference techniques, academic reading.
+
+---
+
+Course: Company-Oriented Product Development Project 1
+Code: T771010D
+Credits: 10
+Year: 3
+Language: English
+Program: DIN2025S
+
+Students apply their learning in projects and get familiar with specifying, designing and implementing a software project. The projects combine theory and practice and give a realistic picture of required skills and work tasks in software projects. Students improve skills in seeking information and working as a team member.
+Topics include: project planning and implementation using timetables, methods and techniques, documentation and reporting.
+Prerequisites: 110 ECTS points completed.
+
+---
+
+Course: Entrepreneurship
+Code: ID00ES01
+Credits: 5
+Year: 3
+Language: English
+Program: DIN2025S
+
+Students know the main definitions and contents of entrepreneurship and the main stages from business idea to new venture creation. Students are able to search and identify business opportunities particularly in their own field. Students can innovate new business ideas and know how to exploit business opportunities.
+Topics include: definitions of entrepreneurship, entrepreneurial mindset, meaning of entrepreneurship in society, business idea to new venture creation, business opportunity recognition, business model, business plan, entrepreneur capabilities, support networks and key stakeholders.
+
+---
+
+Course: Java Programming
+Code: ID00CS46
+Credits: 5
+Year: 3
+Language: English
+Program: DIN2025S
+
+Students can create applications with the Java programming language and are able to utilize standard Java classes and libraries.
+Topics include: essentials of object-oriented programming, programming with Java including standard libraries, software development using Java-based application programming framework.
+
+---
+
+Course: Deepening of Student's Professional Skills
+Code: ID00EO11
+Credits: 1-10
+Year: 3
+Language: English
+Program: DIN2025S
+
+Students deepen their professional skills in a specific branch of their own professional field. Content and execution are planned and agreed together with the teacher individually.
+
+---
+
+Course: Finnish Language 6: Finnish Culture
+Code: YY00EJ17
+Credits: 4
+Year: 3
+Language: Finnish/English
+Program: DIN2025S
+
+Students can participate in routine conversations about personally important topics in Finnish and write simple descriptions of past events and personal experiences. The target level is A2.2 of the Common European Framework of Reference for Languages.
+Topics include: Finnish culture such as holidays, summer cottages, Finnish food culture, society, nature and history, Finnish language structures including past tense, word types, necessitative structure, object.
+
+---
+
+Course: Finnish Language 7: Working Life
+Code: YY00EJ18
+Credits: 4
+Year: 3
+Language: Finnish/English
+Program: DIN2025S
+
+Students can participate even in unexpected interaction situations related to regularly recurring themes in study, work or leisure. Students can write coherent and structured text. The target level is B1.1 of the Common European Framework of Reference for Languages.
+Topics include: Finnish working life and studies, describing oneself and one's skills including a simple job interview, Finnish language structures such as verb use, negative past tense, pronouns, adverbs.
+
+---
+
+Course: Product Design and Implementation
+Code: ID00BQ11
+Credits: 15
+Year: 3
+Language: English
+Programs: TVT2025S-OHJ (elective), DIN2025S (free-choice)
+
+In this project-based course students use modern technologies, tools and methods for product design and development. Students acquire skills including idea generation, creative problem solving, creative design process, rapid prototyping and product architecture. Students can lead a team or work as a team member in a development team.
+Topics include: new tools and methods for product design, confidence in creating new products, awareness of multiple functions in creating a product such as strategy, product management, environmental safety and project management, coordinating interdisciplinary tasks, working in a multicultural development team.
+
+---
+
+========================================
+DIN2025S - YEAR 4 COURSES
+========================================
+
+Course: Company-Oriented Product Development Project 2
+Code: T772010D
+Credits: 10
+Year: 4
+Language: English
+Program: DIN2025S
+
+Students apply their learning in projects and get familiar with specifying, designing and implementing a software project. This is the continuation of Project 1, combining theory and practice with a realistic picture of required skills in software projects. Students continue to improve teamwork and technical knowledge using different technical systems.
+Topics include: project planning and implementation using timetables, methods and techniques, documentation and reporting.
+Prerequisites: 120 ECTS points completed.
+
+---
+
+Course: Harjoittelu (Practical Training)
+Code: T008130D
+Credits: 30
+Year: 4
+Language: English
+Program: DIN2025S
+
+Upon completing the training, students know the central working methods and tasks of their future profession. Students are able to apply the theoretical base and skills learned in class in practice and have a realistic picture of the required skills and work tasks of the specific field.
+Topics include: completion of assignments agreed individually, understanding one's own role and responsibilities in practical work, rules of working life, developing social and teamwork skills, project working skills and career planning skills.
+Structure: General training 10 ECTS, Field-specific training 20 ECTS. Total 30 ECTS can all be field-specific training. 10 ECTS training equals 270 hours of work.
+
+---
+
+Course: Opinnäytetyö (Bachelor's Thesis)
+Code: T009015D
+Credits: 15
+Year: 4
+Language: English
+Program: DIN2025S
+
+Students choose a purposeful topic and define its scope, the objective of the thesis, and justify their choices. Students use relevant information critically, compile a theoretical framework, select and apply appropriate research or development methods, and analyze collected data. Students achieve the defined objectives of the thesis and present the results. Students work ethically and responsibly following agreed practices and guidelines.
+Key competencies: topic selection and thesis objective, use of information and sources, theoretical framework, research and development methods, results and conclusions, ethics and responsibility.
+
+---
+
+========================================
+PROGRAM OVERVIEW
+========================================
+
+TVT2025S-OHJ Program Overview
+Program: Tietotekniikan tutkinto-ohjelma, Ohjelmistokehityksen suuntautumisvaihtoehto
+Code: TVT2025S-OHJ
+Degree: Insinööri (AMK)
+Credits: 240
+Duration: 4 years
+Start: Autumn 2025
+Language: Finnish
+
+Students graduate with diverse knowledge and skills to work in software development and expert roles in rapidly developing international ICT fields. Studies include programming, software development, web and mobile application development, server programming, IoT software development, and software process management. Students can also study robotics and artificial intelligence. Company-oriented product development projects are an important part of studies where students learn to work in teams and understand the importance of active knowledge seeking.
+
+DIN2025S Program Overview
+Program: Degree Programme in Information Technology
+Code: DIN2025S
+Degree: Insinööri (AMK)
+Credits: 240
+Duration: 4 years
+Start: Autumn 2025
+Language: English
+
+The DIN program is taught entirely in English and is designed for international students and Finnish students wishing to study in English. The program covers web development, mobile programming, cloud services, software testing, IoT, data analysis and machine learning. Finnish language courses are included for international students at levels from beginner to working life proficiency. The program combines technical studies with project work and practical training in companies.
