@@ -1,10 +1,57 @@
-January - Spring Semester Start
-The spring semester begins in January. Tutors should organize orientation meetings 
-with new students. Check that all students have registered for correct courses.
-Remind students about study right deadlines. First month is critical for identifying 
-students who may need extra support.
+Tutoring Calendar - Academic Year Guide
+OAMK Tietotekniikka / Degree Programme in Information Technology
 
-February - Mid-Winter Check
-February is time for mid-winter progress review. Check student credit accumulation.
-Students who are behind schedule should be contacted individually. Verify that 
-study rights are valid until end of semester...
+---
+
+January - Spring Semester Start
+The spring semester begins in January. Teachers should organize orientation meetings with new and returning students. Use the group command to review all students in your group and check that everyone has registered for the correct courses for the semester. Use the risk command to identify students who may already be at risk based on previous semester performance. Remind all students about study right deadlines using the status command to check individual valid_until dates. The first month is critical for identifying students who need extra support before they fall too far behind.
+
+---
+
+February - Mid-Winter Progress Check
+February is the time for mid-winter progress review. Use the analytics command to check credit accumulation across your group and identify students who are behind the expected 30 credits per semester pace. Students who are significantly behind should be contacted individually. Use the status command to verify that all study rights are valid until at least the end of the semester. Check whether any enrollment requests are pending using the requests command and process them promptly so students can join courses without delay.
+
+---
+
+March - Midterm Review
+March is midterm month. Review ongoing course enrollments and check for students who may be struggling. Use the risk command to get an updated at-risk report. This is a good time to discuss study plans with students who are behind schedule and help them prioritize which courses to focus on. Students can use the plan command to see their full study plan and identify gaps. Encourage students to use the ask command if they have questions about course content or requirements.
+
+---
+
+April - Pre-Exam Preparation
+April is the pre-exam period before the spring semester ends. Use the history command to review the query history and understand what topics students have been asking about most. Check that students who planned to complete courses this semester are on track. Use the bulk command if you need to update grades or enrollment statuses for multiple students at once. Remind students to check their eligibility for summer projects or next semester courses using the eligibility command.
+
+---
+
+May - Semester End and Grading
+May is the end of the spring semester. Final exams and project submissions happen this month. Use the grade command to enter final grades for completed courses as results come in. Use the analytics command after grading is complete to see the overall performance of your group this semester. Identify students who did not complete planned courses and discuss with them whether they need to repeat or reschedule.
+
+---
+
+June - Summer Period
+June marks the start of the summer period. Most students are not studying during summer but some may be completing practical training (harjoittelu). Use the status command to check which students are in practical training and monitor their progress. This is also a good time to review which students are at risk of not graduating within their study right period and plan interventions for the autumn semester. Update enrollment plans for autumn using the enroll command.
+
+---
+
+August - Autumn Semester Preparation
+August is preparation month for the autumn semester starting in September. Review your student group and check for any new students joining. Use the group command to see your full group composition. Check that all students have a realistic study plan for the coming year using the curriculum command. Process any enrollment requests that came in over summer. Identify students whose study right expires within the next 12 months and schedule meetings with them.
+
+---
+
+September - Autumn Semester Start
+The autumn semester begins in September. New first-year students start their studies this month. Use the profile command to review new student profiles and ensure their study rights are correctly set up. Run the risk command early in the semester to establish a baseline. Organize a group orientation session and explain how students can use the system commands including profile, plan, ask, request, and eligibility. Remind students about the expected credit pace of 30 credits per semester.
+
+---
+
+October - Autumn Progress Check
+October is the first major progress checkpoint of the autumn semester. Use the analytics command to review credit accumulation and compare against the expected pace. Check whether first-year students are progressing well in their foundational courses such as Johdatus ohjelmointiin (IN00CS84), Matematiikan perusteet (IN00EH18), and Tietokannat ja rajapinnat (IN00DL11) for TVT students, or Introduction to Programming (ID00CS34) and Internet Programming and Databases (ID00DH72) for DIN students. Use the risk command to identify any students who need early intervention.
+
+---
+
+November - Mid-Autumn Review
+November is mid-autumn review month. Use the status command to check individual student progress and the bulk command if group-level updates are needed. This is the time to have honest conversations with students who are significantly behind their expected credit targets. Help them create a realistic recovery plan using the plan and recommend commands. Check enrollment requests that may have been submitted for next semester courses and process them before the December deadline.
+
+---
+
+December - Semester End and Planning
+December marks the end of the autumn semester. Enter final grades using the grade command as results arrive. Use the analytics command to get a full picture of group performance for the semester. Export a full semester report using the export command for your records. Review which students completed their planned courses and which did not. Plan the spring semester enrollments for your students and identify anyone whose study right will expire before they can complete their degree. Send a summary of the semester to students using the group communication features.
