@@ -1,11 +1,62 @@
-TVT Program - Tietotekniikka Curriculum Guide
+Curriculum Guide - Program Structure
+OAMK Tietotekniikka / Degree Programme in Information Technology
 
-Semester 1 - Foundation
-Students begin with mathematical foundations and introduction to programming.
-Matematiikan perusteet provides necessary mathematical background.
-Johdatus ohjelmointiin is the gateway course for all programming studies.
-Completing semester 1 courses is mandatory before advancing to semester 2.
+---
 
-Semester 2 - Core Programming
-Ohjelmointi 1 builds on introduction course. Tietokannat teaches database fundamentals.
-These courses are prerequisites for most advanced courses...
+Overview of Both Programs
+OAMK offers two bachelor's degree programs in information technology. TVT2025S-OHJ (Tietotekniikan tutkinto-ohjelma, Ohjelmistokehitys) is taught in Finnish and started in autumn 2025. DIN2025S (Degree Programme in Information Technology) is taught in English and started in autumn 2025. Both programs lead to the degree of Insinööri (AMK), are 240 credits, and take 4 years to complete. Study right is granted for 5 years. Some courses are shared between both programs.
+
+---
+
+TVT2025S-OHJ Year 1 Structure
+Year 1 of the TVT program builds mathematical and programming foundations. Mandatory courses include Matematiikan perusteet tietotekniikassa 1 (IN00EH18, 3op), Digitaalitekniikan perusteet tietotekniikassa (IN00EH20, 3op), Johdatus ohjelmointiin (IN00CS84, 5op), Digi- ja tietotekniset taidot (YY00DU47, 3op), Ammatillinen kehittyminen ja työelämätaidot (YY00DU46, 5op), Sähköturvallisuus ja elektroniikan perusteet (IN00CS82, 5op), Työelämän viestintätaidot (YY00DU50, 3op), Tietotekniikan sovellusprojekti (IN00EP47, 9op), Vektorit ja kompleksiluvut (IN00EP46, 3op), Matematiikan perusteet tietotekniikassa 2 (IN00EH21, 3op), Tietokannat ja rajapinnat (IN00DL11, 5op), Olio-ohjelmointi ja oliopohjainen suunnittelu (IN00CS88, 5op), and Ohjelmistokehityksen sovellusprojekti (IN00ED14, 15op). Total year 1 credits: approximately 63 credits.
+
+---
+
+TVT2025S-OHJ Year 2 Structure
+Year 2 of the TVT program focuses on web development and mobile programming. Mandatory courses include Web-sovellusten perusteet (IN00DL12, 5op), Pilvipalvelut (IN00CT04, 5op), Ohjelmistotestaus (IN00FB05, 5op), English for Working Life (YY00DU52, 3op), Web-ohjelmoinnin sovellusprojekti (IN00ED15, 15op), Fysiikan perusteet tietotekniikassa (IN00EH22, 3op), Mobiiliohjelmointi natiiviteknologioilla (IN00CT07, 5op), Web- ja hybriditeknologiat mobiiliohjelmoinnissa (IN00CT08, 5op), and Mobiilikehitysprojekti (IN00ED17, 15op). Total year 2 credits: approximately 61 credits.
+
+---
+
+TVT2025S-OHJ Year 3 Structure
+Year 3 of the TVT program covers advanced topics and professional deepening. Mandatory courses include Linux Administration (IN00DU04, 5op), Advanced Software Development Techniques (IN00CT12, 5op), Components of IoT Application (IN00ED20, 5op), Soveltava matematiikka ja fysiikka ohjelmoinnissa (IN00CT09, 5op), Svenska för arbetslivet (YY00DU51, 3op), Java-ohjelmointi (IN00FA96, 3op), Yrittäjyys (IN00ED21, 3op), and Viestintä tutkimus- ja kehittämistyössä (YY00DU53, 3op). Students also choose 20 credits from: Yritys- tai hankelähtöinen tuotekehitysprojekti 1 (IN00CT17, 10op) or Ammattitaidon syventäminen 1 (IN00FM22, 10op). Elective options include Product Design and Implementation (ID00BQ11, 15op).
+
+---
+
+TVT2025S-OHJ Year 4 Structure
+Year 4 of the TVT program consists of practical training and the bachelor's thesis. Students complete Harjoittelu (IN00CT02, 30op) in a real company in their field. Students also complete the bachelor's thesis Opinnäytetyö (T009015, 15op). Students may also complete Yritys- tai hankelähtöinen tuotekehitysprojekti 2 (IN00CT18, 10op) or Ammattitaidon syventäminen 2 (IN00FM23, 10op).
+
+---
+
+DIN2025S Year 1 Structure
+Year 1 of the DIN program builds web programming and computer science foundations taught entirely in English. Mandatory courses include Mathematics for Programmers (ID00EK08, 5op), Introduction to Programming and Software Development (ID00CS34, 5op), Ammatillinen kehittyminen ja työelämätaidot (YY00DU46, 5op), Digi- ja tietotekniset taidot (YY00DU47, 3op), English for Working Life (YY00DU52, 3op), Computer Devices and Operating Systems (ID00CS37, 5op), HTML and CSS Programming (ID00CS38, 5op), Internet Programming and Databases (ID00DH72, 5op), Object Oriented Browser Programming (ID00CS41, 5op), Physics for Programmers (ID00EK07, 5op), and Web Programming Project (ID00DW07, 15op). International students also complete Finnish Language 1 (YY00DU55, 3op), Finnish Language 2 (YY00DU56, 3op), and Finnish Language 3 (YY00DU57, 3op).
+
+---
+
+DIN2025S Year 2 Structure
+Year 2 of the DIN program focuses on advanced web development, mobile programming, and software testing. Mandatory courses include Web Development Frameworks (ID00CS44, 5op), Cloud Services (ID00CS45, 5op), Software Testing (ID00ER99, 5op), Advanced Web Applications Project (ID00CS47, 15op), Mobile Programming with Native Technologies (ID00CS48, 5op), Web- and Hybrid Technologies in Mobile Programming (ID00CS49, 5op), Applied Mathematics and Physics in Programming (ID00CS50, 5op), and Mobile Development Project (ID00ES00, 12op). Finnish degree students also complete Svenska för arbetslivet (YY00DU51, 3op) and Taitavaksi kokousviestijäksi (YY00ED71, 3op).
+
+---
+
+DIN2025S Year 3 Structure
+Year 3 of the DIN program covers advanced software development, IoT, and data analysis. Mandatory courses include Advanced Software Development Techniques (ID00DU06, 5op), Components of IoT Application (ID00CS53, 5op), Data Storage and Data Analysis (ID00CS54, 5op), and English Communication in Research and Development (YY00DV86, 3op). Students choose 20 credits from Company-Oriented Product Development Project 1 (T771010D, 10op) or Ammattitaidon syventäminen 1 (IN00FM22, 10op). Elective options include Entrepreneurship (ID00ES01, 5op), Java Programming (ID00CS46, 5op), and Deepening of Student's Professional Skills (ID00EO11, 1-10op).
+
+---
+
+DIN2025S Year 4 Structure
+Year 4 of the DIN program consists of practical training and the bachelor's thesis. Students complete Harjoittelu (T008130D, 30op) in a real company. Students also complete the bachelor's thesis Opinnäytetyö (T009015D, 15op). Students may also complete Company-Oriented Product Development Project 2 (T772010D, 10op) or Ammattitaidon syventäminen 2 (IN00FM23, 10op).
+
+---
+
+Shared Courses Between TVT and DIN
+Several courses are shared between both programs and count toward either degree. Ammatillinen kehittyminen ja työelämätaidot (YY00DU46, 5op) is mandatory in year 1 for both programs. Digi- ja tietotekniset taidot (YY00DU47, 3op) is mandatory in year 1 for both programs. English for Working Life (YY00DU52, 3op) is mandatory for both programs. Svenska för arbetslivet (YY00DU51, 3op) is mandatory for both programs. Ammattitaidon syventäminen 1 (IN00FM22, 10op) and Ammattitaidon syventäminen 2 (IN00FM23, 10op) are elective options in both programs. Product Design and Implementation (ID00BQ11, 15op) is an elective option in both programs.
+
+---
+
+Mandatory versus Elective Courses
+Mandatory courses must be completed to graduate. Elective courses allow students to customize their studies based on interests and career goals. In the TVT program elective options appear mainly in year 3 and year 4 where students choose between company projects and professional deepening courses. In the DIN program elective options also appear in year 3. All students must complete practical training and the bachelor's thesis regardless of which elective path they choose.
+
+---
+
+Prerequisites and Course Order
+Johdatus ohjelmointiin (IN00CS84) is the foundational programming course for TVT students and must be completed before most advanced programming courses. Introduction to Programming and Software Development (ID00CS34) is the equivalent foundational course for DIN students. Tietokannat ja rajapinnat (IN00DL11) builds on the programming foundation and is required for the AI Chatbot Development project. Web-sovellusten perusteet (IN00DL12) is required for the Web Application Project. Linux Administration (IN00DU04) is required for the AI Chatbot Development project. Company-Oriented Product Development Project 1 requires 110 credits completed. Company-Oriented Product Development Project 2 requires 120 credits completed.
