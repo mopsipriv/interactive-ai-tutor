@@ -1,14 +1,52 @@
-Study Right (Opiskeluoikeus) Guide
+Study Right Guide - Opiskeluoikeus
+OAMK Tietotekniikka / Degree Programme in Information Technology
+
+---
 
 What is study right?
-Study right determines how long a student can study at the university.
-For bachelor's degree (AMK) it is typically 3-4 years from enrollment date.
+Study right (opiskeluoikeus) determines how long a student is entitled to study at the university. Without valid study right a student cannot attend courses, exams, or submit assignments. Every student has a valid_from and valid_until date visible in their profile in the system.
+
+---
+
+How long is the study right for TVT and DIN programs?
+Both TVT2025S-OHJ and DIN2025S are 240-credit bachelor's degree programs with a standard duration of 4 years. Study right is typically granted for 5 years from the enrollment date, giving students one extra year as a buffer. Students who enrolled in autumn 2024 have study right until approximately June 2029. Students who enrolled in autumn 2025 have study right until approximately June 2030.
+
+---
 
 What happens when study right expires?
-If study right expires, student cannot attend courses or exams.
-Student must apply for extension through the student office.
+If study right expires the student can no longer attend courses or exams and loses access to university services. The student must apply for an extension through the student office (opiskelijatoimisto) before the expiry date. Extensions are not automatic and require justification. It is much easier to apply for an extension before expiry than after. Teachers are notified automatically when a student's study right is at risk.
 
-Warning signs - contact student if:
-- Less than 6 months remaining on study right
-- Credits earned are below 50% of expected credits
-- Student has not completed any courses in current semester
+---
+
+What is the expected credit pace?
+To graduate within the standard 4 years students should complete approximately 60 credits per academic year or 30 credits per semester. The full degree is 240 credits. Students who fall significantly behind this pace are considered at-risk and their teacher will be notified. Year 1 target is 60 credits. Year 2 target is 120 credits cumulative. Year 3 target is 180 credits cumulative. Year 4 target is 240 credits cumulative (graduation).
+
+---
+
+Warning signs teachers should watch for
+Teachers should contact a student proactively if any of the following apply. The student has less than 12 months remaining on study right. The student has completed fewer than 50 percent of expected credits for their year of study. The student has not completed any courses in the current semester. The student has received failing grades (below 1) on multiple courses. The student has not logged into the system for an extended period. The system generates an automatic risk report when a teacher logs in, highlighting students who meet any of these criteria.
+
+---
+
+How to check a student's study right status as a teacher
+Use the status command followed by the student number or name. For example: status H100003. The system will show the student's valid_from and valid_until dates, total credits completed, current GPA, and enrollment history. Use the risk command to see all at-risk students in your group at once.
+
+---
+
+How can a student check their own study right?
+Students can use the profile command to see their own valid_from and valid_until dates along with their credit progress. Students can also use the plan command to see their full study plan and how many credits remain to complete the degree.
+
+---
+
+What should a student do if study right is about to expire?
+The student should contact their teacher immediately and discuss the situation. The teacher can help the student plan an accelerated course completion schedule or advise on applying for a study right extension through the student office. Students should not wait until the expiry date as processing extensions takes time. The student can also use the ask command in the system to get general guidance on study right and credit requirements.
+
+---
+
+Study right extension process
+To apply for a study right extension the student submits an application to the student office explaining the reasons for the delay and presenting a realistic plan for completing the remaining credits. Common accepted reasons include illness, family circumstances, or significant life events. The application must be submitted before the current study right expires. The extension is typically granted for one academic year at a time.
+
+---
+
+Credits required for practical training and thesis
+Before starting practical training (harjoittelu) students typically need to have completed most of their theoretical studies. Before starting the bachelor's thesis (opinnäytetyö) students need to have completed most of their 240 credits. Company-oriented product development projects require 110 credits completed for Project 1 and 120 credits completed for Project 2. Students should plan their studies so that practical training and thesis can be completed within the study right period.
