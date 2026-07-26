@@ -33,6 +33,25 @@ mcp_client = MultiServerMCPClient({
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
+class BackException(Exception):
+    """Raised when user types 'back' or 'b' to cancel."""
+    pass
+ 
+def ask(prompt: str, hint: str = "") -> str:
+    """
+    Like input() but raises BackException if user types 'back' or 'b'.
+    Allows cancellation at any step inside a command.
+    """
+    full_prompt = f"{prompt}"
+    if hint:
+        full_prompt += f" [{hint}]"
+    full_prompt += " (back to cancel): "
+    value = input(full_prompt)
+    if value.strip().lower() in ("back", "b"):
+        raise BackException()
+    return value
+
+
 
 def split_full_name(full_name: str):
     """
@@ -975,312 +994,317 @@ async def main():
             tools = await mcp_client.get_tools()
             state["command"] = command
             log_tool = next(t for t in tools if t.name == "log_teacher_query_tool")
+            try:
 
-            if command == "profile":
-                name = input("Student name: ")
-                state["filter_name"] = name
-                result = await run_agent_with_timer(app, state)
-                if not result["student_profile"]:
-                    print(f"Error: Student '{name}' not found.")
-                else:
-                    print(result["student_profile"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"profile: {name}",
-                    "intent": "profile",
-                    "result": (result["student_profile"] or "not found")[:200]
-                })
+                if command == "profile":
+                    name = ask("Student name: ")
+                    state["filter_name"] = name
+                    result = await run_agent_with_timer(app, state)
+                    if not result["student_profile"]:
+                        print(f"Error: Student '{name}' not found.")
+                    else:
+                        print(result["student_profile"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"profile: {name}",
+                        "intent": "profile",
+                        "result": (result["student_profile"] or "not found")[:200]
+                    })
 
-            elif command == "course":
-                course = input("Course name: ")
-                state["filter_course"] = course
-                result = await run_agent_with_timer(app, state)
-                if "not found" in result["course_report"]:
-                    print(result["course_report"])
-                    print("Tip: use 'courses' command to see all available courses.")
-                else:
-                    print(result["course_report"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"course: {course}",
-                    "intent": "course",
-                    "result": (result["course_report"] or "not found")[:200]
-                })
+                elif command == "course":
+                    course = ask("Course name: ")
+                    state["filter_course"] = course
+                    result = await run_agent_with_timer(app, state)
+                    if "not found" in result["course_report"]:
+                        print(result["course_report"])
+                        print("Tip: use 'courses' command to see all available courses.")
+                    else:
+                        print(result["course_report"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"course: {course}",
+                        "intent": "course",
+                        "result": (result["course_report"] or "not found")[:200]
+                    })
 
 
-            elif command == "enroll":
-                enroll_name = input("Student name: ")
-                enroll_course = input("Course name: ")
-                state["enroll_student_name"] = enroll_name
-                state["enroll_course_name"] = enroll_course
-                result = await run_agent_with_timer(app, state)
-                if "Error" in result["enroll_result"]:
-                    print(result["enroll_result"])
-                    print("Tip: use 'courses' command to see all available courses.")
-                else:
-                    print(result["enroll_result"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"enroll: {enroll_name} -> {enroll_course}",
-                    "intent": "enroll",
-                    "result": (result["enroll_result"] or "not found")[:200]
-                })
-                
-
-            elif command == "grade":
-                grade_student = input("Student name: ")
-                grade_course = input("Course name: ")
-                while True:
-                    grade_value = input("Grade (1-5): ")
-                    if grade_value in ["1", "2", "3", "4", "5"]:
-                        break
-                    print("Error: grade must be a number between 1 and 5. Try again.")
-                confirm = input(f"Set grade {grade_value} for '{grade_student}' in '{grade_course}'? (yes/no): ")
-                if confirm.lower() != "yes":
-                    print("Cancelled.")
-                    continue
-
-                state["grade_student_name"] = grade_student
-                state["grade_course_name"] = grade_course
-                state["grade_value"] = grade_value
-                result = await run_agent_with_timer(app, state)
-                if "Error" in result["grade_result"]:
-                    print(result["grade_result"])
-                    print("Tip: use 'courses' command to see all available courses.")
-                else:
-                    print(result["grade_result"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"grade: {grade_student} -> {grade_course} = {grade_value}",
-                    "intent": "grade",
-                    "result": (result["grade_result"] or "not found")[:200]
-                })
-
-            elif command == "status":
-                status_student = input("Student name: ")
-                status_course = input("Course name: ")
-                while True:
-                    status_value = input("Status (planned/ongoing/completed): ")
-                    if status_value in ["planned","ongoing","completed"]:
-                        break
-                    print("Error: status must be only planned or ongoing or completed. Try again")
+                elif command == "enroll":
+                    enroll_name = ask("Student name")
+                    enroll_course = ask("Course name")
+                    state["enroll_student_name"] = enroll_name
+                    state["enroll_course_name"] = enroll_course
+                    result = await run_agent_with_timer(app, state)
+                    if "Error" in result["enroll_result"]:
+                        print(result["enroll_result"])
+                        print("Tip: use 'courses' command to see all available courses.")
+                    else:
+                        print(result["enroll_result"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"enroll: {enroll_name} -> {enroll_course}",
+                        "intent": "enroll",
+                        "result": (result["enroll_result"] or "not found")[:200]
+                    })
                     
-                state["status_student_name"] = status_student
-                state["status_course_name"] = status_course
-                state["status_value"] = status_value
-                result = await run_agent_with_timer(app, state)
-                if "Error" in result["status_update_result"]:
-                    print(result["status_update_result"])
-                    print("Tip: use 'courses' command to see all available courses.")
+
+                elif command == "grade":
+                    grade_student = ask("Student name")
+                    grade_course = ask("Course name")
+
+                    while True:
+                        grade_value = ask("Grade (1-5)")
+                        if grade_value in ["1", "2", "3", "4", "5"]:
+                            break
+                        print("Error: grade must be a number between 1 and 5. Try again.")
+                    confirm = ask(f"Set grade {grade_value} for '{grade_student}' in '{grade_course}'? (yes/no)")
+                    if confirm.lower() != "yes":
+                        print("Cancelled.")
+                        continue
+
+                    state["grade_student_name"] = grade_student
+                    state["grade_course_name"] = grade_course
+                    state["grade_value"] = grade_value
+                    result = await run_agent_with_timer(app, state)
+                    if "Error" in result["grade_result"]:
+                        print(result["grade_result"])
+                        print("Tip: use 'courses' command to see all available courses.")
+                    else:
+                        print(result["grade_result"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"grade: {grade_student} -> {grade_course} = {grade_value}",
+                        "intent": "grade",
+                        "result": (result["grade_result"] or "not found")[:200]
+                    })
+
+                elif command == "status":
+                    status_student = ask("Student name")
+                    status_course = ask("Course name")
+                    while True:
+                        status_value = ask("Status (planned/ongoing/completed)")
+                        if status_value in ["planned","ongoing","completed"]:
+                            break
+                        print("Error: status must be only planned or ongoing or completed. Try again")
+                        
+                    state["status_student_name"] = status_student
+                    state["status_course_name"] = status_course
+                    state["status_value"] = status_value
+                    result = await run_agent_with_timer(app, state)
+                    if "Error" in result["status_update_result"]:
+                        print(result["status_update_result"])
+                        print("Tip: use 'courses' command to see all available courses.")
+                    else:
+                        print(result["status_update_result"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"status: {status_student} -> {status_course} = {status_value}",
+                        "intent": "status",
+                        "result": (result["status_update_result"] or "not found")[:200]
+                    })
+
+                elif command == "group":
+                    group_code = ask("Group code")
+                    state["filter_group"] = group_code
+                    result = await run_agent_with_timer(app, state)
+                    if not result["group_report"]:
+                        print(f"Error: Group {group_code} not found.")
+                    else:
+                        print(result["group_report"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"group: {group_code}",
+                        "intent": "group",
+                        "result": (result["group_report"] or "not found")[:200]
+                    })
+
+                elif command == "bulk":
+                    bulk_group = ask("Group code")
+                    bulk_course = ask("Course name")
+                    confirm = ask(f"Enroll all students from '{bulk_group}' to '{bulk_course}'? (yes/no)")
+                    if confirm.lower() != "yes":
+                        print("Cancelled.")
+                        continue
+                    state["bulk_group_code"] = bulk_group
+                    state["bulk_course_name"] = bulk_course
+                    result = await run_agent_with_timer(app, state)
+                    if not result["bulk_enroll_result"]:
+                        print(f"Error: Group '{bulk_group}' or Course '{bulk_course}' not found.")
+                        print("Tip: use 'courses' command to see all available courses.")
+                    else:
+                        print(result["bulk_enroll_result"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"bulk: {bulk_group} -> {bulk_course}",
+                        "intent": "bulk",
+                        "result": (result["bulk_enroll_result"] or "not found")[:200]
+                    })
+
+                elif command == "courses":
+                    state["show_courses"] = True
+                    result = await run_agent_with_timer(app, state)
+                    print(result["courses_list"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": "courses: show all",
+                        "intent": "courses",
+                        "result": (result["courses_list"] or "")[:200]
+                    })
+
+                elif command == "risk":
+                    state["command"] = command
+                    result = await run_agent_with_timer(app, state)
+                    print(result["risk_report"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": "risk: show report",
+                        "intent": "risk",
+                        "result": (result["risk_report"] or "")[:200]
+                    })
+
+                elif command == "history":
+                    history_tool = next(t for t in tools if t.name == "get_teacher_query_history_tool")
+                    raw_history = await history_tool.ainvoke({"teacher_id": teacher["idteacher"], "limit": 10})
+                    history = json.loads(raw_history[0]["text"]) if raw_history else []
+                    if not history:
+                        print("No history found.")
+                    else:
+                        print("Your recent queries:")
+                        for record in history:
+                            print(f"[{record['created_at']}] {record['intent']}: {record['query_text']}")
+
+                elif command == "curriculum":
+                    program = ask("Program code", "TVT2025S-OHJ or DIN2025S")
+                    state["filter_program"] = program
+                    result = await run_agent_with_timer(app, state)
+                    if "Error" in result["curriculum_info"]:
+                        print(result["curriculum_info"])
+                    else:
+                        print(result["curriculum_info"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"curriculum: {program}",
+                        "intent": "curriculum",
+                        "result": result["curriculum_info"][:200]
+                    })
+
+                elif command == "analytics":
+                    print("Analytics type: (courses / group)")
+                    analytics_type = ask("Type (courses/group)")
+                    state["filter_analytics"] = analytics_type
+                    if analytics_type == "group":
+                        group = ask("Group code")
+                        state["filter_group"] = group
+                    result = await run_agent_with_timer(app, state)
+                    print(result["analytics_report"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": f"analytics: {analytics_type}",
+                        "intent": "analytics",
+                        "result": result["analytics_report"][:200]
+                    })
+                
+                elif command == "ask":
+                    question = ask("Your question")
+                    state["rag_query"] = question
+                    result = await run_agent_with_timer(app, state)
+                    print(result["rag_answer"])
+
+                elif command == "export":
+                    print("Export type: (risk / analytics / courses)")
+                    export_type = ask("Type (risk/analytics/courses)")
+                    
+                    quick_state = base_state.copy()
+                    quick_state["command"] = export_type
+                    
+                    if export_type == "analytics":
+                        quick_state["filter_analytics"] = "courses"
+                    
+                    export_result = await app.ainvoke(quick_state)
+                    
+                    field_map = {
+                        "risk": "risk_report",
+                        "analytics": "analytics_report", 
+                        "courses": "courses_list"
+                    }
+                    
+                    content = export_result.get(field_map.get(export_type, ""), "No data")
+                    filename = f"report_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.txt"
+                    
+                    with open(filename, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    print(f"Report saved to {filename}")
+
+
+                elif command == "help":
+                    print("""
+                    Available commands:
+                    profile    - View student's full profile
+                    course     - List students enrolled in a course
+                    enroll     - Enroll a student to a course
+                    grade      - Update student's grade (1-5)
+                    status     - Update enrollment status (planned/ongoing/completed)
+                    group      - List all students in a group
+                    bulk       - Enroll entire group to a course
+                    courses    - Show all available courses
+                    curriculum - View program curriculum by semester
+                    analytics  - View course or group analytics
+                    risk       - Show at-risk students report
+                    history    - View your recent query history
+                    ask        - Ask a question about tutoring guidelines
+                    help       - Show this help message
+                    export     - Export reports
+                    me         - Own information
+                    requests   - See all requests
+                    approve    - Approve requests to course for student
+                    password   - Change password
+                    exit       - Logout
+                    """)
+
+                elif command == "me":
+                    groups = await get_teacher_groups(teacher["idteacher"])
+                    print(f"\n👤 {teacher['fname']} {teacher['lname']}")
+                    print(f"📧 {teacher['email']}")
+                    print("\nYour groups:")
+                    for group in groups:
+                        print(f"  - {group['group_code']}: {group['student_count']} students")
+
+                elif command == "requests":
+                    result = await run_agent_with_timer(app, state)
+                    print(result["pending_requests_list"])
+
+                elif command == "approve":
+                    req_id = ask("Request ID")
+                    if not req_id.isdigit():
+                        print("Error: Request ID must be a number.")
+                        continue
+                    action = ask("Approve or reject?", "approve/reject")
+                    if action not in ("approve", "reject"):
+                        print("Error: please type 'approve' or 'reject'.")
+                        continue
+                    state["request_id"] = int(req_id)
+                    state["request_action"] = action
+                    result = await run_agent_with_timer(app, state)
+                    print(result["request_action_result"])
+
+                elif command == "password":
+                    old_password = getpass.getpass("Current password: ")
+                    if not verify_password(old_password, teacher["password_hash"]):
+                        print("Error: incorrect current password.")
+                        continue
+                    new_password = getpass.getpass("New password: ")
+                    confirm_password = getpass.getpass("Confirm new password: ")
+                    if new_password != confirm_password:
+                        print("Error: passwords do not match.")
+                        continue
+                    new_hash = hash_password(new_password)
+                    await update_teacher_password(teacher["idteacher"], new_hash)
+                    print("Password updated successfully!")
+
                 else:
-                    print(result["status_update_result"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"status: {status_student} -> {status_course} = {status_value}",
-                    "intent": "status",
-                    "result": (result["status_update_result"] or "not found")[:200]
-                })
-
-            elif command == "group":
-                group_code = input("Group code: ")
-                state["filter_group"] = group_code
-                result = await run_agent_with_timer(app, state)
-                if not result["group_report"]:
-                    print(f"Error: Group {group_code} not found.")
-                else:
-                    print(result["group_report"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"group: {group_code}",
-                    "intent": "group",
-                    "result": (result["group_report"] or "not found")[:200]
-                })
-
-            elif command == "bulk":
-                bulk_group = input("Group code: ")
-                bulk_course = input("Course name: ")
-                confirm = input(f"Enroll all students from '{bulk_group}' to '{bulk_course}'? (yes/no): ")
-                if confirm.lower() != "yes":
-                    print("Cancelled.")
-                    continue
-                state["bulk_group_code"] = bulk_group
-                state["bulk_course_name"] = bulk_course
-                result = await run_agent_with_timer(app, state)
-                if not result["bulk_enroll_result"]:
-                    print(f"Error: Group '{bulk_group}' or Course '{bulk_course}' not found.")
-                    print("Tip: use 'courses' command to see all available courses.")
-                else:
-                    print(result["bulk_enroll_result"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"bulk: {bulk_group} -> {bulk_course}",
-                    "intent": "bulk",
-                    "result": (result["bulk_enroll_result"] or "not found")[:200]
-                })
-
-            elif command == "courses":
-                state["show_courses"] = True
-                result = await run_agent_with_timer(app, state)
-                print(result["courses_list"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": "courses: show all",
-                    "intent": "courses",
-                    "result": (result["courses_list"] or "")[:200]
-                })
-
-            elif command == "risk":
-                state["command"] = command
-                result = await run_agent_with_timer(app, state)
-                print(result["risk_report"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": "risk: show report",
-                    "intent": "risk",
-                    "result": (result["risk_report"] or "")[:200]
-                })
-
-            elif command == "history":
-                history_tool = next(t for t in tools if t.name == "get_teacher_query_history_tool")
-                raw_history = await history_tool.ainvoke({"teacher_id": teacher["idteacher"], "limit": 10})
-                history = json.loads(raw_history[0]["text"]) if raw_history else []
-                if not history:
-                    print("No history found.")
-                else:
-                    print("Your recent queries:")
-                    for record in history:
-                        print(f"[{record['created_at']}] {record['intent']}: {record['query_text']}")
-
-            elif command == "curriculum":
-                program = input("Program code (e.g. TVT2025S-OHJ or DIN2025S): ")
-                state["filter_program"] = program
-                result = await run_agent_with_timer(app, state)
-                if "Error" in result["curriculum_info"]:
-                    print(result["curriculum_info"])
-                else:
-                    print(result["curriculum_info"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"curriculum: {program}",
-                    "intent": "curriculum",
-                    "result": result["curriculum_info"][:200]
-                })
-
-            elif command == "analytics":
-                print("Analytics type: (courses / group)")
-                analytics_type = input("Type: ")
-                state["filter_analytics"] = analytics_type
-                if analytics_type == "group":
-                    group = input("Group code: ")
-                    state["filter_group"] = group
-                result = await run_agent_with_timer(app, state)
-                print(result["analytics_report"])
-                await log_tool.ainvoke({
-                    "teacher_id": teacher["idteacher"],
-                    "query_text": f"analytics: {analytics_type}",
-                    "intent": "analytics",
-                    "result": result["analytics_report"][:200]
-                })
-            
-            elif command == "ask":
-                question = input("Your question: ")
-                state["rag_query"] = question
-                result = await run_agent_with_timer(app, state)
-                print(result["rag_answer"])
-
-            elif command == "export":
-                print("Export type: (risk / analytics / courses)")
-                export_type = input("Type: ")
-                
-                quick_state = base_state.copy()
-                quick_state["command"] = export_type
-                
-                if export_type == "analytics":
-                    quick_state["filter_analytics"] = "courses"
-                
-                export_result = await app.ainvoke(quick_state)
-                
-                field_map = {
-                    "risk": "risk_report",
-                    "analytics": "analytics_report", 
-                    "courses": "courses_list"
-                }
-                
-                content = export_result.get(field_map.get(export_type, ""), "No data")
-                filename = f"report_{export_type}_{datetime.now().strftime('%Y%m%d_%H%M')}.txt"
-                
-                with open(filename, "w", encoding="utf-8") as f:
-                    f.write(content)
-                print(f"Report saved to {filename}")
-
-
-            elif command == "help":
-                print("""
-                Available commands:
-                profile    - View student's full profile
-                course     - List students enrolled in a course
-                enroll     - Enroll a student to a course
-                grade      - Update student's grade (1-5)
-                status     - Update enrollment status (planned/ongoing/completed)
-                group      - List all students in a group
-                bulk       - Enroll entire group to a course
-                courses    - Show all available courses
-                curriculum - View program curriculum by semester
-                analytics  - View course or group analytics
-                risk       - Show at-risk students report
-                history    - View your recent query history
-                ask        - Ask a question about tutoring guidelines
-                help       - Show this help message
-                export     - Export reports
-                me         - Own information
-                requests   - See all requests
-                approve    - Approve requests to course for student
-                password   - Change password
-                exit       - Logout
-                """)
-
-            elif command == "me":
-                groups = await get_teacher_groups(teacher["idteacher"])
-                print(f"\n👤 {teacher['fname']} {teacher['lname']}")
-                print(f"📧 {teacher['email']}")
-                print("\nYour groups:")
-                for group in groups:
-                    print(f"  - {group['group_code']}: {group['student_count']} students")
-
-            elif command == "requests":
-                result = await run_agent_with_timer(app, state)
-                print(result["pending_requests_list"])
-
-            elif command == "approve":
-                req_id = input("Request ID: ")
-                if not req_id.isdigit():
-                    print("Error: Request ID must be a number.")
-                    continue
-                action = input("Approve or reject? (approve/reject): ")
-                if action not in ("approve", "reject"):
-                    print("Error: please type 'approve' or 'reject'.")
-                    continue
-                state["request_id"] = int(req_id)
-                state["request_action"] = action
-                result = await run_agent_with_timer(app, state)
-                print(result["request_action_result"])
-
-            elif command == "password":
-                old_password = getpass.getpass("Current password: ")
-                if not verify_password(old_password, teacher["password_hash"]):
-                    print("Error: incorrect current password.")
-                    continue
-                new_password = getpass.getpass("New password: ")
-                confirm_password = getpass.getpass("Confirm new password: ")
-                if new_password != confirm_password:
-                    print("Error: passwords do not match.")
-                    continue
-                new_hash = hash_password(new_password)
-                await update_teacher_password(teacher["idteacher"], new_hash)
-                print("Password updated successfully!")
-
-            else:
-                print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/password/exit")
+                    print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/password/exit")
+            except BackException:
+                print("↩  Cancelled. Back to main menu.")
+                continue
 
     
     if role == "student":
