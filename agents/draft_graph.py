@@ -997,7 +997,7 @@ async def main():
             try:
 
                 if command == "profile":
-                    name = ask("Student name: ")
+                    name = ask("Student name")
                     state["filter_name"] = name
                     result = await run_agent_with_timer(app, state)
                     if not result["student_profile"]:
@@ -1012,7 +1012,7 @@ async def main():
                     })
 
                 elif command == "course":
-                    course = ask("Course name: ")
+                    course = ask("Course name")
                     state["filter_course"] = course
                     result = await run_agent_with_timer(app, state)
                     if "not found" in result["course_report"]:
@@ -1394,86 +1394,93 @@ async def main():
                 print("Goodbye!")
                 break
 
-            if choice == "profile":
-                result = await run_agent_with_timer(app, state)
-                print(result["student_profile"])
+            try:
+                if choice == "profile":
+                    result = await run_agent_with_timer(app, state)
+                    print(result["student_profile"])
 
-            elif choice == "eligibility":
-                result = await run_agent_with_timer(app, state)
-                print("Your project eligibility:")
-                print(result["eligibility_report"])
+                elif choice == "eligibility":
+                    result = await run_agent_with_timer(app, state)
+                    print("Your project eligibility:")
+                    print(result["eligibility_report"])
 
-            elif choice == "recommend":
-                result = await run_agent_with_timer(app, state)
-                print("Your personal recommendation:")
-                print(result["student_recommendation"])
+                elif choice == "recommend":
+                    result = await run_agent_with_timer(app, state)
+                    print("Your personal recommendation:")
+                    print(result["student_recommendation"])
 
-            elif choice == "courses":
-                state["show_courses"] = True
-                result = await run_agent_with_timer(app, state)
-                print(result["courses_list"])
+                elif choice == "courses":
+                    state["show_courses"] = True
+                    result = await run_agent_with_timer(app, state)
+                    print(result["courses_list"])
 
-            elif choice == "plan":
-                state["filter_program"] = student.get("study_right", "TVT2025S-OHJ")
-                result = await run_agent_with_timer(app, state)
-                print(result["student_plan"])
+                elif choice == "plan":
+                    state["filter_program"] = student.get("study_right", "TVT2025S-OHJ")
+                    result = await run_agent_with_timer(app, state)
+                    print(result["student_plan"])
 
-            elif choice == "ask":
-                question = input("Your question: ")
-                state["rag_query"] = question
-                result = await run_agent_with_timer(app, state)
-                print(result["rag_answer"])
+                elif choice == "ask":
+                    question = ask("Your question")
+                    state["rag_query"] = question
+                    result = await run_agent_with_timer(app, state)
+                    print(result["rag_answer"])
 
-            elif choice == "help":
-                print("""
-            Available commands:
-                profile     - View your academic profile
-                eligibility - Check your project eligibility
-                recommend   - Get AI-powered study recommendation
-                courses     - View all available courses
-                plan        - View your study plan progress
-                ask         - Ask a question about your studies
-                request     - Request enrollment in a course
-                my_requests - View status of your enrollment requests
-                help        - Show this help message
-                password    - Change password
-                exit        - Logout
-            """)
+                elif choice == "help":
+                    print("""
+                Available commands:
+                    profile     - View your academic profile
+                    eligibility - Check your project eligibility
+                    recommend   - Get AI-powered study recommendation
+                    courses     - View all available courses
+                    plan        - View your study plan progress
+                    ask         - Ask a question about your studies
+                    request     - Request enrollment in a course
+                    my_requests - View status of your enrollment requests
+                    help        - Show this help message
+                    password    - Change password
+                    exit        - Logout
+                """)
 
-            elif choice == "request":
-                courses_state = initial_state.copy()
-                courses_state["command"] = "courses"
-                courses_state["show_courses"] = True
-                courses_result = await run_agent_with_timer(app, courses_state)
-                print("Available courses:")
-                print(courses_result["courses_list"])
+                elif choice == "request":
+                    courses_state = initial_state.copy()
+                    courses_state["command"] = "courses"
+                    courses_state["show_courses"] = True
+                    courses_result = await run_agent_with_timer(app, courses_state)
+                    print("Available courses:")
+                    print(courses_result["courses_list"])
+                    
+                    course_name = ask("Course name to request")
+                    state["request_course_name"] = course_name
+                    result = await run_agent_with_timer(app, state)
+                    print(result["request_result"])
+
+                elif choice == "my_requests":
+                    result = await run_agent_with_timer(app, state)
+                    print(result["my_requests_list"])
+
+                elif choice == "password":
+                    old_password = getpass.getpass("Current password: ")
+                    if not verify_password(old_password, student["password_hash"]):
+                        print("Error: incorrect current password.")
+                        continue
+                    new_password = getpass.getpass("New password: ")
+                    confirm_password = getpass.getpass("Confirm new password: ")
+                    if new_password != confirm_password:
+                        print("Error: passwords do not match.")
+                        continue
+                    new_hash = hash_password(new_password)
+                    await update_student_password(student["idstudent"], new_hash)
+                    print("Password updated successfully!")
                 
-                course_name = input("\nEnter course name to request: ")
-                state["request_course_name"] = course_name
-                result = await run_agent_with_timer(app, state)
-                print(result["request_result"])
+                
+                else:
+                    print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ")
 
-            elif choice == "my_requests":
-                result = await run_agent_with_timer(app, state)
-                print(result["my_requests_list"])
+            except BackException:
+                print("↩  Cancelled. Back to main menu.")
+                continue
 
-            elif choice == "password":
-                old_password = getpass.getpass("Current password: ")
-                if not verify_password(old_password, student["password_hash"]):
-                    print("Error: incorrect current password.")
-                    continue
-                new_password = getpass.getpass("New password: ")
-                confirm_password = getpass.getpass("Confirm new password: ")
-                if new_password != confirm_password:
-                    print("Error: passwords do not match.")
-                    continue
-                new_hash = hash_password(new_password)
-                await update_student_password(student["idstudent"], new_hash)
-                print("Password updated successfully!")
-            
-            
-            else:
-                print("Unknown command. Try: profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
