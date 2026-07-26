@@ -10,7 +10,6 @@ from groq import Groq
 from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
-from agents.constants import TUTOR_CALENDAR, PROJECTS_DB
 from agents.state import State
 from database.auth import verify_password, hash_password
 from rag.rag_retriever import retrieve
@@ -173,9 +172,9 @@ async def fetch_students_agent(state: State):
 
     
 async def calendar_agent(state: State):
-    today= datetime.now()
-    month=today.month
-    calendar_info = TUTOR_CALENDAR[month]
+    today = datetime.now()
+    month_name = today.strftime("%B")
+    calendar_info = retrieve(f"{month_name} tutoring calendar checklist")
     return {"calendar_info": calendar_info}
 
 
@@ -194,10 +193,15 @@ async def communication_agent(state: State):
 
 
 async def eligibility_agent(state: State):
-    new_issue= ""
-    students = state.get("students",[])
+    new_issue = ""
+    students = state.get("students", [])
+    tools = await mcp_client.get_tools()
+    projects_tool = next(t for t in tools if t.name == "get_all_projects_with_requirements_tool")
+    raw_projects = await projects_tool.ainvoke({})
+    projects = json.loads(raw_projects[0]["text"]) if raw_projects else []
+
     for student in students:
-        for project in PROJECTS_DB.values():
+        for project in projects:
             eligible = True
             required = project["required_courses"]
             completed = student["completed_courses"]

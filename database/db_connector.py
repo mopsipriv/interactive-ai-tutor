@@ -610,3 +610,21 @@ async def update_student_password(student_id: int, new_hash: str):
         return "Password updated successfully"
     except Exception as e:
         return f"Error: {e}"
+
+async def get_all_projects_with_requirements():
+    """Get all projects with their required course IDs."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT idproject, project_name, description FROM project")
+            projects = await cur.fetchall()
+            
+            for project in projects:
+                await cur.execute(
+                    "SELECT idcourse FROM project_requirement WHERE idproject = %s",
+                    (project["idproject"],)
+                )
+                reqs = await cur.fetchall()
+                project["required_courses"] = [r["idcourse"] for r in reqs]
+    
+    return list(projects) if projects else []
