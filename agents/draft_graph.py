@@ -47,7 +47,7 @@ def ask(prompt: str, hint: str = "") -> str:
         full_prompt += f" [{hint}]"
     full_prompt += " (back to cancel): "
     value = input(full_prompt)
-    if value.strip().lower() in ("back", "b"):
+    if value.strip().lower() in ("back", "b", "cancel", "canc"):
         raise BackException()
     return value
 
