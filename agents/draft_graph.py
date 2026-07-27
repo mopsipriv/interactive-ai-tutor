@@ -1475,7 +1475,7 @@ async def main():
             "my_requests_list": ""
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ): ").strip()
 
             state = initial_state.copy()
             tools = await mcp_client.get_tools()
