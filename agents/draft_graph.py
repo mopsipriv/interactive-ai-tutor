@@ -792,11 +792,9 @@ async def morning_brief_agent(state: State):
     tools = await mcp_client.get_tools()
 
     students = state.get("students", [])
-    print(f"DEBUG agent: students={len(students)}, teacher_id={teacher_id}") 
     at_risk = []
     for student in students:
         level, reason = calculate_risk_level(student)
-        print(f"DEBUG: {student['fname']} level={level}")
         if level in ("critical", "warning"):
             at_risk.append((student["fname"] + " " + student["lname"], level, reason))
 
