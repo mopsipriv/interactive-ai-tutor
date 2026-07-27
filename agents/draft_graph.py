@@ -66,6 +66,34 @@ def split_full_name(full_name: str):
     return fname, lname
 
 
+def calculate_risk_level(student) -> tuple[str, str]:
+    """
+    Returns (level, reason) where level is 'critical', 'warning', 'info', or 'ok'
+    """
+    today = datetime.now().date()
+    credits_earned = student["credits_earned"]
+    credits_expected = student["credits_expected"]
+    credits_remaining = 240 - credits_earned
+    valid_until = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
+    months_left = (valid_until - today).days / 30
+    months_needed = credits_remaining / 5
+    buffer_months = months_left - months_needed
+    completion_rate = credits_earned / credits_expected if credits_expected > 0 else 1.0
+
+    if completion_rate < 0.5 and buffer_months < -6:
+        return "critical", f"completed only {round(completion_rate*100)}% of expected credits and may not finish before study right expires"
+    elif buffer_months < -12:
+        return "critical", f"study right ends too soon — needs {round(months_needed)} more months but only {round(months_left)} months remaining"
+    elif completion_rate < 0.5:
+        return "warning", f"completed only {round(completion_rate*100)}% of expected credits — falling behind schedule"
+    elif buffer_months < -6:
+        return "warning", f"at current pace may not finish before study right expires"
+    elif completion_rate < 0.75 or buffer_months < 0:
+        return "info", f"slightly behind expected pace, worth checking in"
+    else:
+        return "ok", ""
+
+
 async def progress_agent(state: State):
     students = state.get("students", [])
     new_issue = ""
@@ -391,70 +419,20 @@ async def status_update_agent(state: State):
 async def risk_report_agent(state: State):
     new_issue = "=== Risk Report ===\n"
     students = state.get("students", [])
-    today = datetime.now().date()
 
     for student in students:
         full_name = student["fname"] + " " + student["lname"]
         credits_earned = student["credits_earned"]
-        credits_expected_now = student["credits_expected"]
-        credits_remaining = 240 - credits_earned
+        level, reason = calculate_risk_level(student)
 
-
-        valid_until = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
-        months_left = (valid_until - today).days / 30
-
-
-        months_needed = credits_remaining / 5
-
-
-        buffer_months = months_left - months_needed
-
-
-        if credits_expected_now > 0:
-            completion_rate = credits_earned / credits_expected_now
+        if level == "critical":
+            new_issue += f"\n{full_name}:\n  🔴 Needs urgent attention — {reason}\n"
+        elif level == "warning":
+            new_issue += f"\n{full_name}:\n  🟡 Monitor closely — {reason}\n"
+        elif level == "info":
+            new_issue += f"\n{full_name}:\n  ℹ️  Slightly behind — {reason}\n"
         else:
-            completion_rate = 1.0
-
-        issues = []
-
-
-        if completion_rate < 0.5 and buffer_months < -6:
-            issues.append(
-                f"🔴 Critical: completed only {credits_earned} of expected {round(credits_expected_now)} credits "
-                f"({round(completion_rate * 100)}%) and study right runs out in {round(months_left)} months "
-                f"— needs ~{round(months_needed)} months to finish. Short by ~{abs(round(buffer_months))} months."
-            )
-
-        elif buffer_months < -12:
-            issues.append(
-                f"🔴 Critical: only {round(months_left)} months of study right left, "
-                f"but needs ~{round(months_needed)} months to finish {credits_remaining} remaining credits."
-            )
-
-        elif completion_rate < 0.5:
-            issues.append(
-                f"🟡 Warning: only {credits_earned} of expected {round(credits_expected_now)} credits completed "
-                f"({round(completion_rate * 100)}%). Behind schedule."
-            )
-
-        elif buffer_months < -6:
-            issues.append(
-                f"🟡 Warning: {round(months_left)} months left, needs ~{round(months_needed)} months "
-                f"to finish {credits_remaining} remaining credits. Tight."
-            )
-
-        elif completion_rate < 0.75 or buffer_months < 0:
-            issues.append(
-                f"ℹ️  Slightly behind: {credits_earned}/{round(credits_expected_now)} credits "
-                f"({round(completion_rate * 100)}%). Monitor progress."
-            )
-
-        if issues:
-            new_issue += f"\n{full_name}:\n"
-            for issue in issues:
-                new_issue += f"  {issue}\n"
-        else:
-            new_issue += f"🟢 {full_name}: On track ({credits_earned} credits, {round(completion_rate * 100)}% of expected)\n"
+            new_issue += f"🟢 {full_name}: On track ({credits_earned} credits)\n"
 
     return {"risk_report": new_issue}
 
@@ -861,6 +839,7 @@ def route_after_status(state: State):
         return "go_to_analytics"
     else:
         return "go_to_end"
+    
 
 graph = StateGraph(State)
 
