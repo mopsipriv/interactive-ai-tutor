@@ -7,7 +7,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password
+from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password, close_pool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -1571,7 +1571,7 @@ async def main():
                 print("↩  Cancelled. Back to main menu.")
                 continue
 
-
+    await close_pool()            
 
 if __name__ == "__main__":
     asyncio.run(main())
