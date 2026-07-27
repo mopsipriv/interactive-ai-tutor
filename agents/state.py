@@ -81,3 +81,5 @@ class State(TypedDict):
     request_action_result: str
 
     my_requests_list: str
+    teacher_name: str
+    morning_brief: str

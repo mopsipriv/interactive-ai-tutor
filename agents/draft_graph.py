@@ -7,7 +7,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password
+from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password, close_pool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -64,6 +64,34 @@ def split_full_name(full_name: str):
     fname = parts[0]
     lname = " ".join(parts[1:])
     return fname, lname
+
+
+def calculate_risk_level(student) -> tuple[str, str]:
+    """
+    Returns (level, reason) where level is 'critical', 'warning', 'info', or 'ok'
+    """
+    today = datetime.now().date()
+    credits_earned = student["credits_earned"]
+    credits_expected = student["credits_expected"]
+    credits_remaining = 240 - credits_earned
+    valid_until = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
+    months_left = (valid_until - today).days / 30
+    months_needed = credits_remaining / 5
+    buffer_months = months_left - months_needed
+    completion_rate = credits_earned / credits_expected if credits_expected > 0 else 1.0
+
+    if completion_rate < 0.5 and buffer_months < -6:
+        return "critical", f"completed only {round(completion_rate*100)}% of expected credits and may not finish before study right expires"
+    elif buffer_months < -12:
+        return "critical", f"study right ends too soon — needs {round(months_needed)} more months but only {round(months_left)} months remaining"
+    elif completion_rate < 0.5:
+        return "warning", f"completed only {round(completion_rate*100)}% of expected credits — falling behind schedule"
+    elif buffer_months < -6:
+        return "warning", f"at current pace may not finish before study right expires"
+    elif completion_rate < 0.75 or buffer_months < 0:
+        return "info", f"slightly behind expected pace, worth checking in"
+    else:
+        return "ok", ""
 
 
 async def progress_agent(state: State):
@@ -390,33 +418,23 @@ async def status_update_agent(state: State):
 
 async def risk_report_agent(state: State):
     new_issue = "=== Risk Report ===\n"
-    students = state.get("students",[])
+    students = state.get("students", [])
+
     for student in students:
         full_name = student["fname"] + " " + student["lname"]
-        progress = student["credits_expected"] - student["credits_earned"]
-        today = datetime.now()
-        date_obj = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
-        left_study_right = (date_obj - today.date()).days / 30
-        issues = []
-        if progress > 15:
-            issues.append("🔴Critical credits!")
-        elif progress > 5:
-            issues.append("🟡Warning credits!")
+        credits_earned = student["credits_earned"]
+        level, reason = calculate_risk_level(student)
 
-        if left_study_right < 6:
-            issues.append("🔴Study right expires soon")
-        elif left_study_right < 12:
-            issues.append("🟡Study right expires during year")
-
-        if issues:
-            new_issue += f"{full_name}:\n"
-            for issue in issues:
-                new_issue += f"  {issue}\n"
+        if level == "critical":
+            new_issue += f"\n{full_name}:\n  🔴 Needs urgent attention — {reason}\n"
+        elif level == "warning":
+            new_issue += f"\n{full_name}:\n  🟡 Monitor closely — {reason}\n"
+        elif level == "info":
+            new_issue += f"\n{full_name}:\n  ℹ️  Slightly behind — {reason}\n"
         else:
-            new_issue += f"🟢{full_name}: Everything is good\n"
-    
-    return {"risk_report": new_issue}
+            new_issue += f"🟢 {full_name}: On track ({credits_earned} credits)\n"
 
+    return {"risk_report": new_issue}
 
 async def group_report_agent(state:State):
     new_issue=""
@@ -767,13 +785,65 @@ async def my_requests_agent(state:State):
     
     return {"my_requests_list": "\n".join(lines)}
 
+async def morning_brief_agent(state: State):
+    teacher_id = state.get("teacher_id", 0)
+    today = datetime.now()
+    month_name = today.strftime("%B")
+    tools = await mcp_client.get_tools()
+
+    students = state.get("students", [])
+    at_risk = []
+    for student in students:
+        level, reason = calculate_risk_level(student)
+        if level in ("critical", "warning"):
+            at_risk.append((student["fname"] + " " + student["lname"], level, reason))
+
+    requests_tool = next(t for t in tools if t.name == "get_pending_requests_tool")
+    raw_requests = await requests_tool.ainvoke({"teacher_id": teacher_id})
+    pending = json.loads(raw_requests[0]["text"]) if raw_requests else []
+
+    calendar_hint = retrieve(f"{month_name} tutoring actions checklist")
+
+    brief = f"\nGood morning, {state['teacher_name']}! 🌅\n"
+    brief += f"{'━'*35}\n"
+
+    if at_risk:
+        brief += f"⚠️  At-risk students: {len(at_risk)}\n"
+        for name, level, reason in at_risk:
+            icon = "🔴" if level == "critical" else "🟡"
+            brief += f"   {icon} {name} — {reason}\n"
+    else:
+        brief += "✅ All students on track\n"
+
+    brief += "\n"
+
+    if pending:
+        brief += f"📥 Pending requests: {len(pending)}\n"
+        for req in pending[:3]:
+            brief += f"   • {req['fname']} {req['lname']} → {req['course_name']}\n"
+    else:
+        brief += "📥 No pending requests\n"
+
+    brief += "\n"
+
+    clean_hint = "\n".join(
+        line for line in calendar_hint.split("\n") 
+        if not line.startswith("[Source:")
+    ).strip()
+    sentences = clean_hint.split(".")[:2]
+    hint = ". ".join(s.strip() for s in sentences if s.strip()) + "."
+    brief += f"📅 {month_name} reminder: {hint}\n"
+
+    brief += f"\nType 'risk' for details, 'requests' to review.\n"
+        
+    return {"morning_brief": brief}
 
 
 def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
     
-    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export", "requests", "approve"]
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export", "requests", "approve","morning_brief"]
     student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help","request", "my_requests"]
     
     if role == "student" and cmd not in student_commands:
@@ -800,7 +870,8 @@ def router_by_command(state: State):
         "request": "request_course_node",
         "requests": "view_requests_node",
         "approve": "handle_request_node",
-        "my_requests": "my_requests_node"
+        "my_requests": "my_requests_node",
+        "morning_brief": "morning_brief_node" 
     }
     
     result = routes.get(cmd, END)
@@ -821,6 +892,7 @@ def route_after_status(state: State):
         return "go_to_analytics"
     else:
         return "go_to_end"
+    
 
 graph = StateGraph(State)
 
@@ -852,6 +924,7 @@ graph.add_node("request_course_node", request_course_agent)
 graph.add_node("view_requests_node", view_requests_agent)
 graph.add_node("handle_request_node", handle_request_agent)
 graph.add_node("my_requests_node", my_requests_agent)
+graph.add_node("morning_brief_node", morning_brief_agent)
 
 # start
 graph.add_conditional_edges(START, router_by_command)
@@ -862,7 +935,8 @@ simple_nodes = [
     "update_status_node", "group_report_node", "bulk_enroll_node",
     "curriculum_node", "analytics_report_node", "student_plan_node",
     "course_students_node", "rag_node", "request_course_node",
-    "view_requests_node", "handle_request_node", "my_requests_node"
+    "view_requests_node", "handle_request_node", "my_requests_node",
+    "morning_brief_node"
 ]
 for node in simple_nodes:
     graph.add_edge(node, END)
@@ -971,6 +1045,8 @@ async def main():
             "rag_query": "",
             "rag_answer": "",
             "teacher_id": teacher["idteacher"],
+            "teacher_name": teacher["fname"] + " " + teacher["lname"],
+            "morning_brief": "",
             "request_course_name":"",
             "request_result": "",
             "pending_requests_list":"",
@@ -984,11 +1060,14 @@ async def main():
         quick_result = await app.ainvoke(quick_state)
         risk_text = quick_result.get("risk_report", "")
         critical_count = risk_text.count("🔴")
-        if critical_count > 0:
-            print(f"⚠️  {critical_count} student(s) currently at risk. Type 'risk' to see details.")
+        brief_state = base_state.copy()
+        brief_state["command"] = "morning_brief"
+        brief_state["students"] = quick_result.get("students", [])
+        brief_result = await app.ainvoke(brief_state)
+        print(brief_result.get("morning_brief", ""))
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/exit): ")
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/morning_brief/exit): ").strip()
 
             if command == "exit":
                 print("Goodbye!")
@@ -1261,6 +1340,7 @@ async def main():
                     requests   - See all requests
                     approve    - Approve requests to course for student
                     password   - Change password
+                    morning_brief - Report 
                     exit       - Logout
                     """)
 
@@ -1304,8 +1384,15 @@ async def main():
                     await update_teacher_password(teacher["idteacher"], new_hash)
                     print("Password updated successfully!")
 
+                elif command == "morning_brief":
+                    brief_state = base_state.copy()
+                    brief_state["command"] = "morning_brief"
+                    brief_state["students"] = quick_result.get("students", [])
+                    brief_result = await app.ainvoke(brief_state)
+                    print(brief_result.get("morning_brief", ""))
+
                 else:
-                    print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/password/exit")
+                    print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/password/morning_brief/exit")
             except BackException:
                 print("↩  Cancelled. Back to main menu.")
                 continue
@@ -1388,7 +1475,7 @@ async def main():
             "my_requests_list": ""
         }
         while True:
-            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ): ")
+            choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ): ").strip()
 
             state = initial_state.copy()
             tools = await mcp_client.get_tools()
@@ -1484,7 +1571,7 @@ async def main():
                 print("↩  Cancelled. Back to main menu.")
                 continue
 
-
+    await close_pool()            
 
 if __name__ == "__main__":
     asyncio.run(main())
