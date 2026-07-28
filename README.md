@@ -190,7 +190,7 @@ GitHub Actions pipeline runs on push to `main` and `rag-implementation` branches
 ✅ OpenClaw + Telegram bot connected  
 ✅ Connection pooling, ownership checks, getpass security  
 🔜 Full Telegram end-to-end command routing  
-🔜 Morning Brief on teacher login  
+✅ Morning Brief on teacher login  
 🔜 Prerequisites check on enroll  
 🔜 Inline Telegram buttons and MarkdownV2 formatting  
 
