@@ -94,7 +94,7 @@ def calculate_risk_level(student) -> tuple[str, str]:
         return "ok", ""
 
 
-async def progress_agent(state: State):
+async def progress_analysis_agent(state: State):
     students = state.get("students", [])
     new_issue = ""
     for student in students:
@@ -936,7 +936,7 @@ graph = StateGraph(State)
 
 # adding nodes
 graph.add_node("fetch_node", fetch_students_agent)
-graph.add_node("progress_node", progress_agent)
+graph.add_node("progress_analysis_node", progress_analysis_agent)
 graph.add_node("study_right_node", study_right_agent)
 graph.add_node("eligibility_node", eligibility_agent)
 graph.add_node("calendar_node", calendar_agent)
@@ -984,8 +984,8 @@ graph.add_edge("profile_node", "student_recommendation_node")
 graph.add_edge("student_recommendation_node", END)
 
 # risk/eligibility/recommend
-graph.add_edge("fetch_node", "progress_node")
-graph.add_edge("progress_node", "study_right_node")
+graph.add_edge("fetch_node", "progress_analysis_node")
+graph.add_edge("progress_analysis_node", "study_right_node")
 graph.add_edge("study_right_node", "eligibility_node")
 graph.add_edge("eligibility_node", "calendar_node")
 graph.add_edge("calendar_node", "risk_report_node")
