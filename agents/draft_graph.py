@@ -7,7 +7,7 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password, close_pool
+from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password, close_pool, search_students_by_name
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -838,6 +838,44 @@ async def morning_brief_agent(state: State):
         
     return {"morning_brief": brief}
 
+async def resolve_student(query: str) -> tuple[int | None,str]:
+    """
+    Fuzzy search student by name or number.
+    Returns (student_id, display_name) or (None, "") if not found/cancelled.
+    """
+    matches = await search_students_by_name(query)
+    if not matches:
+        print(f"No students found matching '{query}'.")
+        return None, ""
+    if len(matches) == 1:
+        s = matches[0]
+        display_name = f"{s['fname']} {s['lname']}"
+        print(f"→ Found: {display_name} ({s['student_number']})")
+        return s["idstudent"], display_name
+
+    print(f"\nFound {len(matches)} students matching '{query}':")
+    for i, s in enumerate(matches, 1):
+        print(f"  {i}. {s['fname']} {s['lname']} ({s['student_number']})")
+
+    while True:
+        choice = input("Choose number (or 'back' to cancel): ").strip()
+        
+
+        if choice.lower() in ("back", "b", "cancel"):
+            raise BackException()
+        
+        if not choice.isdigit():
+            print("Please enter a number.")
+            continue
+        
+        idx = int(choice)
+        if not (1 <= idx <= len(matches)):
+            print(f"Please enter a number between 1 and {len(matches)}.")
+            continue
+
+        s = matches[idx - 1]
+        return s["idstudent"], f"{s['fname']} {s['lname']}"
+
 
 def router_by_command(state: State):
     cmd = state.get("command", "")
@@ -1080,16 +1118,18 @@ async def main():
             try:
 
                 if command == "profile":
-                    name = ask("Student name")
-                    state["filter_name"] = name
+                    student_id, display_name = await resolve_student(ask("Student name or number"))
+                    if student_id is None:
+                        continue
+                    state["filter_name"] = display_name
                     result = await run_agent_with_timer(app, state)
                     if not result["student_profile"]:
-                        print(f"Error: Student '{name}' not found.")
+                        print(f"Error: Student '{display_name}' not found.")
                     else:
                         print(result["student_profile"])
                     await log_tool.ainvoke({
                         "teacher_id": teacher["idteacher"],
-                        "query_text": f"profile: {name}",
+                        "query_text": f"profile: {display_name}",
                         "intent": "profile",
                         "result": (result["student_profile"] or "not found")[:200]
                     })
@@ -1112,9 +1152,11 @@ async def main():
 
 
                 elif command == "enroll":
-                    enroll_name = ask("Student name")
+                    student_id, display_name = await resolve_student(ask("Student name or number"))
+                    if student_id is None:
+                        continue
                     enroll_course = ask("Course name")
-                    state["enroll_student_name"] = enroll_name
+                    state["enroll_student_name"] = display_name
                     state["enroll_course_name"] = enroll_course
                     result = await run_agent_with_timer(app, state)
                     if "Error" in result["enroll_result"]:
@@ -1124,27 +1166,27 @@ async def main():
                         print(result["enroll_result"])
                     await log_tool.ainvoke({
                         "teacher_id": teacher["idteacher"],
-                        "query_text": f"enroll: {enroll_name} -> {enroll_course}",
+                        "query_text": f"enroll: {display_name} -> {enroll_course}",
                         "intent": "enroll",
                         "result": (result["enroll_result"] or "not found")[:200]
                     })
                     
 
                 elif command == "grade":
-                    grade_student = ask("Student name")
+                    student_id, display_name = await resolve_student(ask("Student name or number"))
+                    if student_id is None:
+                        continue
                     grade_course = ask("Course name")
-
                     while True:
                         grade_value = ask("Grade (1-5)")
                         if grade_value in ["1", "2", "3", "4", "5"]:
                             break
                         print("Error: grade must be a number between 1 and 5. Try again.")
-                    confirm = ask(f"Set grade {grade_value} for '{grade_student}' in '{grade_course}'? (yes/no)")
+                    confirm = ask(f"Set grade {grade_value} for '{display_name}' in '{grade_course}'? (yes/no)")
                     if confirm.lower() != "yes":
                         print("Cancelled.")
                         continue
-
-                    state["grade_student_name"] = grade_student
+                    state["grade_student_name"] = display_name
                     state["grade_course_name"] = grade_course
                     state["grade_value"] = grade_value
                     result = await run_agent_with_timer(app, state)
@@ -1155,21 +1197,22 @@ async def main():
                         print(result["grade_result"])
                     await log_tool.ainvoke({
                         "teacher_id": teacher["idteacher"],
-                        "query_text": f"grade: {grade_student} -> {grade_course} = {grade_value}",
+                        "query_text": f"grade: {display_name} -> {grade_course} = {grade_value}",
                         "intent": "grade",
                         "result": (result["grade_result"] or "not found")[:200]
                     })
 
                 elif command == "status":
-                    status_student = ask("Student name")
+                    student_id, display_name = await resolve_student(ask("Student name or number"))
+                    if student_id is None:
+                        continue
                     status_course = ask("Course name")
                     while True:
                         status_value = ask("Status (planned/ongoing/completed)")
-                        if status_value in ["planned","ongoing","completed"]:
+                        if status_value in ["planned", "ongoing", "completed"]:
                             break
-                        print("Error: status must be only planned or ongoing or completed. Try again")
-                        
-                    state["status_student_name"] = status_student
+                        print("Error: status must be planned, ongoing or completed. Try again.")
+                    state["status_student_name"] = display_name
                     state["status_course_name"] = status_course
                     state["status_value"] = status_value
                     result = await run_agent_with_timer(app, state)
@@ -1180,7 +1223,7 @@ async def main():
                         print(result["status_update_result"])
                     await log_tool.ainvoke({
                         "teacher_id": teacher["idteacher"],
-                        "query_text": f"status: {status_student} -> {status_course} = {status_value}",
+                        "query_text": f"status: {display_name} -> {status_course} = {status_value}",
                         "intent": "status",
                         "result": (result["status_update_result"] or "not found")[:200]
                     })
