@@ -153,6 +153,75 @@ LangGraph (20+ agents, Router pattern)
 MySQL (peppi_db) + Chroma (RAG)
 ```
 
+## Agent Architecture
+
+The system follows the assignment specification with 5 core specialized agents plus additional agents for extended functionality.
+
+### Core Agents (as specified in project assignment)
+
+**Calendar Agent** (`calendar_agent`)
+Understands the tutoring calendar via RAG. Retrieves relevant actions and reminders for the current month from the knowledge base. Answers: "What tutoring activities should happen this month?"
+
+**Progress Analysis Agent** (`progress_analysis_agent`)
+Analyzes student credit accumulation and progression pace. Calculates expected vs actual credits based on enrollment date and identifies students falling behind schedule. Answers: "Is this student progressing normally?"
+
+**Study Right Agent** (`study_right_agent`)
+Monitors study right expiry dates and combines them with remaining credits to assess real urgency. Uses the formula: `buffer = months_left - (credits_remaining / 5)`. Answers: "Will this student finish before study right expires?"
+
+**Recommendation Agent** (`recommendation_agent`)
+Generates personalized study recommendations based on student progress, completed courses, and curriculum requirements. Answers: "What should this student do next?"
+
+**Communication Agent** (`communication_agent`)
+Creates summaries and messages for tutors. Generates the Morning Brief on teacher login combining at-risk data, pending requests, and calendar hints.
+
+### Additional Agents (beyond specification)
+
+| Agent | Purpose |
+|---|---|
+| `fetch_students_agent` | Loads all students for a teacher's groups from MySQL |
+| `eligibility_agent` | Checks project prerequisites against completed courses |
+| `enroll_agent` | Enrolls student in a course via MCP tool |
+| `grade_agent` | Updates student grade via MCP tool |
+| `profile_agent` | Retrieves full student academic profile |
+| `curriculum_agent` | Shows program curriculum by year (TVT/DIN) |
+| `analytics_report_agent` | Course and group performance analytics |
+| `rag_agent` | RAG-powered Q&A using course descriptions and guidelines |
+| `request_course_agent` | Student enrollment request submission |
+| `handle_request_agent` | Teacher approval/rejection of enrollment requests |
+| `morning_brief_agent` | Autonomous morning summary for teachers on login |
+| `student_plan_agent` | Full study plan with progress indicators (✅🔄📋❌) |
+
+### Agent Flow
+
+```
+Input → router_by_command
+   │
+   ├── risk/eligibility/recommend
+   │      └── fetch_students → progress_analysis → study_right
+   │                        → eligibility → calendar → risk_report
+   │                        → status → analytics → recommendation
+   │                                             → communication
+   │
+   ├── Teacher CRUD commands
+   │      └── enroll / grade / status_update / bulk_enroll / ...
+   │
+   ├── Student commands  
+   │      └── profile → student_recommendation
+   │          plan / eligibility / ask / request / my_requests
+   │
+   └── Shared
+          └── curriculum / courses / rag / morning_brief
+```
+
+### Why LangGraph over a simple chatbot
+
+A traditional chatbot processes one question and returns one answer. LangGraph models the workflow as a directed graph where each node is a specialized agent with a specific responsibility. This allows:
+
+- **Parallel concerns** — study rights and credit progress are analyzed by separate agents, each expert in their domain
+- **Conditional routing** — different commands trigger different agent chains via `router_by_command`
+- **State persistence** — the shared `State` TypedDict passes data between agents without re-querying the database
+- **Extensibility** — new agents can be added as graph nodes without modifying existing logic
+
 ### Agent Flow
 ```
 Input → router_by_command
@@ -190,7 +259,7 @@ GitHub Actions pipeline runs on push to `main` and `rag-implementation` branches
 ✅ OpenClaw + Telegram bot connected  
 ✅ Connection pooling, ownership checks, getpass security  
 🔜 Full Telegram end-to-end command routing  
-🔜 Morning Brief on teacher login  
+✅ Morning Brief on teacher login  
 🔜 Prerequisites check on enroll  
 🔜 Inline Telegram buttons and MarkdownV2 formatting  
 

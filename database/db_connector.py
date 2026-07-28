@@ -628,3 +628,21 @@ async def get_all_projects_with_requirements():
                 project["required_courses"] = [r["idcourse"] for r in reqs]
     
     return list(projects) if projects else []
+
+async def search_students_by_name(query:str):
+    pool = await get_pool()
+    search = f"%{query.strip()}%"
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT idstudent, fname,lname, student_number FROM student
+                WHERE fname LIKE %s
+                OR lname LIKE %s
+                OR CONCAT(fname, ' ', lname) LIKE %s
+                OR student_number LIKE %s
+                ORDER BY lname, fname
+                LIMIT 10""",
+                (search,search,search,search)
+            )
+            result = await cur.fetchall()
+    return result if result else[]
