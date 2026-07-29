@@ -1082,10 +1082,6 @@ async def main():
         brief_result = await app.ainvoke(brief_state)
         print(brief_result.get("morning_brief", ""))
 
-        scheduler = AsyncIOScheduler()
-        scheduler.add_job(weekly_brief_job,trigger="interval",seconds=30,misfire_grace_time=30)
-        scheduler.start()
-
         while True:
             command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/morning_brief/exit): ").strip()
 
@@ -1611,8 +1607,6 @@ async def main():
             except BackException:
                 print("↩  Cancelled. Back to main menu.")
                 continue
-    if 'scheduler' in locals():
-        scheduler.shutdown()
     await close_pool()            
 
 if __name__ == "__main__":
