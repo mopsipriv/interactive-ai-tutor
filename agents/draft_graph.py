@@ -7,12 +7,19 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password, close_pool, search_students_by_name
+from database.db_connector import (
+    get_student_enrollments, get_teacher_by_email, 
+    get_student_by_number, get_teacher_groups, update_teacher_password, 
+    update_student_password, close_pool, search_students_by_name, 
+    get_project_requirements_for_course)
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
 from database.auth import verify_password, hash_password
 from rag.rag_retriever import retrieve
+from agents.risk_utils import calculate_risk_level
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from agents.scheduler import weekly_brief_job
 os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import warnings
@@ -64,35 +71,6 @@ def split_full_name(full_name: str):
     fname = parts[0]
     lname = " ".join(parts[1:])
     return fname, lname
-
-
-def calculate_risk_level(student) -> tuple[str, str]:
-    """
-    Returns (level, reason) where level is 'critical', 'warning', 'info', or 'ok'
-    """
-    today = datetime.now().date()
-    credits_earned = student["credits_earned"]
-    credits_expected = student["credits_expected"]
-    credits_remaining = 240 - credits_earned
-    valid_until = datetime.strptime(student["valid_until"], "%Y-%m-%d").date()
-    months_left = (valid_until - today).days / 30
-    months_needed = credits_remaining / 5
-    buffer_months = months_left - months_needed
-    completion_rate = credits_earned / credits_expected if credits_expected > 0 else 1.0
-
-    if completion_rate < 0.5 and buffer_months < -6:
-        return "critical", f"completed only {round(completion_rate*100)}% of expected credits and may not finish before study right expires"
-    elif buffer_months < -12:
-        return "critical", f"study right ends too soon — needs {round(months_needed)} more months but only {round(months_left)} months remaining"
-    elif completion_rate < 0.5:
-        return "warning", f"completed only {round(completion_rate*100)}% of expected credits — falling behind schedule"
-    elif buffer_months < -6:
-        return "warning", f"at current pace may not finish before study right expires"
-    elif completion_rate < 0.75 or buffer_months < 0:
-        return "info", f"slightly behind expected pace, worth checking in"
-    else:
-        return "ok", ""
-
 
 async def progress_analysis_agent(state: State):
     students = state.get("students", [])
@@ -1156,6 +1134,22 @@ async def main():
                     if student_id is None:
                         continue
                     enroll_course = ask("Course name")
+                    
+                    requirements = await get_project_requirements_for_course(enroll_course)
+                    if requirements:
+                        enrollments = await get_student_enrollments(student_id)
+                        completed_ids = [e["idcourse"] for e in enrollments if e["status"] == "completed"]
+                        missing = [r for r in requirements if r["idcourse"] not in completed_ids]
+                        
+                        if missing:
+                            print(f"⚠️  Student has not completed required courses:")
+                            for course in missing:
+                                print(f"   - {course['course_name']} ({course['course_code']})")
+                            confirm = ask("Enroll anyway? (yes/no)")
+                            if confirm.lower() != "yes":
+                                print("Cancelled.")
+                                continue
+                    
                     state["enroll_student_name"] = display_name
                     state["enroll_course_name"] = enroll_course
                     result = await run_agent_with_timer(app, state)
@@ -1613,7 +1607,6 @@ async def main():
             except BackException:
                 print("↩  Cancelled. Back to main menu.")
                 continue
-
     await close_pool()            
 
 if __name__ == "__main__":

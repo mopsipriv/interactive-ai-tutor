@@ -646,3 +646,35 @@ async def search_students_by_name(query:str):
             )
             result = await cur.fetchall()
     return result if result else[]
+
+async def get_all_teachers():
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT idteacher,fname,lname,email FROM teacher")
+            result = await cur.fetchall()
+    return list(result) if result else []
+
+async def get_project_requirements_for_course(course_name: str):
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                "SELECT idproject FROM project WHERE project_name = %s",
+                (course_name,)
+            )
+            project = await cur.fetchone()
+            
+            if not project:
+                return []
+            
+            await cur.execute(
+                """SELECT pr.idcourse, c.course_name, c.course_code 
+                   FROM project_requirement pr
+                   JOIN course c ON pr.idcourse = c.idcourse
+                   WHERE pr.idproject = %s""",
+                (project["idproject"],)
+            )
+            result = await cur.fetchall()
+    
+    return list(result) if result else []
