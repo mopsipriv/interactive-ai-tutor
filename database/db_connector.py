@@ -646,3 +646,11 @@ async def search_students_by_name(query:str):
             )
             result = await cur.fetchall()
     return result if result else[]
+
+async def get_all_teachers():
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute("SELECT idteacher,fname,lname,email FROM teacher")
+            result = await cur.fetchall()
+    return list(result) if result else []
