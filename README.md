@@ -262,7 +262,3 @@ GitHub Actions pipeline runs on push to `main` and `rag-implementation` branches
 ✅ Morning Brief on teacher login  
 🔜 Prerequisites check on enroll  
 🔜 Inline Telegram buttons and MarkdownV2 formatting  
-
-## Solo Development Note
-
-This project was originally planned as a group project (2 students). Due to the partner being unresponsive for over a month, the entire implementation was completed solo. All architecture decisions, database design, agent logic, MCP integration, RAG system, Docker setup, and Telegram integration were designed and implemented by one person.
