@@ -6,14 +6,17 @@ An AI-powered tutoring assistant for university tutors and students at OAMK (Oul
 
 ### Teacher
 - Monitor student progress, credits, study rights, and risk status
-- Enroll students in courses, update grades and enrollment status
-- Approve or reject student enrollment requests
+- Enroll students in courses with **prerequisites check** for projects
+- Update grades and enrollment status
+- Approve or reject student enrollment requests (with ownership verification)
 - View curriculum by year (TVT and DIN programs)
 - View analytics — course stats, group performance
-- AI-generated risk reports on login
+- **Adaptive risk scoring** combining credit gap and study right buffer
+- **Morning Brief on login** — at-risk students + pending requests + calendar hint
+- **Fuzzy student search** — find by partial name or student number
+- **"Back" to cancel** at any step without losing context
 - Query history logging
 - Export reports (risk, analytics, courses)
-- Morning brief on login (at-risk students + pending requests)
 
 ### Student
 - View own academic profile and full study plan with progress indicators (✅🔄📋❌)
@@ -23,17 +26,23 @@ An AI-powered tutoring assistant for university tutors and students at OAMK (Oul
 - Track status of enrollment requests
 - Ask questions about curriculum, courses, and study guidelines
 
+### Autonomous Scheduler
+- **Weekly Brief every Monday at 08:00** — sends Telegram notification automatically
+- Runs as a separate process independently of the CLI
+- Combines at-risk analysis, pending requests, and calendar reminders
+
 ## Tech Stack
 
 | Component | Technology |
 |---|---|
 | Agent framework | LangGraph 20+ agents, Router pattern |
 | LLM | DeepSeek (`deepseek-v4-flash`) via OpenClaw |
-| MCP server | FastMCP, 15+ tools |
-| Database | MySQL 8.0 (`peppi_db`) |
+| MCP server | FastMCP, 15+ tools, SSE transport |
+| Database | MySQL 8.0 (`peppi_db`), connection pooling |
 | Authentication | bcrypt, teacher/student roles, 3-attempt lockout |
-| RAG | Chroma + sentence-transformers (CPU-only), 88 chunks |
+| RAG | Chroma + sentence-transformers (CPU-only), 88 chunks, smart chunking |
 | Telegram | OpenClaw gateway |
+| Scheduler | APScheduler (AsyncIOScheduler), cron trigger |
 | Infrastructure | Docker, docker-compose, GitHub Actions CI/CD |
 
 ## Programs in the System
@@ -58,25 +67,27 @@ An AI-powered tutoring assistant for university tutors and students at OAMK (Oul
 
 ### Teacher
 ```
-profile    — Student profile by name or number
-course     — Students in a specific course
-enroll     — Enroll student in a course
-grade      — Update student grade
-status     — Update enrollment status
-group      — All students in a group
-bulk       — Enroll entire group in a course
-courses    — All available courses
-curriculum — Program curriculum by year
-analytics  — Course or group analytics
-risk       — At-risk student report
-history    — Teacher query history
-ask        — RAG-powered question answering
-export     — Export reports to file
-requests   — Pending enrollment requests
-approve    — Approve or reject a request
-me         — Teacher profile
-password   — Change password
-help       — Show all commands
+profile       — Student profile (fuzzy search by name or number)
+course        — Students in a specific course
+enroll        — Enroll student in a course (with prerequisites check)
+grade         — Update student grade (1-5)
+status        — Update enrollment status
+group         — All students in a group
+bulk          — Enroll entire group in a course
+courses       — All available courses
+curriculum    — Program curriculum by year (TVT2025S-OHJ / DIN2025S)
+analytics     — Course or group analytics
+risk          — Adaptive risk report (credit gap + study right buffer)
+history       — Teacher query history
+ask           — RAG-powered question answering
+export        — Export reports to file
+requests      — Pending enrollment requests
+approve       — Approve or reject a request
+me            — Teacher profile and groups
+morning_brief — On-demand morning brief summary
+password      — Change password
+help          — Show all commands
+exit          — Logout
 ```
 
 ### Student
@@ -85,13 +96,30 @@ profile      — Own academic profile
 eligibility  — Project eligibility check
 recommend    — AI course recommendations
 courses      — All available courses
-plan         — Full study plan with progress
+plan         — Full study plan with progress (✅🔄📋❌)
 ask          — RAG-powered question answering
 request      — Request enrollment in a course
 my_requests  — Track enrollment request status
 password     — Change password
 help         — Show all commands
+exit         — Logout
 ```
+
+## Risk Scoring Algorithm
+
+The system uses adaptive risk scoring combining two factors as specified in the project assignment:
+
+```
+credits_remaining = 240 - credits_earned
+months_needed = credits_remaining / 5  (60 credits/year = 5/month)
+months_left = (valid_until - today).days / 30
+buffer = months_left - months_needed
+completion_rate = credits_earned / credits_expected_now
+```
+
+Example from assignment specification:
+- Student A: 100/240 credits, 12 months left → buffer = -11 months → 🔴 Critical
+- Student B: 235/240 credits, 12 months left → buffer = +11 months → 🟢 On track
 
 ## RAG Knowledge Base
 
@@ -102,9 +130,9 @@ The system uses RAG (Retrieval-Augmented Generation) with real OAMK course descr
 - `curriculum_guide.txt` — Program structure and prerequisites
 - `student_faq.txt` — Student FAQ with real course codes
 - `study_right_guide.txt` — Study right and credit pace guidelines
-- `tutoring_calendar.txt` — Month-by-month tutoring calendar
+- `tutoring_calendar.txt` — Month-by-month tutoring calendar with system commands
 
-Smart chunking: documents with `---` separators are chunked per course (one course = one chunk), others use character-based chunking with overlap.
+Smart chunking: documents with `---` separators are chunked per course/section, others use character-based chunking with 50-character overlap.
 
 ## Run with Docker
 
@@ -120,6 +148,9 @@ docker compose up -d
 
 # Run interactive CLI
 docker compose run --rm app
+
+# Run autonomous scheduler (separate terminal)
+docker compose run --rm app python run_scheduler.py
 ```
 
 ### Services
@@ -137,6 +168,9 @@ fastmcp run mcp_server.py --transport sse --host 0.0.0.0 --port 8000
 
 # Terminal 2 — App
 python -m agents.draft_graph
+
+# Terminal 3 — Autonomous scheduler (optional)
+python run_scheduler.py
 ```
 
 ## Architecture
@@ -146,11 +180,15 @@ Telegram
    ↓
 OpenClaw Gateway (DeepSeek LLM)
    ↓
-MCP Server (FastMCP, 15+ tools)
+MCP Server (FastMCP, 15+ tools, SSE)
    ↓
 LangGraph (20+ agents, Router pattern)
    ↓
 MySQL (peppi_db) + Chroma (RAG)
+
+Autonomous Scheduler (APScheduler)
+   ↓
+Weekly Brief → Telegram notification
 ```
 
 ## Agent Architecture
@@ -160,36 +198,36 @@ The system follows the assignment specification with 5 core specialized agents p
 ### Core Agents (as specified in project assignment)
 
 **Calendar Agent** (`calendar_agent`)
-Understands the tutoring calendar via RAG. Retrieves relevant actions and reminders for the current month from the knowledge base. Answers: "What tutoring activities should happen this month?"
+Understands the tutoring calendar via RAG. Retrieves relevant actions and reminders for the current month from the knowledge base.
 
 **Progress Analysis Agent** (`progress_analysis_agent`)
-Analyzes student credit accumulation and progression pace. Calculates expected vs actual credits based on enrollment date and identifies students falling behind schedule. Answers: "Is this student progressing normally?"
+Analyzes student credit accumulation and progression pace. Calculates expected vs actual credits based on enrollment date.
 
 **Study Right Agent** (`study_right_agent`)
-Monitors study right expiry dates and combines them with remaining credits to assess real urgency. Uses the formula: `buffer = months_left - (credits_remaining / 5)`. Answers: "Will this student finish before study right expires?"
+Monitors study right expiry dates and combines them with remaining credits using the buffer formula to assess real urgency.
 
 **Recommendation Agent** (`recommendation_agent`)
-Generates personalized study recommendations based on student progress, completed courses, and curriculum requirements. Answers: "What should this student do next?"
+Generates personalized study recommendations based on student progress, completed courses, and curriculum requirements.
 
 **Communication Agent** (`communication_agent`)
-Creates summaries and messages for tutors. Generates the Morning Brief on teacher login combining at-risk data, pending requests, and calendar hints.
+Creates summaries and messages for tutors. Generates the Morning Brief combining at-risk data, pending requests, and calendar hints.
 
 ### Additional Agents (beyond specification)
 
 | Agent | Purpose |
 |---|---|
-| `fetch_students_agent` | Loads all students for a teacher's groups from MySQL |
+| `fetch_students_agent` | Loads students for teacher's groups with credit calculations |
 | `eligibility_agent` | Checks project prerequisites against completed courses |
 | `enroll_agent` | Enrolls student in a course via MCP tool |
 | `grade_agent` | Updates student grade via MCP tool |
 | `profile_agent` | Retrieves full student academic profile |
-| `curriculum_agent` | Shows program curriculum by year (TVT/DIN) |
+| `curriculum_agent` | Shows program curriculum by year (TVT/DIN) via RAG |
 | `analytics_report_agent` | Course and group performance analytics |
 | `rag_agent` | RAG-powered Q&A using course descriptions and guidelines |
 | `request_course_agent` | Student enrollment request submission |
-| `handle_request_agent` | Teacher approval/rejection of enrollment requests |
+| `handle_request_agent` | Teacher approval/rejection with ownership verification |
 | `morning_brief_agent` | Autonomous morning summary for teachers on login |
-| `student_plan_agent` | Full study plan with progress indicators (✅🔄📋❌) |
+| `student_plan_agent` | Full study plan with progress indicators |
 
 ### Agent Flow
 
@@ -205,7 +243,7 @@ Input → router_by_command
    ├── Teacher CRUD commands
    │      └── enroll / grade / status_update / bulk_enroll / ...
    │
-   ├── Student commands  
+   ├── Student commands
    │      └── profile → student_recommendation
    │          plan / eligibility / ask / request / my_requests
    │
@@ -217,18 +255,10 @@ Input → router_by_command
 
 A traditional chatbot processes one question and returns one answer. LangGraph models the workflow as a directed graph where each node is a specialized agent with a specific responsibility. This allows:
 
-- **Parallel concerns** — study rights and credit progress are analyzed by separate agents, each expert in their domain
-- **Conditional routing** — different commands trigger different agent chains via `router_by_command`
-- **State persistence** — the shared `State` TypedDict passes data between agents without re-querying the database
-- **Extensibility** — new agents can be added as graph nodes without modifying existing logic
-
-### Agent Flow
-```
-Input → router_by_command
-   ├── Teacher commands → profile/enroll/grade/risk/analytics/...
-   ├── Student commands → profile/plan/eligibility/ask/...
-   └── Shared → curriculum/courses/password/help
-```
+- **Parallel concerns** — study rights and credit progress analyzed by separate agents
+- **Conditional routing** — different commands trigger different agent chains
+- **State persistence** — shared `State` TypedDict passes data between agents without re-querying the database
+- **Extensibility** — new agents added as graph nodes without modifying existing logic
 
 ## Security
 
@@ -237,6 +267,8 @@ Input → router_by_command
 - Enrollment request ownership verified before approve/reject
 - Password input via `getpass` (hidden from terminal)
 - MySQL connection pooling (`aiomysql.create_pool`, maxsize=10)
+- Input validation on grades (1-5), statuses, request IDs
+- "Back" cancellation at any input step via `BackException`
 - OpenClaw: Telegram allowlist (single user ID), dangerous commands denied
 
 ## CI/CD
@@ -247,18 +279,23 @@ GitHub Actions pipeline runs on push to `main` and `rag-implementation` branches
 
 ## Project Status
 
-✅ LangGraph 20+ agents with Router pattern  
-✅ FastMCP server with 15+ tools  
-✅ MySQL database with real TVT + DIN curriculum  
-✅ bcrypt authentication, teacher/student roles  
-✅ RAG system with official OAMK course descriptions  
-✅ Enrollment requests workflow  
-✅ Analytics, risk reports, curriculum, export  
-✅ Docker + docker-compose deployment  
-✅ GitHub Actions CI/CD  
-✅ OpenClaw + Telegram bot connected  
-✅ Connection pooling, ownership checks, getpass security  
-🔜 Full Telegram end-to-end command routing  
-✅ Morning Brief on teacher login  
-🔜 Prerequisites check on enroll  
-🔜 Inline Telegram buttons and MarkdownV2 formatting  
+✅ LangGraph 20+ agents with Router pattern
+✅ FastMCP server with 15+ tools (SSE transport)
+✅ MySQL database with real TVT + DIN curriculum (72 courses)
+✅ bcrypt authentication, teacher/student roles, 3-attempt lockout
+✅ RAG system with official OAMK course descriptions (88 chunks)
+✅ Smart chunking (separator-based + character-based fallback)
+✅ Enrollment requests workflow with ownership verification
+✅ Analytics, risk reports, curriculum, export
+✅ Adaptive risk scoring (credit gap + study right buffer)
+✅ Morning Brief on teacher login
+✅ Autonomous weekly scheduler (APScheduler, Telegram notifications)
+✅ Fuzzy student search (partial name or student number)
+✅ Prerequisites check for project enrollment
+✅ "Back" cancellation at any input step
+✅ Docker + docker-compose deployment
+✅ GitHub Actions CI/CD
+✅ OpenClaw + Telegram bot connected (MCP tools verified)
+✅ Connection pooling, ownership checks, getpass security
+🔜 Full Telegram end-to-end command routing
+🔜 Inline Telegram buttons and MarkdownV2 formatting
