@@ -7,7 +7,11 @@ import operator
 import os
 from dotenv import load_dotenv
 from groq import Groq
-from database.db_connector import get_student_enrollments, get_teacher_by_email, get_student_by_number, get_teacher_groups, update_teacher_password, update_student_password, close_pool, search_students_by_name
+from database.db_connector import (
+    get_student_enrollments, get_teacher_by_email, 
+    get_student_by_number, get_teacher_groups, update_teacher_password, 
+    update_student_password, close_pool, search_students_by_name, 
+    get_project_requirements_for_course)
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -1134,6 +1138,22 @@ async def main():
                     if student_id is None:
                         continue
                     enroll_course = ask("Course name")
+                    
+                    requirements = await get_project_requirements_for_course(enroll_course)
+                    if requirements:
+                        enrollments = await get_student_enrollments(student_id)
+                        completed_ids = [e["idcourse"] for e in enrollments if e["status"] == "completed"]
+                        missing = [r for r in requirements if r["idcourse"] not in completed_ids]
+                        
+                        if missing:
+                            print(f"⚠️  Student has not completed required courses:")
+                            for course in missing:
+                                print(f"   - {course['course_name']} ({course['course_code']})")
+                            confirm = ask("Enroll anyway? (yes/no)")
+                            if confirm.lower() != "yes":
+                                print("Cancelled.")
+                                continue
+                    
                     state["enroll_student_name"] = display_name
                     state["enroll_course_name"] = enroll_course
                     result = await run_agent_with_timer(app, state)
