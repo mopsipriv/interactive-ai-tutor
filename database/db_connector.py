@@ -471,7 +471,8 @@ async def get_pending_requests(teacher_id: int):
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
                 """SELECT er.idrequest, er.idstudent, s.fname, s.lname, er.idcourse, 
-                          c.course_code, c.course_name, er.status, er.requested_at
+                    c.course_code, c.course_name, er.status, er.requested_at,
+                    gc.group_code 
                 FROM enrollment_request er
                 JOIN student s ON er.idstudent = s.idstudent
                 JOIN course c ON er.idcourse = c.idcourse

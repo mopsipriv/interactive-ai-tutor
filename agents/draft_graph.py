@@ -872,7 +872,7 @@ def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
     
-    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export", "requests", "approve","morning_brief"]
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export", "requests", "morning_brief"]
     student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help","request", "my_requests"]
     
     if role == "student" and cmd not in student_commands:
@@ -1096,7 +1096,7 @@ async def main():
         print(brief_result.get("morning_brief", ""))
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/morning_brief/exit): ").strip()
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/morning_brief/exit): ").strip()
 
             if command == "exit":
                 print("Goodbye!")
@@ -1387,8 +1387,7 @@ async def main():
                     help       - Show this help message
                     export     - Export reports
                     me         - Own information
-                    requests   - See all requests
-                    approve    - Approve requests to course for student
+                    requests   - See/approve/reject all requests
                     password   - Change password
                     morning_brief - Report 
                     exit       - Logout
@@ -1403,22 +1402,54 @@ async def main():
                         print(f"  - {group['group_code']}: {group['student_count']} students")
 
                 elif command == "requests":
-                    result = await run_agent_with_timer(app, state)
-                    print(result["pending_requests_list"])
-
-                elif command == "approve":
-                    req_id = ask("Request ID")
-                    if not req_id.isdigit():
-                        print("Error: Request ID must be a number.")
+                    tools = await mcp_client.get_tools()
+                    requests_tool = next(t for t in tools if t.name == "get_pending_requests_tool")
+                    raw = await requests_tool.ainvoke({"teacher_id": teacher["idteacher"]})
+                    pending = json.loads(raw[0]["text"]) if raw else []
+                    
+                    if not pending:
+                        print("📥 No pending requests.")
                         continue
-                    action = ask("Approve or reject?", "approve/reject")
-                    if action not in ("approve", "reject"):
-                        print("Error: please type 'approve' or 'reject'.")
+                    
+                    print(f"\nPending requests ({len(pending)}):")
+                    for i, req in enumerate(pending, 1):
+                        print(f"  {i}. {req['fname']} {req['lname']} ({req.get('group_code', '?')}) → {req['course_name']} — {str(req['requested_at'])[:10]}")
+                    
+                    print("\nOptions: [number] / all approve / all reject / back")
+                    choice = input("Your choice: ").strip().lower()
+                    
+                    if choice in ("back", "b"):
                         continue
-                    state["request_id"] = int(req_id)
-                    state["request_action"] = action
-                    result = await run_agent_with_timer(app, state)
-                    print(result["request_action_result"])
+                    
+                    approve_tool = next(t for t in tools if t.name == "approve_request_tool")
+                    reject_tool = next(t for t in tools if t.name == "reject_request_tool")
+                    
+                    if choice == "all approve":
+                        for req in pending:
+                            await approve_tool.ainvoke({"request_id": req["idrequest"], "teacher_id": teacher["idteacher"]})
+                        print(f"✅ All {len(pending)} requests approved!")
+                    
+                    elif choice == "all reject":
+                        confirm = input(f"Reject all {len(pending)} requests? (yes/no): ").strip()
+                        if confirm == "yes":
+                            for req in pending:
+                                await reject_tool.ainvoke({"request_id": req["idrequest"], "teacher_id": teacher["idteacher"]})
+                            print(f"❌ All {len(pending)} requests rejected.")
+                    
+                    elif choice.isdigit() and 1 <= int(choice) <= len(pending):
+                        req = pending[int(choice) - 1]
+                        action = input(f"Approve or reject '{req['course_name']}' for {req['fname']} {req['lname']}? (approve/reject): ").strip()
+                        if action == "approve":
+                            await approve_tool.ainvoke({"request_id": req["idrequest"], "teacher_id": teacher["idteacher"]})
+                            print(f"✅ Request approved!")
+                        elif action == "reject":
+                            await reject_tool.ainvoke({"request_id": req["idrequest"], "teacher_id": teacher["idteacher"]})
+                            print(f"❌ Request rejected.")
+                        else:
+                            print("Unknown action.")
+                    
+                    else:
+                        print("Invalid choice.")
 
                 elif command == "password":
                     old_password = getpass.getpass("Current password: ")
@@ -1442,7 +1473,7 @@ async def main():
                     print(brief_result.get("morning_brief", ""))
 
                 else:
-                    print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/password/morning_brief/exit")
+                    print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/password/morning_brief/exit")
             except BackException:
                 print("↩  Cancelled. Back to main menu.")
                 continue
@@ -1489,7 +1520,7 @@ async def main():
                     print(f"   ✅ Your request for '{req['course_name']}' was APPROVED!")
                 else:
                     print(f"   ❌ Your request for '{req['course_name']}' was rejected.")
-                    
+
         student_full_name = f"{student['fname']} {student['lname']}"
         initial_state = {
             "user_role": "student",
