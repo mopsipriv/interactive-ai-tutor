@@ -72,6 +72,17 @@ def split_full_name(full_name: str):
     lname = " ".join(parts[1:])
     return fname, lname
 
+def progress_bar(earned: int, total: int = 240, width: int = 10) -> str:
+    """
+    Returns a unicode progress bar.
+    Example: ▓▓▓▓░░░░░░ 36/240 (15%)
+    """
+    pct = earned / total if total > 0 else 0
+    filled = int(pct * width)
+    bar = "▓" * filled + "░" * (width - filled)
+    return f"{bar} {earned}/{total} ({round(pct * 100)}%)"
+
+
 async def progress_analysis_agent(state: State):
     students = state.get("students", [])
     new_issue = ""
@@ -403,16 +414,19 @@ async def risk_report_agent(state: State):
         credits_earned = student["credits_earned"]
         level, reason = calculate_risk_level(student)
 
+        bar = progress_bar(credits_earned)
         if level == "critical":
-            new_issue += f"\n{full_name}:\n  🔴 Needs urgent attention — {reason}\n"
+            new_issue += f"\n{full_name}: {bar}\n  🔴 Needs urgent attention — {reason}\n"
         elif level == "warning":
-            new_issue += f"\n{full_name}:\n  🟡 Monitor closely — {reason}\n"
+            new_issue += f"\n{full_name}: {bar}\n  🟡 Monitor closely — {reason}\n"
         elif level == "info":
-            new_issue += f"\n{full_name}:\n  ℹ️  Slightly behind — {reason}\n"
+            new_issue += f"\n{full_name}: {bar}\n  ℹ️  Slightly behind — {reason}\n"
         else:
-            new_issue += f"🟢 {full_name}: On track ({credits_earned} credits)\n"
+            new_issue += f"🟢 {full_name}: {bar}\n"
 
+    print(f"DEBUG new_issue length: {len(new_issue)}")  # добавь
     return {"risk_report": new_issue}
+
 
 async def group_report_agent(state:State):
     new_issue=""
@@ -1273,13 +1287,9 @@ async def main():
                 elif command == "risk":
                     state["command"] = command
                     result = await run_agent_with_timer(app, state)
+                    print(f"DEBUG students: {len(result.get('students', []))}")
+                    print(f"DEBUG risk_report: '{result.get('risk_report', '')[:100]}'")
                     print(result["risk_report"])
-                    await log_tool.ainvoke({
-                        "teacher_id": teacher["idteacher"],
-                        "query_text": "risk: show report",
-                        "intent": "risk",
-                        "result": (result["risk_report"] or "")[:200]
-                    })
 
                 elif command == "history":
                     history_tool = next(t for t in tools if t.name == "get_teacher_query_history_tool")
