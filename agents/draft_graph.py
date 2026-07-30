@@ -11,7 +11,7 @@ from database.db_connector import (
     get_student_enrollments, get_teacher_by_email, 
     get_student_by_number, get_teacher_groups, update_teacher_password, 
     update_student_password, close_pool, search_students_by_name, 
-    get_project_requirements_for_course)
+    get_project_requirements_for_course, get_student_requests)
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -1469,7 +1469,27 @@ async def main():
                 return
         
         print(f"Welcome, {student['fname']} {student['lname']}!")
+        
+        enrollments = await get_student_enrollments(student["idstudent"])
+        credits_earned = 0
+        for enrollment in enrollments:
+            if enrollment["status"] == "completed":
+                credits_earned += enrollment["credit"]
 
+        bar = progress_bar(credits_earned)
+        print(f"📊 Your progress: {bar}")
+
+        requests = await get_student_requests(student["idstudent"])
+        notifications = [r for r in requests if r["status"] in ("approved", "rejected")]
+
+        if notifications:
+            print("📬 Notifications:")
+            for req in notifications:
+                if req["status"] == "approved":
+                    print(f"   ✅ Your request for '{req['course_name']}' was APPROVED!")
+                else:
+                    print(f"   ❌ Your request for '{req['course_name']}' was rejected.")
+                    
         student_full_name = f"{student['fname']} {student['lname']}"
         initial_state = {
             "user_role": "student",
