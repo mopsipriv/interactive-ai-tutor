@@ -679,3 +679,20 @@ async def get_project_requirements_for_course(course_name: str):
             result = await cur.fetchall()
     
     return list(result) if result else []
+
+async def search_courses_by_name(query: str):
+    pool = await get_pool()
+    search = f"%{query.strip()}%"
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT idcourse, course_code, course_name, credit, category
+                   FROM course
+                   WHERE course_name LIKE %s
+                      OR course_code LIKE %s
+                   ORDER BY course_name
+                   LIMIT 10""",
+                (search, search)
+            )
+            result = await cur.fetchall()
+    return list(result) if result else []

@@ -11,7 +11,8 @@ from database.db_connector import (
     get_student_enrollments, get_teacher_by_email, 
     get_student_by_number, get_teacher_groups, update_teacher_password, 
     update_student_password, close_pool, search_students_by_name, 
-    get_project_requirements_for_course, get_student_requests)
+    get_project_requirements_for_course, get_student_requests,
+    search_courses_by_name)
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -867,6 +868,44 @@ async def resolve_student(query: str) -> tuple[int | None,str]:
         s = matches[idx - 1]
         return s["idstudent"], f"{s['fname']} {s['lname']}"
 
+async def resolve_course(query: str) -> tuple[int | None,str]:
+    """
+    Fuzzy search course by name or number.
+    Returns (course_id, course_name) or (None, "") if not found/cancelled.
+    """
+    matches = await search_courses_by_name(query)
+    if not matches:
+        print(f"No courses found matching '{query}'.")
+        return None, ""
+    if len(matches) == 1:
+        s = matches[0]
+        display_name = s['course_name']
+        print(f"→ Found: {display_name} ({s['course_code']})")
+        return s["idcourse"], display_name
+
+    print(f"\nFound {len(matches)} courses matching '{query}':")
+    for i, s in enumerate(matches, 1):
+        print(f"  {i}. {s['course_name']} ({s['course_code']}) — {s['credit']} cr")
+
+    while True:
+        choice = input("Choose number (or 'back' to cancel): ").strip()
+        
+
+        if choice.lower() in ("back", "b", "cancel"):
+            raise BackException()
+        
+        if not choice.isdigit():
+            print("Please enter a number.")
+            continue
+        
+        idx = int(choice)
+        if not (1 <= idx <= len(matches)):
+            print(f"Please enter a number between 1 and {len(matches)}.")
+            continue
+
+        s = matches[idx - 1]
+        return s["idcourse"], s["course_name"]
+
 
 def router_by_command(state: State):
     cmd = state.get("command", "")
@@ -1634,14 +1673,9 @@ async def main():
                 """)
 
                 elif choice == "request":
-                    courses_state = initial_state.copy()
-                    courses_state["command"] = "courses"
-                    courses_state["show_courses"] = True
-                    courses_result = await run_agent_with_timer(app, courses_state)
-                    print("Available courses:")
-                    print(courses_result["courses_list"])
-                    
-                    course_name = ask("Course name to request")
+                    course_id, course_name = await resolve_course(ask("Course name or code"))
+                    if course_id is None:
+                        continue
                     state["request_course_name"] = course_name
                     result = await run_agent_with_timer(app, state)
                     print(result["request_result"])
