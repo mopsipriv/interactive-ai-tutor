@@ -81,8 +81,7 @@ risk          — Adaptive risk report (credit gap + study right buffer)
 history       — Teacher query history
 ask           — RAG-powered question answering
 export        — Export reports to file
-requests      — Pending enrollment requests
-approve       — Approve or reject a request
+requests      — Pending/approve/reject enrollment requests
 me            — Teacher profile and groups
 morning_brief — On-demand morning brief summary
 password      — Change password
