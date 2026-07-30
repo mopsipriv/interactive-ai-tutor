@@ -449,7 +449,6 @@ async def group_report_agent(state:State):
     return {"group_report": new_issue}
 
 
-
 async def bulk_enroll_agent(state: State):
     bulk_group_code = state.get("bulk_group_code", "")
     bulk_course_code = state.get("bulk_course_name", "")
@@ -787,7 +786,7 @@ async def morning_brief_agent(state: State):
     for student in students:
         level, reason = calculate_risk_level(student)
         if level in ("critical", "warning"):
-            at_risk.append((student["fname"] + " " + student["lname"], level, reason))
+            at_risk.append((student["fname"] + " " + student["lname"], level, reason, student["credits_earned"]))
 
     requests_tool = next(t for t in tools if t.name == "get_pending_requests_tool")
     raw_requests = await requests_tool.ainvoke({"teacher_id": teacher_id})
@@ -800,9 +799,10 @@ async def morning_brief_agent(state: State):
 
     if at_risk:
         brief += f"⚠️  At-risk students: {len(at_risk)}\n"
-        for name, level, reason in at_risk:
+        for name, level, reason, credits in at_risk:
             icon = "🔴" if level == "critical" else "🟡"
-            brief += f"   {icon} {name} — {reason}\n"
+            bar = progress_bar(credits)
+            brief += f"   {icon} {name}: {bar}\n      {reason}\n"
     else:
         brief += "✅ All students on track\n"
 
