@@ -424,7 +424,6 @@ async def risk_report_agent(state: State):
         else:
             new_issue += f"🟢 {full_name}: {bar}\n"
 
-    print(f"DEBUG new_issue length: {len(new_issue)}")  # добавь
     return {"risk_report": new_issue}
 
 
@@ -1287,9 +1286,13 @@ async def main():
                 elif command == "risk":
                     state["command"] = command
                     result = await run_agent_with_timer(app, state)
-                    print(f"DEBUG students: {len(result.get('students', []))}")
-                    print(f"DEBUG risk_report: '{result.get('risk_report', '')[:100]}'")
                     print(result["risk_report"])
+                    await log_tool.ainvoke({
+                        "teacher_id": teacher["idteacher"],
+                        "query_text": "risk: show report",
+                        "intent": "risk",
+                        "result": (result["risk_report"] or "")[:200]
+                    })
 
                 elif command == "history":
                     history_tool = next(t for t in tools if t.name == "get_teacher_query_history_tool")
