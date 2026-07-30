@@ -471,7 +471,8 @@ async def get_pending_requests(teacher_id: int):
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
                 """SELECT er.idrequest, er.idstudent, s.fname, s.lname, er.idcourse, 
-                          c.course_code, c.course_name, er.status, er.requested_at
+                    c.course_code, c.course_name, er.status, er.requested_at,
+                    gc.group_code 
                 FROM enrollment_request er
                 JOIN student s ON er.idstudent = s.idstudent
                 JOIN course c ON er.idcourse = c.idcourse
@@ -677,4 +678,21 @@ async def get_project_requirements_for_course(course_name: str):
             )
             result = await cur.fetchall()
     
+    return list(result) if result else []
+
+async def search_courses_by_name(query: str):
+    pool = await get_pool()
+    search = f"%{query.strip()}%"
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT idcourse, course_code, course_name, credit, category
+                   FROM course
+                   WHERE course_name LIKE %s
+                      OR course_code LIKE %s
+                   ORDER BY course_name
+                   LIMIT 10""",
+                (search, search)
+            )
+            result = await cur.fetchall()
     return list(result) if result else []

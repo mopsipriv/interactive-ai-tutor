@@ -11,7 +11,8 @@ from database.db_connector import (
     get_student_enrollments, get_teacher_by_email, 
     get_student_by_number, get_teacher_groups, update_teacher_password, 
     update_student_password, close_pool, search_students_by_name, 
-    get_project_requirements_for_course)
+    get_project_requirements_for_course, get_student_requests,
+    search_courses_by_name)
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -71,6 +72,17 @@ def split_full_name(full_name: str):
     fname = parts[0]
     lname = " ".join(parts[1:])
     return fname, lname
+
+def progress_bar(earned: int, total: int = 240, width: int = 10) -> str:
+    """
+    Returns a unicode progress bar.
+    Example: ▓▓▓▓░░░░░░ 36/240 (15%)
+    """
+    pct = earned / total if total > 0 else 0
+    filled = int(pct * width)
+    bar = "▓" * filled + "░" * (width - filled)
+    return f"{bar} {earned}/{total} ({round(pct * 100)}%)"
+
 
 async def progress_analysis_agent(state: State):
     students = state.get("students", [])
@@ -403,16 +415,18 @@ async def risk_report_agent(state: State):
         credits_earned = student["credits_earned"]
         level, reason = calculate_risk_level(student)
 
+        bar = progress_bar(credits_earned)
         if level == "critical":
-            new_issue += f"\n{full_name}:\n  🔴 Needs urgent attention — {reason}\n"
+            new_issue += f"\n{full_name}: {bar}\n  🔴 Needs urgent attention — {reason}\n"
         elif level == "warning":
-            new_issue += f"\n{full_name}:\n  🟡 Monitor closely — {reason}\n"
+            new_issue += f"\n{full_name}: {bar}\n  🟡 Monitor closely — {reason}\n"
         elif level == "info":
-            new_issue += f"\n{full_name}:\n  ℹ️  Slightly behind — {reason}\n"
+            new_issue += f"\n{full_name}: {bar}\n  ℹ️  Slightly behind — {reason}\n"
         else:
-            new_issue += f"🟢 {full_name}: On track ({credits_earned} credits)\n"
+            new_issue += f"🟢 {full_name}: {bar}\n"
 
     return {"risk_report": new_issue}
+
 
 async def group_report_agent(state:State):
     new_issue=""
@@ -434,7 +448,6 @@ async def group_report_agent(state:State):
         new_issue += f"- {student['fname']} {student['lname']} ({student['student_number']})\n"
 
     return {"group_report": new_issue}
-
 
 
 async def bulk_enroll_agent(state: State):
@@ -774,7 +787,7 @@ async def morning_brief_agent(state: State):
     for student in students:
         level, reason = calculate_risk_level(student)
         if level in ("critical", "warning"):
-            at_risk.append((student["fname"] + " " + student["lname"], level, reason))
+            at_risk.append((student["fname"] + " " + student["lname"], level, reason, student["credits_earned"]))
 
     requests_tool = next(t for t in tools if t.name == "get_pending_requests_tool")
     raw_requests = await requests_tool.ainvoke({"teacher_id": teacher_id})
@@ -787,9 +800,10 @@ async def morning_brief_agent(state: State):
 
     if at_risk:
         brief += f"⚠️  At-risk students: {len(at_risk)}\n"
-        for name, level, reason in at_risk:
+        for name, level, reason, credits in at_risk:
             icon = "🔴" if level == "critical" else "🟡"
-            brief += f"   {icon} {name} — {reason}\n"
+            bar = progress_bar(credits)
+            brief += f"   {icon} {name}: {bar}\n      {reason}\n"
     else:
         brief += "✅ All students on track\n"
 
@@ -854,12 +868,50 @@ async def resolve_student(query: str) -> tuple[int | None,str]:
         s = matches[idx - 1]
         return s["idstudent"], f"{s['fname']} {s['lname']}"
 
+async def resolve_course(query: str) -> tuple[int | None,str]:
+    """
+    Fuzzy search course by name or number.
+    Returns (course_id, course_name) or (None, "") if not found/cancelled.
+    """
+    matches = await search_courses_by_name(query)
+    if not matches:
+        print(f"No courses found matching '{query}'.")
+        return None, ""
+    if len(matches) == 1:
+        s = matches[0]
+        display_name = s['course_name']
+        print(f"→ Found: {display_name} ({s['course_code']})")
+        return s["idcourse"], display_name
+
+    print(f"\nFound {len(matches)} courses matching '{query}':")
+    for i, s in enumerate(matches, 1):
+        print(f"  {i}. {s['course_name']} ({s['course_code']}) — {s['credit']} cr")
+
+    while True:
+        choice = input("Choose number (or 'back' to cancel): ").strip()
+        
+
+        if choice.lower() in ("back", "b", "cancel"):
+            raise BackException()
+        
+        if not choice.isdigit():
+            print("Please enter a number.")
+            continue
+        
+        idx = int(choice)
+        if not (1 <= idx <= len(matches)):
+            print(f"Please enter a number between 1 and {len(matches)}.")
+            continue
+
+        s = matches[idx - 1]
+        return s["idcourse"], s["course_name"]
+
 
 def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
     
-    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export", "requests", "approve","morning_brief"]
+    teacher_commands = ["profile", "course", "enroll", "grade", "status", "group", "bulk", "courses", "curriculum", "analytics", "risk", "ask", "help", "export", "requests", "morning_brief"]
     student_commands = ["profile", "eligibility", "recommend", "courses", "plan", "ask", "help","request", "my_requests"]
     
     if role == "student" and cmd not in student_commands:
@@ -1083,7 +1135,7 @@ async def main():
         print(brief_result.get("morning_brief", ""))
 
         while True:
-            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/morning_brief/exit): ").strip()
+            command = input("\nCommand (profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/morning_brief/exit): ").strip()
 
             if command == "exit":
                 print("Goodbye!")
@@ -1374,8 +1426,7 @@ async def main():
                     help       - Show this help message
                     export     - Export reports
                     me         - Own information
-                    requests   - See all requests
-                    approve    - Approve requests to course for student
+                    requests   - See/approve/reject all requests
                     password   - Change password
                     morning_brief - Report 
                     exit       - Logout
@@ -1390,22 +1441,54 @@ async def main():
                         print(f"  - {group['group_code']}: {group['student_count']} students")
 
                 elif command == "requests":
-                    result = await run_agent_with_timer(app, state)
-                    print(result["pending_requests_list"])
-
-                elif command == "approve":
-                    req_id = ask("Request ID")
-                    if not req_id.isdigit():
-                        print("Error: Request ID must be a number.")
+                    tools = await mcp_client.get_tools()
+                    requests_tool = next(t for t in tools if t.name == "get_pending_requests_tool")
+                    raw = await requests_tool.ainvoke({"teacher_id": teacher["idteacher"]})
+                    pending = json.loads(raw[0]["text"]) if raw else []
+                    
+                    if not pending:
+                        print("📥 No pending requests.")
                         continue
-                    action = ask("Approve or reject?", "approve/reject")
-                    if action not in ("approve", "reject"):
-                        print("Error: please type 'approve' or 'reject'.")
+                    
+                    print(f"\nPending requests ({len(pending)}):")
+                    for i, req in enumerate(pending, 1):
+                        print(f"  {i}. {req['fname']} {req['lname']} ({req.get('group_code', '?')}) → {req['course_name']} — {str(req['requested_at'])[:10]}")
+                    
+                    print("\nOptions: [number] / all approve / all reject / back")
+                    choice = input("Your choice: ").strip().lower()
+                    
+                    if choice in ("back", "b"):
                         continue
-                    state["request_id"] = int(req_id)
-                    state["request_action"] = action
-                    result = await run_agent_with_timer(app, state)
-                    print(result["request_action_result"])
+                    
+                    approve_tool = next(t for t in tools if t.name == "approve_request_tool")
+                    reject_tool = next(t for t in tools if t.name == "reject_request_tool")
+                    
+                    if choice == "all approve":
+                        for req in pending:
+                            await approve_tool.ainvoke({"request_id": req["idrequest"], "teacher_id": teacher["idteacher"]})
+                        print(f"✅ All {len(pending)} requests approved!")
+                    
+                    elif choice == "all reject":
+                        confirm = input(f"Reject all {len(pending)} requests? (yes/no): ").strip()
+                        if confirm == "yes":
+                            for req in pending:
+                                await reject_tool.ainvoke({"request_id": req["idrequest"], "teacher_id": teacher["idteacher"]})
+                            print(f"❌ All {len(pending)} requests rejected.")
+                    
+                    elif choice.isdigit() and 1 <= int(choice) <= len(pending):
+                        req = pending[int(choice) - 1]
+                        action = input(f"Approve or reject '{req['course_name']}' for {req['fname']} {req['lname']}? (approve/reject): ").strip()
+                        if action == "approve":
+                            await approve_tool.ainvoke({"request_id": req["idrequest"], "teacher_id": teacher["idteacher"]})
+                            print(f"✅ Request approved!")
+                        elif action == "reject":
+                            await reject_tool.ainvoke({"request_id": req["idrequest"], "teacher_id": teacher["idteacher"]})
+                            print(f"❌ Request rejected.")
+                        else:
+                            print("Unknown action.")
+                    
+                    else:
+                        print("Invalid choice.")
 
                 elif command == "password":
                     old_password = getpass.getpass("Current password: ")
@@ -1429,7 +1512,7 @@ async def main():
                     print(brief_result.get("morning_brief", ""))
 
                 else:
-                    print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/approve/password/morning_brief/exit")
+                    print("Unknown command. Try: profile/course/enroll/grade/status/group/bulk/courses/risk/history/curriculum/analytics/ask/help/export/me/requests/password/morning_brief/exit")
             except BackException:
                 print("↩  Cancelled. Back to main menu.")
                 continue
@@ -1456,6 +1539,26 @@ async def main():
                 return
         
         print(f"Welcome, {student['fname']} {student['lname']}!")
+        
+        enrollments = await get_student_enrollments(student["idstudent"])
+        credits_earned = 0
+        for enrollment in enrollments:
+            if enrollment["status"] == "completed":
+                credits_earned += enrollment["credit"]
+
+        bar = progress_bar(credits_earned)
+        print(f"📊 Your progress: {bar}")
+
+        requests = await get_student_requests(student["idstudent"])
+        notifications = [r for r in requests if r["status"] in ("approved", "rejected")]
+
+        if notifications:
+            print("📬 Notifications:")
+            for req in notifications:
+                if req["status"] == "approved":
+                    print(f"   ✅ Your request for '{req['course_name']}' was APPROVED!")
+                else:
+                    print(f"   ❌ Your request for '{req['course_name']}' was rejected.")
 
         student_full_name = f"{student['fname']} {student['lname']}"
         initial_state = {
@@ -1570,14 +1673,9 @@ async def main():
                 """)
 
                 elif choice == "request":
-                    courses_state = initial_state.copy()
-                    courses_state["command"] = "courses"
-                    courses_state["show_courses"] = True
-                    courses_result = await run_agent_with_timer(app, courses_state)
-                    print("Available courses:")
-                    print(courses_result["courses_list"])
-                    
-                    course_name = ask("Course name to request")
+                    course_id, course_name = await resolve_course(ask("Course name or code"))
+                    if course_id is None:
+                        continue
                     state["request_course_name"] = course_name
                     result = await run_agent_with_timer(app, state)
                     print(result["request_result"])
