@@ -696,3 +696,43 @@ async def search_courses_by_name(query: str):
             )
             result = await cur.fetchall()
     return list(result) if result else []
+
+async def get_group_stats_for_student(student_id:int):
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT idgroup FROM student_group
+                WHERE idstudent=%s LIMIT 1""",
+            (student_id,)
+            )
+            group = await cur.fetchone()
+            if not group:
+                return None
+            
+            group_id = group["idgroup"]
+
+            await cur.execute(
+                """SELECT idstudent FROM student_group
+                WHERE idgroup=%s""",
+                (group_id,)
+            )
+            members = await cur.fetchall()
+
+            all_credits = []
+            for member in members:
+                await cur.execute(
+                    """SELECT COALESCE(SUM(c.credit), 0) as credits
+                       FROM enrollment e
+                       JOIN course c ON e.idcourse = c.idcourse
+                       WHERE e.idstudent = %s AND e.status = 'completed'""",
+                    (member["idstudent"],)
+                )
+                result = await cur.fetchone()
+                all_credits.append(int(result["credits"]))
+    
+    return {
+        "avg_credits": round(sum(all_credits) / len(all_credits)) if all_credits else 0,
+        "max_credits": max(all_credits) if all_credits else 0,
+        "group_size": len(members)
+    }

@@ -12,7 +12,7 @@ from database.db_connector import (
     get_student_by_number, get_teacher_groups, update_teacher_password, 
     update_student_password, close_pool, search_students_by_name, 
     get_project_requirements_for_course, get_student_requests,
-    search_courses_by_name)
+    search_courses_by_name, get_group_stats_for_student)
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -1546,8 +1546,19 @@ async def main():
             if enrollment["status"] == "completed":
                 credits_earned += enrollment["credit"]
 
-        bar = progress_bar(credits_earned)
-        print(f"📊 Your progress: {bar}")
+        stats = await get_group_stats_for_student(student["idstudent"])
+        if stats:
+            print(f"📊 Your progress vs group ({stats['group_size']} students):")
+            print(f"   You:         {progress_bar(credits_earned)}")
+            print(f"   Group avg:   {progress_bar(int(stats['avg_credits']))}")
+            print(f"   Top student: {progress_bar(stats['max_credits'])}")
+            
+            if credits_earned >= stats["max_credits"]:
+                print("   🏆 You are the top student in your group!")
+            elif credits_earned >= stats["avg_credits"]:
+                print("   ✅ You are above average!")
+            else:
+                print("   💪 Keep going — you can catch up!")
 
         requests = await get_student_requests(student["idstudent"])
         notifications = [r for r in requests if r["status"] in ("approved", "rejected")]
