@@ -1044,7 +1044,11 @@ async def main():
 ║     Peppi-like Academic Records System    ║
 ╚═══════════════════════════════════════════╝
 """)
-    role = input("Login as: (teacher / student): ")
+    while True:
+        role = input("Login as: (teacher / student): ").strip().lower()
+        if role in ("teacher", "student"):
+            break
+        print("Please type 'teacher' or 'student'.")
 
     if role == "teacher":
         email = input("Enter your email: ")
