@@ -1004,14 +1004,13 @@ simple_nodes = [
     "curriculum_node", "analytics_report_node", "student_plan_node",
     "course_students_node", "rag_node", "request_course_node",
     "view_requests_node", "handle_request_node", "my_requests_node",
-    "morning_brief_node"
+    "morning_brief_node", "profile_node"
 ]
 for node in simple_nodes:
     graph.add_edge(node, END)
 
-# profile/recommendation
-graph.add_edge("profile_node", "student_recommendation_node")
-graph.add_edge("student_recommendation_node", END)
+# profile
+graph.add_edge("profile_node", END)
 
 # risk/eligibility/recommend
 graph.add_edge("fetch_node", "progress_analysis_node")
