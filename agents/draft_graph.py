@@ -1627,7 +1627,8 @@ async def main():
             "request_id": 0,
             "request_action": "",
             "request_action_result": "",
-            "my_requests_list": ""
+            "my_requests_list": "",
+            "student_recommendation": "",
         }
         while True:
             choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ): ").strip()
