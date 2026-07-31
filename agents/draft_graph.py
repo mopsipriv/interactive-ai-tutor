@@ -12,7 +12,7 @@ from database.db_connector import (
     get_student_by_number, get_teacher_groups, update_teacher_password, 
     update_student_password, close_pool, search_students_by_name, 
     get_project_requirements_for_course, get_student_requests,
-    search_courses_by_name)
+    search_courses_by_name, get_group_stats_for_student)
 from langchain_mcp_adapters.client import MultiServerMCPClient
 import json
 from agents.state import State
@@ -1004,14 +1004,13 @@ simple_nodes = [
     "curriculum_node", "analytics_report_node", "student_plan_node",
     "course_students_node", "rag_node", "request_course_node",
     "view_requests_node", "handle_request_node", "my_requests_node",
-    "morning_brief_node"
+    "morning_brief_node", "profile_node"
 ]
 for node in simple_nodes:
     graph.add_edge(node, END)
 
-# profile/recommendation
-graph.add_edge("profile_node", "student_recommendation_node")
-graph.add_edge("student_recommendation_node", END)
+# profile
+graph.add_edge("profile_node", END)
 
 # risk/eligibility/recommend
 graph.add_edge("fetch_node", "progress_analysis_node")
@@ -1044,7 +1043,11 @@ async def main():
 ║     Peppi-like Academic Records System    ║
 ╚═══════════════════════════════════════════╝
 """)
-    role = input("Login as: (teacher / student): ")
+    while True:
+        role = input("Login as: (teacher / student): ").strip().lower()
+        if role in ("teacher", "student"):
+            break
+        print("Please type 'teacher' or 'student'.")
 
     if role == "teacher":
         email = input("Enter your email: ")
@@ -1546,8 +1549,19 @@ async def main():
             if enrollment["status"] == "completed":
                 credits_earned += enrollment["credit"]
 
-        bar = progress_bar(credits_earned)
-        print(f"📊 Your progress: {bar}")
+        stats = await get_group_stats_for_student(student["idstudent"])
+        if stats:
+            print(f"📊 Your progress vs group ({stats['group_size']} students):")
+            print(f"   You:         {progress_bar(credits_earned)}")
+            print(f"   Group avg:   {progress_bar(int(stats['avg_credits']))}")
+            print(f"   Top student: {progress_bar(stats['max_credits'])}")
+            
+            if credits_earned >= stats["max_credits"]:
+                print("   🏆 You are the top student in your group!")
+            elif credits_earned >= stats["avg_credits"]:
+                print("   ✅ You are above average!")
+            else:
+                print("   💪 Keep going — you can catch up!")
 
         requests = await get_student_requests(student["idstudent"])
         notifications = [r for r in requests if r["status"] in ("approved", "rejected")]
@@ -1612,19 +1626,22 @@ async def main():
             "request_id": 0,
             "request_action": "",
             "request_action_result": "",
-            "my_requests_list": ""
+            "my_requests_list": "",
+            "student_recommendation": "",
+            "teacher_name": "",
+            "morning_brief": ""
         }
         while True:
             choice = input("What would you like to see? (profile / eligibility / recommend / courses / plan / ask / help / request / my_requests / password / exit ): ").strip()
 
-            state = initial_state.copy()
-            tools = await mcp_client.get_tools()
-            state["command"] = choice
-
             if choice == "exit":
                 print("Goodbye!")
                 break
-
+            
+            state = initial_state.copy()
+            tools = await mcp_client.get_tools()
+            state["command"] = choice
+            
             try:
                 if choice == "profile":
                     result = await run_agent_with_timer(app, state)
