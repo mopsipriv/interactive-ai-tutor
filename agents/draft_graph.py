@@ -83,6 +83,11 @@ def progress_bar(earned: int, total: int = 240, width: int = 10) -> str:
     bar = "▓" * filled + "░" * (width - filled)
     return f"{bar} {earned}/{total} ({round(pct * 100)}%)"
 
+def get_mcp_tool(tools, tool_name):
+    tool = next((t for t in tools if t.name == tool_name), None)
+    if not tool:
+        raise RuntimeError(f"MCP Tool '{tool_name}' not found!")
+    return tool
 
 async def progress_analysis_agent(state: State):
     students = state.get("students", [])
