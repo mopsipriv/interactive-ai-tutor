@@ -954,7 +954,7 @@ def router_by_command(state: State):
 def route_after_status(state: State):
     cmd = state.get("command", "")
     if cmd == "recommend":
-        return "go_to_profile"
+        return "go_to_recommendation"
     if cmd == "eligibility":
         return "go_to_end"
     if cmd == "risk":
