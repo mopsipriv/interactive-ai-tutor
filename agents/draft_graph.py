@@ -1390,8 +1390,11 @@ async def main():
                     print(result["rag_answer"])
 
                 elif command == "export":
-                    print("Export type: (risk / analytics / courses)")
                     export_type = ask("Type (risk/analytics/courses)")
+                    
+                    if export_type not in ("risk", "analytics", "courses"):
+                        print("Error: type must be 'risk', 'analytics', or 'courses'.")
+                        continue
                     
                     quick_state = base_state.copy()
                     quick_state["command"] = export_type
