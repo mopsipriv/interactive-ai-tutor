@@ -1429,7 +1429,7 @@ async def main():
                     group      - List all students in a group
                     bulk       - Enroll entire group to a course
                     courses    - Show all available courses
-                    curriculum - View program curriculum by semester
+                    curriculum - View program curriculum by year
                     analytics  - View course or group analytics
                     risk       - Show at-risk students report
                     history    - View your recent query history
