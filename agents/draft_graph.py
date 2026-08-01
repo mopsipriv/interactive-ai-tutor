@@ -83,6 +83,11 @@ def progress_bar(earned: int, total: int = 240, width: int = 10) -> str:
     bar = "▓" * filled + "░" * (width - filled)
     return f"{bar} {earned}/{total} ({round(pct * 100)}%)"
 
+def get_mcp_tool(tools, tool_name):
+    tool = next((t for t in tools if t.name == tool_name), None)
+    if not tool:
+        raise RuntimeError(f"MCP Tool '{tool_name}' not found!")
+    return tool
 
 async def progress_analysis_agent(state: State):
     students = state.get("students", [])
@@ -949,7 +954,7 @@ def router_by_command(state: State):
 def route_after_status(state: State):
     cmd = state.get("command", "")
     if cmd == "recommend":
-        return "go_to_profile"
+        return "go_to_recommendation"
     if cmd == "eligibility":
         return "go_to_end"
     if cmd == "risk":
@@ -1025,7 +1030,7 @@ graph.add_conditional_edges(
     route_after_status,
     {
         "go_to_analytics": "analytics_node",
-        "go_to_profile": "profile_node",
+        "go_to_recommendation": "student_recommendation_node",
         "go_to_end": END
     }
 )
@@ -1385,8 +1390,11 @@ async def main():
                     print(result["rag_answer"])
 
                 elif command == "export":
-                    print("Export type: (risk / analytics / courses)")
                     export_type = ask("Type (risk/analytics/courses)")
+                    
+                    if export_type not in ("risk", "analytics", "courses"):
+                        print("Error: type must be 'risk', 'analytics', or 'courses'.")
+                        continue
                     
                     quick_state = base_state.copy()
                     quick_state["command"] = export_type
@@ -1421,7 +1429,7 @@ async def main():
                     group      - List all students in a group
                     bulk       - Enroll entire group to a course
                     courses    - Show all available courses
-                    curriculum - View program curriculum by semester
+                    curriculum - View program curriculum by year
                     analytics  - View course or group analytics
                     risk       - Show at-risk students report
                     history    - View your recent query history
