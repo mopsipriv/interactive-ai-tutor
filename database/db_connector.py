@@ -769,3 +769,41 @@ async def delete_telegram_session(chat_id: str):
                 (chat_id,)
             )
             await conn.commit()
+
+async def get_students_with_risk_data(teacher_id: int):
+    """Get students with credits_earned, credits_expected and valid_until for risk scoring"""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT DISTINCT s.idstudent, s.fname, s.lname, 
+                          s.valid_from, s.valid_until, s.student_number
+                   FROM student s
+                   JOIN student_group sg ON s.idstudent = sg.idstudent
+                   JOIN group_cohort gc ON sg.idgroup = gc.idgroup_cohort
+                   WHERE gc.idteacher = %s""",
+                (teacher_id,)
+            )
+            students = await cur.fetchall()
+            
+            for student in students:
+                await cur.execute(
+                    """SELECT COALESCE(SUM(c.credit), 0) as credits_earned
+                       FROM enrollment e
+                       JOIN course c ON e.idcourse = c.idcourse
+                       WHERE e.idstudent = %s AND e.status = 'completed'""",
+                    (student["idstudent"],)
+                )
+                result = await cur.fetchone()
+                student["credits_earned"] = int(result["credits_earned"])
+                
+                from datetime import datetime, date
+                valid_from = student["valid_from"]
+                if isinstance(valid_from, date):
+                    days_passed = (datetime.now().date() - valid_from).days
+                else:
+                    days_passed = (datetime.now().date() - datetime.strptime(valid_from, "%Y-%m-%d").date()).days
+                student["credits_expected"] = (days_passed / 182) * 30
+    
+    return list(students) if students else []
+

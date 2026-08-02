@@ -32,7 +32,8 @@ from database.db_connector import (
     get_telegram_session,
     delete_telegram_session,
     get_teacher_by_email,
-    get_student_by_number
+    get_student_by_number,
+    get_students_with_risk_data
 )
 
 from database.auth import verify_password
@@ -223,6 +224,35 @@ async def logout_tool(chat_id: str) -> str:
     await delete_telegram_session(chat_id)
     return "Logged out successfully"
 
+
+from agents.risk_utils import calculate_risk_level
+
+@mcp.tool
+async def get_risk_report_tool(teacher_id: int) -> str:
+    """Generate risk report for all students of a teacher"""
+    students = await get_students_with_risk_data(teacher_id)
+    if not students:
+        return "No students found."
+    
+    report = "=== Risk Report ===\n"
+    for student in students:
+        full_name = f"{student['fname']} {student['lname']}"
+        credits_earned = student["credits_earned"]
+        pct = int(credits_earned / 240 * 100)
+        bar = "▓" * int(pct / 10) + "░" * (10 - int(pct / 10))
+        
+        level, reason = calculate_risk_level(student)
+        
+        if level == "critical":
+            report += f"\n🔴 {full_name}: {bar} {credits_earned}/240 ({pct}%)\n   {reason}\n"
+        elif level == "warning":
+            report += f"\n🟡 {full_name}: {bar} {credits_earned}/240 ({pct}%)\n   {reason}\n"
+        elif level == "info":
+            report += f"\nℹ️  {full_name}: {bar} {credits_earned}/240 ({pct}%)\n   {reason}\n"
+        else:
+            report += f"\n🟢 {full_name}: {bar} {credits_earned}/240 ({pct}%)\n"
+    
+    return report
 
 if __name__=="__main__":
     mcp.run()
