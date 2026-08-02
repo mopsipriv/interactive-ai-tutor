@@ -27,8 +27,15 @@ from database.db_connector import (
     approve_request,
     reject_request,
     get_student_requests,
-    get_all_projects_with_requirements
+    get_all_projects_with_requirements,
+    save_telegram_session,
+    get_telegram_session,
+    delete_telegram_session,
+    get_teacher_by_email,
+    get_student_by_number
 )
+
+from database.auth import verify_password
 
 mcp = FastMCP("Tutor Server")
 
@@ -180,6 +187,41 @@ async def get_student_requests_tool(student_id: int) -> list:
 async def get_all_projects_with_requirements_tool() -> list:
     """Get all projects with their required course IDs"""
     return await get_all_projects_with_requirements()
+
+@mcp.tool
+async def get_session_tool(chat_id: str) -> dict | None:
+    """Get current Telegram session for chat_id"""
+    return await get_telegram_session(chat_id)
+
+@mcp.tool
+async def login_teacher_tool(chat_id: str, email: str, password: str) -> str:
+    """Login teacher by email and password"""
+    teacher = await get_teacher_by_email(email)
+    if not teacher:
+        return "Error: Teacher not found"
+    if not verify_password(password, teacher["password_hash"]):
+        return "Error: Wrong password"
+    name = f"{teacher['fname']} {teacher['lname']}"
+    await save_telegram_session(chat_id, "teacher", teacher["idteacher"], name)
+    return f"OK:{teacher['idteacher']}:{name}"
+
+@mcp.tool
+async def login_student_tool(chat_id: str, student_number: str, password: str) -> str:
+    """Login student by student number and password"""
+    student = await get_student_by_number(student_number)
+    if not student:
+        return "Error: Student not found"
+    if not verify_password(password, student["password_hash"]):
+        return "Error: Wrong password"
+    name = f"{student['fname']} {student['lname']}"
+    await save_telegram_session(chat_id, "student", student["idstudent"], name)
+    return f"OK:{student['idstudent']}:{name}"
+
+@mcp.tool
+async def logout_tool(chat_id: str) -> str:
+    """Logout from Telegram session"""
+    await delete_telegram_session(chat_id)
+    return "Logged out successfully"
 
 
 if __name__=="__main__":

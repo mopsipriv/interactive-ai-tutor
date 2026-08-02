@@ -36,6 +36,19 @@ INSERT INTO student (student_number, fname, lname, email, study_right, valid_fro
 ('H100009', 'Mason',    'Anderson', 'mason.anderson@oamk.fi', 'TVT2025S-OHJ', '2024-09-01', '2028-06-30'),
 ('H100010', 'Isabella', 'Thomas',   'isabella.thomas@oamk.fi','TVT2025S-OHJ', '2024-09-01', '2028-06-30');
 
+
+-- ============================================================
+-- TELEGRAM
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS telegram_sessions (
+    chat_id VARCHAR(20) PRIMARY KEY,
+    user_role VARCHAR(10) NOT NULL,
+    user_id INT NOT NULL,
+    user_name VARCHAR(60),
+    logged_in_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ============================================================
 -- TEACHER
 -- ============================================================
