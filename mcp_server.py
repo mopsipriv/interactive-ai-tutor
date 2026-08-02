@@ -37,7 +37,9 @@ from database.db_connector import (
 )
 
 from database.auth import verify_password
-from agents.risk_utils import calculate_risk_level
+from agents.risk_utils import calculate_risk_level, calculate_risk_level
+from rag.rag_retriever import retrieve
+from datetime import datetime
 
 
 mcp = FastMCP("Tutor Server")
@@ -261,7 +263,71 @@ async def get_risk_report_tool(teacher_id: int) -> str:
     
     return report
 
-
+@mcp.tool
+async def get_morning_brief_tool(teacher_id:int,teacher_name:str):
+    """Get morning brief for teacher"""
+    students = await get_students_by_teacher(teacher_id)
+    if not students:
+        return None
+    for student in students:
+        enrollments = await get_student_enrollments(student["idstudent"])
+        credits_earned=0
+        for enrollment in enrollments:
+            if enrollment["status"] == "completed":
+                credits_earned += enrollment["credit"]  
+        student["credits_earned"] = credits_earned
+    
+        valid_from = student["valid_from"]
+        if isinstance(valid_from, str):
+            date_obj = datetime.strptime(valid_from, "%Y-%m-%d").date()
+        else:
+            date_obj = valid_from
+        days_passed = (datetime.now().date() - date_obj).days
+        student["credits_expected"] = (days_passed / 182) * 30
+    at_risk = []
+    for student in students:
+        level, reason = calculate_risk_level(student)
+        if level in ("critical", "warning"):
+            at_risk.append((student["fname"] + " " + student["lname"], level, reason))
+        
+    pending = await get_pending_requests(teacher_id)
+    
+    month_name = datetime.now().strftime("%B")
+    calendar_hint = retrieve(f"{month_name} tutoring actions checklist")
+        
+    brief = f"\n🌅 Weekly Brief for {teacher_name}\n"
+    brief += f"{'━'*35}\n"
+        
+    if at_risk:
+        brief += f"⚠️  At-risk students: {len(at_risk)}\n"
+        for name, level, reason in at_risk:
+            icon = "🔴" if level == "critical" else "🟡"
+            brief += f"   {icon} {name} — {reason}\n"
+    else:
+        brief += "✅ All students on track\n"
+        
+    brief += "\n"
+        
+    if pending:
+        brief += f"📥 Pending requests: {len(pending)}\n"
+        for req in pending[:3]:
+            brief += f"   • {req['fname']} {req['lname']} → {req['course_name']}\n"
+    else:
+        brief += "📥 No pending requests\n"
+        
+    brief += "\n"
+        
+    clean_hint = "\n".join(
+        line for line in calendar_hint.split("\n") 
+        if not line.startswith("[Source:")
+    ).strip()
+    sentences = clean_hint.split(".")[:2]
+    hint = ". ".join(s.strip() for s in sentences if s.strip()) + "."
+    brief += f"📅 {month_name} reminder: {hint}\n"
+        
+    brief += f"\nType 'risk' for details, 'requests' to review.\n"
+        
+    return brief
 
 if __name__=="__main__":
     mcp.run()
