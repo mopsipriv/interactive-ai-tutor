@@ -736,3 +736,36 @@ async def get_group_stats_for_student(student_id:int):
         "max_credits": max(all_credits) if all_credits else 0,
         "group_size": len(members)
     }
+
+async def save_telegram_session(chat_id: str, user_role: str, user_id: int, user_name: str):
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                """INSERT INTO telegram_sessions (chat_id, user_role, user_id, user_name)
+                   VALUES (%s, %s, %s, %s)
+                   ON DUPLICATE KEY UPDATE 
+                   user_role=%s, user_id=%s, user_name=%s, logged_in_at=NOW()""",
+                (chat_id, user_role, user_id, user_name, user_role, user_id, user_name)
+            )
+            await conn.commit()
+
+async def get_telegram_session(chat_id: str):
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                "SELECT * FROM telegram_sessions WHERE chat_id = %s",
+                (chat_id,)
+            )
+            return await cur.fetchone()
+
+async def delete_telegram_session(chat_id: str):
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor() as cur:
+            await cur.execute(
+                "DELETE FROM telegram_sessions WHERE chat_id = %s",
+                (chat_id,)
+            )
+            await conn.commit()
