@@ -37,6 +37,8 @@ from database.db_connector import (
 )
 
 from database.auth import verify_password
+from agents.risk_utils import calculate_risk_level
+
 
 mcp = FastMCP("Tutor Server")
 
@@ -192,42 +194,45 @@ async def get_all_projects_with_requirements_tool() -> list:
 @mcp.tool
 async def get_session_tool(chat_id: str) -> dict | None:
     """Get current Telegram session for chat_id"""
-    return await get_telegram_session(chat_id)
+    clean_chat_id = chat_id.replace("telegram:", "")
+    return await get_telegram_session(clean_chat_id)
 
 @mcp.tool
 async def login_teacher_tool(chat_id: str, email: str, password: str) -> str:
     """Login teacher by email and password"""
+    clean_chat_id = chat_id.replace("telegram:", "")
     teacher = await get_teacher_by_email(email)
     if not teacher:
         return "Error: Teacher not found"
     if not verify_password(password, teacher["password_hash"]):
         return "Error: Wrong password"
     name = f"{teacher['fname']} {teacher['lname']}"
-    await save_telegram_session(chat_id, "teacher", teacher["idteacher"], name)
+    await save_telegram_session(clean_chat_id, "teacher", teacher["idteacher"], name)
     return f"OK:{teacher['idteacher']}:{name}"
 
 @mcp.tool
 async def login_student_tool(chat_id: str, student_number: str, password: str) -> str:
     """Login student by student number and password"""
-    print(f"DEBUG login_student: chat_id={chat_id}, student_number={student_number}, password={password[:3]}***")
+    clean_chat_id = chat_id.replace("telegram:", "")
+    
     student = await get_student_by_number(student_number)
     if not student:
         return "Error: Student not found"
     if not verify_password(password, student["password_hash"]):
-        return f"Error: Wrong password (hash={student['password_hash'][:10]})"
+        return "Error: Wrong password"
     name = f"{student['fname']} {student['lname']}"
-    await save_telegram_session(chat_id, "student", student["idstudent"], name)
+    await save_telegram_session(clean_chat_id, "student", student["idstudent"], name)
     return f"OK:{student['idstudent']}:{name}"
 
 
 @mcp.tool
 async def logout_tool(chat_id: str) -> str:
     """Logout from Telegram session"""
-    await delete_telegram_session(chat_id)
+    clean_chat_id = chat_id.replace("telegram:", "")
+    await delete_telegram_session(clean_chat_id)
     return "Logged out successfully"
 
 
-from agents.risk_utils import calculate_risk_level
 
 @mcp.tool
 async def get_risk_report_tool(teacher_id: int) -> str:
