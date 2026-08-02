@@ -209,14 +209,16 @@ async def login_teacher_tool(chat_id: str, email: str, password: str) -> str:
 @mcp.tool
 async def login_student_tool(chat_id: str, student_number: str, password: str) -> str:
     """Login student by student number and password"""
+    print(f"DEBUG login_student: chat_id={chat_id}, student_number={student_number}, password={password[:3]}***")
     student = await get_student_by_number(student_number)
     if not student:
         return "Error: Student not found"
     if not verify_password(password, student["password_hash"]):
-        return "Error: Wrong password"
+        return f"Error: Wrong password (hash={student['password_hash'][:10]})"
     name = f"{student['fname']} {student['lname']}"
     await save_telegram_session(chat_id, "student", student["idstudent"], name)
     return f"OK:{student['idstudent']}:{name}"
+
 
 @mcp.tool
 async def logout_tool(chat_id: str) -> str:
@@ -253,6 +255,8 @@ async def get_risk_report_tool(teacher_id: int) -> str:
             report += f"\n🟢 {full_name}: {bar} {credits_earned}/240 ({pct}%)\n"
     
     return report
+
+
 
 if __name__=="__main__":
     mcp.run()
