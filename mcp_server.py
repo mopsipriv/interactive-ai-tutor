@@ -37,7 +37,7 @@ from database.db_connector import (
 )
 
 from database.auth import verify_password
-from agents.risk_utils import calculate_risk_level, calculate_risk_level
+from agents.risk_utils import calculate_risk_level
 from rag.rag_retriever import retrieve
 from datetime import datetime
 
@@ -328,6 +328,36 @@ async def get_morning_brief_tool(teacher_id:int,teacher_name:str):
     brief += f"\nType 'risk' for details, 'requests' to review.\n"
         
     return brief
+
+@mcp.tool
+async def get_student_plan_tool(student_id: int, program_code: str) -> str:
+    """Get student study plan with progress indicators"""
+    progress = await get_student_curriculum_progress(student_id, program_code)
+    if not progress:
+        return "No curriculum found for this program."
+    
+    plan = f"=== Study Plan: {program_code} ===\n"
+    current_year = None
+    
+    for course in progress:
+        if course["year_of_study"] != current_year:
+            current_year = course["year_of_study"]
+            plan += f"\nYear {current_year}:\n"
+        
+        status = course["enrollment_status"]
+        if status == "completed":
+            icon = "✅"
+        elif status == "ongoing":
+            icon = "🔄"
+        elif status == "planned":
+            icon = "📋"
+        else:
+            icon = "❌"
+        
+        grade = f" (grade: {course['grade']})" if course["grade"] else ""
+        plan += f"  {icon} {course['course_name']} ({course['credit']}cr){grade}\n"
+    
+    return plan
 
 if __name__=="__main__":
     mcp.run()
