@@ -216,13 +216,12 @@ async def login_teacher_tool(chat_id: str, email: str, password: str) -> str:
 async def login_student_tool(chat_id: str, student_number: str, password: str) -> str:
     """Login student by student number and password"""
     clean_chat_id = chat_id.replace("telegram:", "")
-    print(f"DEBUG: number='{student_number}' password='{password[:3]}***' chat='{chat_id}'")
     
     student = await get_student_by_number(student_number)
     if not student:
         return "Error: Student not found"
     if not verify_password(password, student["password_hash"]):
-        return f"Error: Wrong password (got hash {student['password_hash'][:10]})"
+        return "Error: Wrong password"
     name = f"{student['fname']} {student['lname']}"
     await save_telegram_session(clean_chat_id, "student", student["idstudent"], name)
     return f"OK:{student['idstudent']}:{name}"
