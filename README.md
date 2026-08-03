@@ -63,6 +63,7 @@ An AI-powered tutoring assistant for university tutors and students at OAMK (Oul
 - **3 projects** with prerequisite checks (AI Chatbot, Web App, Mobile App)
 - **42 enrollments** with realistic grade distribution
 
+
 ## Commands
 
 ### Teacher
@@ -171,6 +172,32 @@ python -m agents.draft_graph
 # Terminal 3 — Autonomous scheduler (optional)
 python run_scheduler.py
 ```
+## Screenshots
+
+### CLI — Morning Brief on teacher login
+![Morning Brief](morning_brief.png)
+
+### Telegram — Teacher login and menu
+![Telegram Login](telegram_login_teacher.png)
+
+### Telegram — Risk report
+![Telegram Risk](telegram_risk_teacher.png)
+
+### Telegram — Student login and menu
+![Telegram Student](telegram_student.png)
+
+## System Architecture
+
+![System Architecture](system_architecture.png)
+
+## Agent Flow
+
+![LangGraph Agent Flow](langgraph_flow.png)
+
+## Database Schema (ERD)
+
+![ERD](erd.png)
+
 
 ## Architecture
 
@@ -296,5 +323,5 @@ GitHub Actions pipeline runs on push to `main` and `rag-implementation` branches
 ✅ GitHub Actions CI/CD
 ✅ OpenClaw + Telegram bot connected (MCP tools verified)
 ✅ Connection pooling, ownership checks, getpass security
-🔜 Full Telegram end-to-end command routing
+✅ Full Telegram end-to-end command routing
 🔜 Inline Telegram buttons and MarkdownV2 formatting
