@@ -192,7 +192,7 @@ python run_scheduler.py
 
 ## Agent Flow
 
-![LangGraph Agent Flow](langgraph_flow.png)
+![LangGraph Agent Flow](langgraph_agent_flow.png)
 
 ## Database Schema (ERD)
 
