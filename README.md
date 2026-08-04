@@ -134,22 +134,36 @@ The system uses RAG (Retrieval-Augmented Generation) with real OAMK course descr
 
 Smart chunking: documents with `---` separators are chunked per course/section, others use character-based chunking with 50-character overlap.
 
-## Run with Docker
+## Getting Started
 
+### Prerequisites
+- Docker and Docker Compose
+- OpenClaw (for Telegram integration)
+
+### Setup
 ```bash
-# Clone and configure
 git clone https://github.com/mopsipriv/interactive-ai-tutor.git
 cd interactive-ai-tutor
-cp agents/.env.example agents/.env  # fill in DB credentials and API keys
+cp agents/.env.example agents/.env  # fill in your credentials
 cp agents/.env .env
-
-# Start all services
 docker compose up -d
+```
 
-# Run interactive CLI
+### Run CLI
+```bash
 docker compose run --rm app
+```
 
-# Run autonomous scheduler (separate terminal)
+### Run Telegram bot
+```bash
+cd ~/openclaw && docker compose up -d
+./update_mcp_ip.sh
+docker network connect interactive-ai-tutor_default openclaw-openclaw-gateway-1
+# Bot is now active in Telegram
+```
+
+### Run scheduler (optional)
+```bash
 docker compose run --rm app python run_scheduler.py
 ```
 
@@ -159,60 +173,6 @@ docker compose run --rm app python run_scheduler.py
 | `peppi-mysql` | MySQL database | 3306 |
 | `peppi-mcp` | FastMCP server (SSE) | 8000 |
 | `peppi-app` | LangGraph CLI app | — |
-
-## Run Locally
-
-```bash
-# Terminal 1 — MCP server
-fastmcp run mcp_server.py --transport sse --host 0.0.0.0 --port 8000
-
-# Terminal 2 — App
-python -m agents.draft_graph
-
-# Terminal 3 — Autonomous scheduler (optional)
-python run_scheduler.py
-```
-## Quick Start
-
-### Prerequisites
-- Docker and Docker Compose
-- Python 3.11+ (for local run)
-- OpenClaw (for Telegram integration)
-
-### 1. Clone and configure
-```bash
-git clone https://github.com/mopsipriv/interactive-ai-tutor.git
-cd interactive-ai-tutor
-cp agents/.env.example agents/.env  # fill in your credentials
-cp agents/.env .env
-```
-
-### 2. Start services
-```bash
-docker compose up -d
-```
-
-### 3. Run CLI
-```bash
-docker compose run --rm app
-```
-
-### 4. Run Telegram bot (requires OpenClaw)
-```bash
-# Start OpenClaw
-cd ~/openclaw && docker compose up -d
-
-# Connect MCP server
-./update_mcp_ip.sh
-docker network connect interactive-ai-tutor_default openclaw-openclaw-gateway-1
-
-# Bot is now active in Telegram
-```
-
-### 5. Run autonomous scheduler (optional)
-```bash
-docker compose run --rm app python run_scheduler.py
-```
 
 ### Default credentials (demo)
 | Role | Email / Number | Password |
