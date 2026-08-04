@@ -224,28 +224,28 @@ docker compose run --rm app python run_scheduler.py
 ## Screenshots
 
 ### CLI — Morning Brief on teacher login
-![Morning Brief](morning_brief.png)
+![Morning Brief](docs/morning_brief.png)
 
 ### Telegram — Teacher login and menu
-![Telegram Login](telegram_login_teacher.png)
+![Telegram Login](docs/telegram_login_teacher.png)
 
 ### Telegram — Risk report
-![Telegram Risk](telegram_risk_teacher.png)
+![Telegram Risk](docs/telegram_risk_teacher.png)
 
 ### Telegram — Student login and menu
-![Telegram Student](telegram_student.png)
+![Telegram Student](docs/telegram_student.png)
 
 ## System Architecture
 
-![System Architecture](system_architecture.png)
+![System Architecture](docs/system_architecture.png)
 
 ## Agent Flow
 
-![LangGraph Agent Flow](langgraph_agent_flow.png)
+![LangGraph Agent Flow](docs/langgraph_agent_flow.png)
 
 ## Database Schema (ERD)
 
-![ERD](erd.png)
+![ERD](docs/erd.png)
 
 
 ## Architecture
