@@ -172,6 +172,55 @@ python -m agents.draft_graph
 # Terminal 3 — Autonomous scheduler (optional)
 python run_scheduler.py
 ```
+## Quick Start
+
+### Prerequisites
+- Docker and Docker Compose
+- Python 3.11+ (for local run)
+- OpenClaw (for Telegram integration)
+
+### 1. Clone and configure
+```bash
+git clone https://github.com/mopsipriv/interactive-ai-tutor.git
+cd interactive-ai-tutor
+cp agents/.env.example agents/.env  # fill in your credentials
+cp agents/.env .env
+```
+
+### 2. Start services
+```bash
+docker compose up -d
+```
+
+### 3. Run CLI
+```bash
+docker compose run --rm app
+```
+
+### 4. Run Telegram bot (requires OpenClaw)
+```bash
+# Start OpenClaw
+cd ~/openclaw && docker compose up -d
+
+# Connect MCP server
+./update_mcp_ip.sh
+docker network connect interactive-ai-tutor_default openclaw-openclaw-gateway-1
+
+# Bot is now active in Telegram
+```
+
+### 5. Run autonomous scheduler (optional)
+```bash
+docker compose run --rm app python run_scheduler.py
+```
+
+### Default credentials (demo)
+| Role | Email / Number | Password |
+|---|---|---|
+| Teacher | james.white@oamk.fi | password123 |
+| Student | H100001 | password123 |
+
+
 ## Screenshots
 
 ### CLI — Morning Brief on teacher login
