@@ -324,4 +324,5 @@ GitHub Actions pipeline runs on push to `main` and `rag-implementation` branches
 ✅ OpenClaw + Telegram bot connected (MCP tools verified)
 ✅ Connection pooling, ownership checks, getpass security
 ✅ Full Telegram end-to-end command routing
-🔜 Inline Telegram buttons and MarkdownV2 formatting
+✅ Telegram bot with session management (login/logout)
+✅ Security tested (prompt injection resistant)
