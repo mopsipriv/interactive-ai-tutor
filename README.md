@@ -134,22 +134,36 @@ The system uses RAG (Retrieval-Augmented Generation) with real OAMK course descr
 
 Smart chunking: documents with `---` separators are chunked per course/section, others use character-based chunking with 50-character overlap.
 
-## Run with Docker
+## Getting Started
 
+### Prerequisites
+- Docker and Docker Compose
+- OpenClaw (for Telegram integration)
+
+### Setup
 ```bash
-# Clone and configure
 git clone https://github.com/mopsipriv/interactive-ai-tutor.git
 cd interactive-ai-tutor
-cp agents/.env.example agents/.env  # fill in DB credentials and API keys
+cp agents/.env.example agents/.env  # fill in your credentials
 cp agents/.env .env
-
-# Start all services
 docker compose up -d
+```
 
-# Run interactive CLI
+### Run CLI
+```bash
 docker compose run --rm app
+```
 
-# Run autonomous scheduler (separate terminal)
+### Run Telegram bot
+```bash
+cd ~/openclaw && docker compose up -d
+./update_mcp_ip.sh
+docker network connect interactive-ai-tutor_default openclaw-openclaw-gateway-1
+# Bot is now active in Telegram
+```
+
+### Run scheduler (optional)
+```bash
 docker compose run --rm app python run_scheduler.py
 ```
 
@@ -160,43 +174,38 @@ docker compose run --rm app python run_scheduler.py
 | `peppi-mcp` | FastMCP server (SSE) | 8000 |
 | `peppi-app` | LangGraph CLI app | — |
 
-## Run Locally
+### Default credentials (demo)
+| Role | Email / Number | Password |
+|---|---|---|
+| Teacher | james.white@oamk.fi | password123 |
+| Student | H100001 | password123 |
 
-```bash
-# Terminal 1 — MCP server
-fastmcp run mcp_server.py --transport sse --host 0.0.0.0 --port 8000
 
-# Terminal 2 — App
-python -m agents.draft_graph
-
-# Terminal 3 — Autonomous scheduler (optional)
-python run_scheduler.py
-```
 ## Screenshots
 
 ### CLI — Morning Brief on teacher login
-![Morning Brief](morning_brief.png)
+![Morning Brief](docs/morning_brief.png)
 
 ### Telegram — Teacher login and menu
-![Telegram Login](telegram_login_teacher.png)
+![Telegram Login](docs/telegram_login_teacher.png)
 
 ### Telegram — Risk report
-![Telegram Risk](telegram_risk_teacher.png)
+![Telegram Risk](docs/telegram_risk_teacher.png)
 
 ### Telegram — Student login and menu
-![Telegram Student](telegram_student.png)
+![Telegram Student](docs/telegram_student.png)
 
 ## System Architecture
 
-![System Architecture](system_architecture.png)
+![System Architecture](docs/system_architecture.png)
 
 ## Agent Flow
 
-![LangGraph Agent Flow](langgraph_agent_flow.png)
+![LangGraph Agent Flow](docs/langgraph_agent_flow.png)
 
 ## Database Schema (ERD)
 
-![ERD](erd.png)
+![ERD](docs/erd.png)
 
 
 ## Architecture
@@ -324,4 +333,5 @@ GitHub Actions pipeline runs on push to `main` and `rag-implementation` branches
 ✅ OpenClaw + Telegram bot connected (MCP tools verified)
 ✅ Connection pooling, ownership checks, getpass security
 ✅ Full Telegram end-to-end command routing
-🔜 Inline Telegram buttons and MarkdownV2 formatting
+✅ Telegram bot with session management (login/logout)
+✅ Security tested (prompt injection resistant)
