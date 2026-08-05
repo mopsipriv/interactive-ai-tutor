@@ -58,8 +58,6 @@ def ask(prompt: str, hint: str = "") -> str:
         raise BackException()
     return value
 
-
-
 def split_full_name(full_name: str):
     """
     Splits a full name into (fname, lname).
@@ -83,7 +81,6 @@ def progress_bar(earned: int, total: int = 240, width: int = 10) -> str:
     bar = "▓" * filled + "░" * (width - filled)
     return f"{bar} {earned}/{total} ({round(pct * 100)}%)"
 
-
 async def progress_analysis_agent(state: State):
     students = state.get("students", [])
     new_issue = ""
@@ -99,7 +96,6 @@ async def progress_analysis_agent(state: State):
         
     current_text = state.get("bot_analyze_text", "")
     return {"bot_analyze_text": current_text + new_issue}
-
 
 async def study_right_agent(state: State):
     students = state.get("students", [])
@@ -133,7 +129,6 @@ async def recommendation_agent(state: State):
     result_text = response.choices[0].message.content
     return {"final_text": result_text}
 
-
 async def status_agent(state: State):
     current_text = state.get("bot_analyze_text","")
     if "critical" in current_text or "warning" in current_text or "Not found" in current_text:
@@ -141,7 +136,6 @@ async def status_agent(state: State):
     else:
         return {"is_allowed": True}
     
-
 async def analytics_agent(state: State):
     allowed = state.get("is_allowed", True)
     if allowed:
@@ -151,7 +145,6 @@ async def analytics_agent(state: State):
         
     current_text = state.get("bot_analyze_text", "")
     return {"bot_analyze_text": current_text + verdict}
-
 
 async def fetch_students_agent(state: State):
     filter_name = state.get("filter_name", "")
@@ -188,13 +181,11 @@ async def fetch_students_agent(state: State):
 
     return {"students": all_students}
 
-    
 async def calendar_agent(state: State):
     today = datetime.now()
     month_name = today.strftime("%B")
     calendar_info = retrieve(f"{month_name} tutoring calendar checklist")
     return {"calendar_info": calendar_info}
-
 
 async def communication_agent(state: State):
     current_text=state.get("bot_analyze_text","")
@@ -208,7 +199,6 @@ async def communication_agent(state: State):
     )
     result_text = response.choices[0].message.content
     return {"student_messages": result_text}
-
 
 async def eligibility_agent(state: State):
     new_issue = ""
@@ -235,7 +225,6 @@ async def eligibility_agent(state: State):
 
     return {"eligibility_report": new_issue}
 
-
 async def course_student_agent(state: State):
     new_issue=""
     filter_course = state.get("filter_course","")
@@ -255,7 +244,6 @@ async def course_student_agent(state: State):
             new_issue += f"- {student['fname']} {student['lname']}: {student['status']}, grade: {student['grade']}\n"
 
     return {"course_report": new_issue}
-
 
 async def enroll_agent(state: State):
     enroll_student_name=state.get("enroll_student_name","")
@@ -300,7 +288,6 @@ async def course_list_agent(state: State):
             new_issue += f"- {course['course_code']}: {course['course_name']} ({course['credit']} credits)\n"
     return {"courses_list": new_issue}
 
-
 async def grade_agent(state: State):
     grade_student_name=state.get("grade_student_name","")
     grade_course_name=state.get("grade_course_name","")
@@ -334,7 +321,6 @@ async def grade_agent(state: State):
     grade_result = raw_grade_result[0]["text"]
     
     return {"grade_result": grade_result}
-
 
 async def profile_agent(state: State):
     new_issue=""
@@ -370,7 +356,6 @@ async def profile_agent(state: State):
             new_issue += f"- {row['course_name']}: {row['status']}, grade: {row['grade']}\n"
     return {"student_profile":new_issue}
 
-
 async def status_update_agent(state: State):
     status_student_name = state.get("status_student_name","")
     status_course_name= state.get("status_course_name","")
@@ -405,7 +390,6 @@ async def status_update_agent(state: State):
     status_update_result = raw_status_update[0]["text"]
     return {"status_update_result": status_update_result}
 
-
 async def risk_report_agent(state: State):
     new_issue = "=== Risk Report ===\n"
     students = state.get("students", [])
@@ -427,7 +411,6 @@ async def risk_report_agent(state: State):
 
     return {"risk_report": new_issue}
 
-
 async def group_report_agent(state:State):
     new_issue=""
     filter_group = state.get("filter_group","")
@@ -448,7 +431,6 @@ async def group_report_agent(state:State):
         new_issue += f"- {student['fname']} {student['lname']} ({student['student_number']})\n"
 
     return {"group_report": new_issue}
-
 
 async def bulk_enroll_agent(state: State):
     bulk_group_code = state.get("bulk_group_code", "")
@@ -486,7 +468,6 @@ async def bulk_enroll_agent(state: State):
     new_issue = f"Enrolled {success_count} out of {len(students)} students"
     return {"bulk_enroll_result": new_issue}
 
-
 async def student_recommendation_agent(state: State):
     profile = state.get("student_profile", "")
     eligibility = state.get("eligibility_report", "")
@@ -523,7 +504,6 @@ async def curriculum_agent(state: State):
         new_issue += f"  - {course['course_name']} ({course['credit']}cr) [{course['course_type']}]\n"
     
     return {"curriculum_info": new_issue}
-
 
 async def student_plan_agent(state: State):
     filter_name = state.get("filter_name","")
@@ -574,7 +554,6 @@ async def student_plan_agent(state: State):
     
     return {"student_plan": new_issue}
 
-
 async def analytics_report_agent(state: State):
     filter_analytics = state.get("filter_analytics","")
     if filter_analytics == "":
@@ -620,7 +599,6 @@ async def analytics_report_agent(state: State):
     else:
         return {"analytics_report": f"Error: Unknown analytics type '{filter_analytics}'. Use 'courses' or 'group'."}
     
-
 async def rag_agent(state: State):
     rag_query = state.get("rag_query", "")
     if rag_query == "":
@@ -682,7 +660,6 @@ async def request_course_agent(state: State):
 
     return {"request_result": result_text}
 
-
 async def view_requests_agent(state:State):
     teacher_id = state.get("teacher_id",0)
     if not teacher_id:
@@ -708,7 +685,6 @@ async def view_requests_agent(state:State):
 
     return {"pending_requests_list": "\n".join(lines)}
     
-
 async def handle_request_agent(state: State):
     request_id = state.get("request_id","")
     request_action = state.get("request_action","")
@@ -906,7 +882,6 @@ async def resolve_course(query: str) -> tuple[int | None,str]:
         s = matches[idx - 1]
         return s["idcourse"], s["course_name"]
 
-
 def router_by_command(state: State):
     cmd = state.get("command", "")
     role = state.get("user_role", "student")
@@ -945,7 +920,6 @@ def router_by_command(state: State):
     result = routes.get(cmd, END)
     return result
 
-
 def route_after_status(state: State):
     cmd = state.get("command", "")
     if cmd == "recommend":
@@ -964,7 +938,6 @@ def route_after_status(state: State):
 
 graph = StateGraph(State)
 
-# adding nodes
 graph.add_node("fetch_node", fetch_students_agent)
 graph.add_node("progress_analysis_node", progress_analysis_agent)
 graph.add_node("study_right_node", study_right_agent)
@@ -994,10 +967,8 @@ graph.add_node("handle_request_node", handle_request_agent)
 graph.add_node("my_requests_node", my_requests_agent)
 graph.add_node("morning_brief_node", morning_brief_agent)
 
-# start
 graph.add_conditional_edges(START, router_by_command)
 
-# simple nodes
 simple_nodes = [
     "enroll_node", "course_list_node", "grade_node",
     "update_status_node", "group_report_node", "bulk_enroll_node",
@@ -1009,10 +980,8 @@ simple_nodes = [
 for node in simple_nodes:
     graph.add_edge(node, END)
 
-# profile
 graph.add_edge("profile_node", END)
 
-# risk/eligibility/recommend
 graph.add_edge("fetch_node", "progress_analysis_node")
 graph.add_edge("progress_analysis_node", "study_right_node")
 graph.add_edge("study_right_node", "eligibility_node")
