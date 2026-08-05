@@ -37,7 +37,7 @@ An AI-powered tutoring assistant for university tutors and students at OAMK (Oul
 |---|---|
 | Agent framework | LangGraph 20+ agents, Router pattern |
 | LLM | DeepSeek (`deepseek-v4-flash`) via OpenClaw |
-| MCP server | FastMCP, 15+ tools, SSE transport |
+| MCP server | FastMCP, 33 tools, SSE transport |
 | Database | MySQL 8.0 (`peppi_db`), connection pooling |
 | Authentication | bcrypt, teacher/student roles, 3-attempt lockout |
 | RAG | Chroma + sentence-transformers (CPU-only), 88 chunks, smart chunking |
@@ -207,28 +207,6 @@ docker compose run --rm app python run_scheduler.py
 
 ![ERD](docs/erd.png)
 
-
-## Architecture
-
-```
-Telegram
-   ↓
-OpenClaw Gateway (DeepSeek LLM)
-   ↓
-MCP Server (FastMCP, 15+ tools, SSE)
-   ↓
-LangGraph (20+ agents, Router pattern)
-   ↓
-MySQL (peppi_db) + Chroma (RAG)
-
-Autonomous Scheduler (APScheduler)
-   ↓
-Weekly Brief → Telegram notification
-```
-
-## Agent Architecture
-
-The system follows the assignment specification with 5 core specialized agents plus additional agents for extended functionality.
 
 ### Core Agents (as specified in project assignment)
 
