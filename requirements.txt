@@ -17,3 +17,5 @@ pydantic==2.13.4
 rich==15.0.0
 pytest==9.0.3
 apscheduler==3.11.3
+sentence-transformers
+chromadb

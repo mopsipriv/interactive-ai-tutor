@@ -54,6 +54,12 @@ services:
       - GROQ_API_KEY=${GROQ_API_KEY}
       - MCP_URL=http://mcp_server:8000/sse
       - PYTHONUNBUFFERED=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - GATEWAY_AUTH_TOKEN=${GATEWAY_AUTH_TOKEN}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - TELEGRAM_OWNER_ID=${TELEGRAM_OWNER_ID}
+      - NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
+      - OPENCLAW_NO_RESPAWN=1
     depends_on:
       mysql:
         condition: service_healthy
