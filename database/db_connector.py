@@ -2,6 +2,7 @@ import aiomysql
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from auth import verify_password
 
 load_dotenv()
 
@@ -807,3 +808,32 @@ async def get_students_with_risk_data(teacher_id: int):
     
     return list(students) if students else []
 
+async def check_credentials_in_db(identifier: str, plain_password: str, role: str):
+    """Verification auth credits"""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            if role == "teacher":
+                table = "teacher"
+                column = "email"
+            else:
+                table = "student"  
+                column = "student_number"
+
+            await cur.execute(
+                f"SELECT * FROM {table} WHERE {column} = %s",
+                (identifier,)
+            )
+            user = await cur.fetchone()
+            
+            if not user:
+                return None 
+            hashed_password_from_db = user.get("password_hash")
+            
+            if not hashed_password_from_db:
+                return None
+                
+            if verify_password(plain_password, hashed_password_from_db):
+                return user  
+            
+            return None
