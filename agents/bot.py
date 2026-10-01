@@ -1,4 +1,5 @@
 import os
+import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from dialog_states import incoming_commands, get_user_session, UserState
@@ -51,3 +52,6 @@ async def handle_message(payload: IncomingMessage):
     final_text = graph_result.get("rag_answer") or graph_result.get("final_text") or "Запрос обработан."
 
     return {"type": "llm_reply", "text": final_text}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8080)
