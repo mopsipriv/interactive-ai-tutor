@@ -1,16 +1,14 @@
-
 services:
   mysql:
     image: mysql:8.0
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     container_name: peppi-mysql
+    restart: always
     env_file:
       - agents/.env
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    ports:
-      - "3306:3306"
     volumes:
       - ./database/setup.sql:/docker-entrypoint-initdb.d/setup.sql
       - mysql_data:/var/lib/mysql
@@ -23,13 +21,14 @@ services:
   mcp_server:
     build: .
     container_name: peppi-mcp
+    restart: always
     env_file:
       - agents/.env
     command: fastmcp run mcp_server.py --transport sse --host 0.0.0.0 --port 8000
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - DB_HOST=mysql
+      - DB_HOST=peppi-mysql
       - DB_PORT=3306
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
@@ -41,13 +40,14 @@ services:
   app:
     build: .
     container_name: peppi-app
+    restart: always
     env_file:
       - agents/.env
     command: python -m agents.draft_graph
     stdin_open: true
     tty: true
     environment:
-      - DB_HOST=mysql
+      - DB_HOST=peppi-mysql
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
