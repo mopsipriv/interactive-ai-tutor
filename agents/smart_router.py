@@ -198,10 +198,40 @@ async def perform_logout(chat_id: str) -> str:
         logger.error(f"Logout error: {e}")
         return "Logged out."
 
-async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str]:
+def extract_password_from_raw(raw_content: str) -> Optional[str]:
+    """
+    Try to extract password from raw OpenClaw message content.
+    Handles queued message format and plain text. Returns None for normal OpenClaw context.
+    """
+    # Queued message format: [timestamp] [Queued user message...]\npassword\nContinue...
+    queued_match = re.search(r'\[Queued user message[^\]]*\]\s*\n(.+?)(?:\n|$)', raw_content, re.IGNORECASE)
+    if queued_match:
+        candidate = queued_match.group(1).strip()
+        if candidate and not re.search(r'^(continue|task|transcript)', candidate, re.IGNORECASE):
+            return candidate
+
+    # Normal OpenClaw context format - check tail after END marker
+    if "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>" in raw_content:
+        if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in raw_content:
+            tail = raw_content.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
+            if tail and len(tail) < 100:
+                first_line = tail.split('\n')[0].strip()
+                return first_line if first_line else None
+        return None  # Normal format without tail → password not in payload
+
+    # Short plain text (testing / direct API call, no OpenClaw markers)
+    stripped = raw_content.strip()
+    if stripped and len(stripped) < 200 and '\n' not in stripped:
+        return stripped
+
+    return None
+
+
+async def handle_deterministic_response(text: str, chat_id: str, messages: List[Dict[str, Any]] = None) -> Optional[str]:
     """
     Evaluates message against deterministic rules (Login, FSM, Static commands, Menu).
     Returns response string if handled deterministically, or None if LLM is needed.
+    messages: raw messages list from OpenClaw payload (for password extraction).
     """
     # Clean up prefixes from telegram/openclaw e.g. [Telegram 12345] or [Name]
     clean_text = re.sub(r"^\[.*?\]\s*", "", text).strip()
@@ -228,14 +258,52 @@ async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str
 
     # 3. If NOT logged in -> process Login FSM
     if not session:
-        # 3a. If waiting for password -> MUST pass to LLM (password not in OpenClaw context!)
+        # 3a. AWAITING_PASSWORD: try to extract password from raw payload
         if fsm["state"] == "AWAITING_PASSWORD":
-            # We cannot extract the password from OpenClaw context (it's not included).
-            # Pass to LLM which calls login_teacher_tool / login_student_tool via MCP.
-            # Reset FSM so next message starts fresh.
-            reset_fsm(chat_id)
-            logger.info(f"-> Password step for chat_id={chat_id}: passing to LLM for tool call")
-            return None  # LLM handles login via MCP tool call
+            password = None
+
+            # Try raw message content (queued format has password directly)
+            if messages:
+                for m in reversed(messages):
+                    if m.get("role") == "user":
+                        raw = str(m.get("content", ""))
+                        password = extract_password_from_raw(raw)
+                        if password:
+                            break
+
+            # Fallback: try last User: line in history IF it's not email/student number
+            if not password and messages:
+                for m in reversed(messages):
+                    content = str(m.get("content", ""))
+                    user_lines = re.findall(r"User:\s*([^\n\r]+)", content)
+                    if user_lines:
+                        last_user = user_lines[-1].strip()
+                        is_email = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", last_user)
+                        is_student = re.search(r"\bH\d+\b", last_user, re.IGNORECASE)
+                        is_role = re.search(r"^(teacher|student|opettaja|opiskelija)$", last_user, re.IGNORECASE)
+                        if last_user and not is_email and not is_student and not is_role and len(last_user) > 2:
+                            password = last_user
+                        break
+
+            if password:
+                role = fsm.get("role", "teacher")
+                identifier = fsm.get("identifier", "")
+                reset_fsm(chat_id)
+                logger.info(f"-> Attempting {role} login for '{identifier}' with extracted password")
+                if role == "teacher":
+                    success, result = await perform_teacher_login(chat_id, identifier, password)
+                    if success:
+                        return f"🎓 Welcome, {result}! You are logged in as teacher.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + TEACHER_MENU
+                else:
+                    success, result = await perform_student_login(chat_id, identifier, password)
+                    if success:
+                        return f"🎓 Welcome, {result}! You are logged in as student.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + STUDENT_MENU
+                return "❌ Login failed. Try again.\n\nAre you a teacher or student?\nReply: teacher  or  student"
+            else:
+                # Password not in payload yet (normal OpenClaw format before queued delivery)
+                # Keep FSM state AWAITING_PASSWORD and re-prompt
+                logger.info(f"-> Password not in payload for chat_id={chat_id}, re-prompting (FSM stays AWAITING_PASSWORD)")
+                return "Enter your password:"
 
         # 3b. If waiting for identifier (email or student number)
         if fsm["state"] == "AWAITING_IDENTIFIER":
@@ -417,7 +485,7 @@ async def chat_completions(request: Request):
 
     logger.info(f"Incoming message from chat_id={chat_id}: '{user_msg}'")
 
-    deterministic_answer = await handle_deterministic_response(user_msg, chat_id)
+    deterministic_answer = await handle_deterministic_response(user_msg, chat_id, messages)
     if deterministic_answer is not None:
         logger.info(f"-> Handled DETERMINISTICALLY (0 tokens): {deterministic_answer[:40]}...")
         return format_openai_response(deterministic_answer, model=data.get("model", "deepseek-v4-flash"))
