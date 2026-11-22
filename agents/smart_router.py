@@ -42,6 +42,42 @@ def reset_fsm(chat_id: str):
         "identifier": None,
     }
 
+def extract_clean_user_message(messages: List[Dict[str, Any]]) -> str:
+    """Extracts actual user input text, stripping OpenClaw internal context headers."""
+    # 1. Search for clean user text after context tag or in pure message
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            content = m.get("content", "")
+            if isinstance(content, str):
+                content = content.strip()
+                if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in content:
+                    tail = content.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
+                    if tail:
+                        return tail
+                elif not content.startswith("<<<BEGIN_OPENCLAW"):
+                    return content
+            elif isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        txt = item.get("text", "").strip()
+                        if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in txt:
+                            tail = txt.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
+                            if tail:
+                                return tail
+                        elif not txt.startswith("<<<BEGIN_OPENCLAW"):
+                            return txt
+
+    # 2. Fallback: extract last User: entry from OpenClaw context history
+    for m in reversed(messages):
+        content = str(m.get("content", ""))
+        user_lines = re.findall(r"User:\s*([^\n\r]+)", content)
+        if user_lines:
+            last_line = user_lines[-1].strip()
+            if last_line:
+                return last_line
+
+    return ""
+
 def format_openai_response(content: str, model: str = "deepseek-v4.1-flash") -> Dict[str, Any]:
     return {
         "id": f"chatcmpl-smart-{int(time.time() * 1000)}",
@@ -372,18 +408,7 @@ async def chat_completions(request: Request):
     if not messages:
         return format_openai_response("No messages provided.")
 
-    user_msg = ""
-    for m in reversed(messages):
-        if m.get("role") == "user":
-            content = m.get("content", "")
-            if isinstance(content, str):
-                user_msg = content
-            elif isinstance(content, list):
-                # Multimodal or blocks
-                for item in content:
-                    if isinstance(item, dict) and item.get("type") == "text":
-                        user_msg += item.get("text", "")
-            break
+    user_msg = extract_clean_user_message(messages)
 
     chat_id = "default_user"
     for m in reversed(messages):
