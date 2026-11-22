@@ -201,8 +201,19 @@ async def perform_logout(chat_id: str) -> str:
 def extract_password_from_raw(raw_content: str) -> Optional[str]:
     """
     Try to extract password from raw OpenClaw message content.
-    Handles queued message format and plain text. Returns None for normal OpenClaw context.
+    Handles queued format, new OpenClaw lite format, and plain text.
+    Returns None for classic OpenClaw context (password not in payload).
     """
+    # Classic OpenClaw context format (<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>) -
+    # password is NOT included in the payload on first delivery.
+    if "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>" in raw_content:
+        if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in raw_content:
+            tail = raw_content.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
+            if tail and len(tail) < 100:
+                first_line = tail.split('\n')[0].strip()
+                return first_line if first_line else None
+        return None  # No password in classic format
+
     # Queued message format: [timestamp] [Queued user message...]\npassword\nContinue...
     queued_match = re.search(r'\[Queued user message[^\]]*\]\s*\n(.+?)(?:\n|$)', raw_content, re.IGNORECASE)
     if queued_match:
@@ -210,19 +221,16 @@ def extract_password_from_raw(raw_content: str) -> Optional[str]:
         if candidate and not re.search(r'^(continue|task|transcript)', candidate, re.IGNORECASE):
             return candidate
 
-    # Normal OpenClaw context format - check tail after END marker
-    if "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>" in raw_content:
-        if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in raw_content:
-            tail = raw_content.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
-            if tail and len(tail) < 100:
-                first_line = tail.split('\n')[0].strip()
-                return first_line if first_line else None
-        return None  # Normal format without tail → password not in payload
-
-    # Short plain text (testing / direct API call, no OpenClaw markers)
-    stripped = raw_content.strip()
-    if stripped and len(stripped) < 200 and '\n' not in stripped:
-        return stripped
+    # New OpenClaw lite format: [timestamp] Conversation info...\n```json\n{...}\n```\n\n<user_input>
+    # Extract last non-empty line that isn't JSON/markdown/metadata
+    lines = [l.strip() for l in raw_content.split('\n') if l.strip()]
+    if lines:
+        last_line = lines[-1]
+        skip_patterns = r'^(\{|\}|```|Conversation|⟦|continue|task|transcript)'
+        if last_line and not re.search(skip_patterns, last_line, re.IGNORECASE):
+            # Sanity check: should look like a user input (not too long, not structured)
+            if len(last_line) < 150 and ':' not in last_line[:5]:
+                return last_line
 
     return None
 
