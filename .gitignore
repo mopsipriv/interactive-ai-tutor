@@ -222,3 +222,6 @@ setup_student_password.py
 rag/chroma_db/
 chroma_db/
 *.env
+
+_backup*/
+

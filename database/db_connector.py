@@ -2,7 +2,10 @@ import aiomysql
 from datetime import datetime
 import os
 from dotenv import load_dotenv
-from auth import verify_password
+try:
+    from database.auth import verify_password
+except ImportError:
+    from auth import verify_password
 
 load_dotenv()
 

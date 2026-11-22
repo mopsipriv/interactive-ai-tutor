@@ -2,16 +2,30 @@ from sentence_transformers import SentenceTransformer
 import chromadb
 import os
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-client = chromadb.PersistentClient(path=os.path.join(BASE_DIR, "../chroma_db"))
-collection = client.get_or_create_collection(name="tutor_docs")
+_model = None
+_client = None
+_collection = None
+
+def get_rag_model():
+    global _model
+    if _model is None:
+        try:
+            _model = SentenceTransformer("all-MiniLM-L6-v2")
+        except Exception:
+            _model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+    return _model
+
+def get_collection():
+    global _client, _collection
+    if _collection is None:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        _client = chromadb.PersistentClient(path=os.path.join(BASE_DIR, "../chroma_db"))
+        _collection = _client.get_or_create_collection(name="tutor_docs")
+    return _collection
 
 def retrieve(query: str, top_k: int = 3) -> str:
-    """
-    Accepts a question and returns the top_k relevant pieces of text as a single string.
-    Used in the RAG agent to obtain context.
-    """
+    model = get_rag_model()
+    collection = get_collection()
     query_embedding = model.encode([query]).tolist()
     
     results = collection.query(
