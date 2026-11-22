@@ -21,7 +21,7 @@ CREATE TABLE student (
     study_right    VARCHAR(60)  NOT NULL DEFAULT 'TVT2025S-OHJ',
     valid_from     DATE         NOT NULL,
     valid_until    DATE         NOT NULL,
-    password_hash  VARCHAR(255) NOT NULL DEFAULT '$2b$12$g2CjXUr57vOVw/b6wViiOuAW1mbvJLXX9Gh2Y0LSP5ud.AVnnHSyC'
+    password_hash  VARCHAR(255) NOT NULL DEFAULT '$2b$12$qvXG5fAUK30bXKeNNc2VCen92fxSY8lap7wv1CNu3ASeoBjShZ9t2'
 );
 
 INSERT INTO student (student_number, fname, lname, email, study_right, valid_from, valid_until) VALUES
@@ -57,7 +57,7 @@ CREATE TABLE teacher (
     fname         VARCHAR(30)  NOT NULL,
     lname         VARCHAR(30)  NOT NULL,
     email         VARCHAR(60)  NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL DEFAULT '$2b$12$g2CjXUr57vOVw/b6wViiOuAW1mbvJLXX9Gh2Y0LSP5ud.AVnnHSyC'
+    password_hash VARCHAR(255) NOT NULL DEFAULT '$2b$12$qvXG5fAUK30bXKeNNc2VCen92fxSY8lap7wv1CNu3ASeoBjShZ9t2'
 );
 
 INSERT INTO teacher (fname, lname, email) VALUES

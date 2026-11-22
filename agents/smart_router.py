@@ -110,16 +110,22 @@ async def perform_teacher_login(chat_id: str, email: str, password: str) -> tupl
         from database.db_connector import get_teacher_by_email, save_telegram_session
         from database.auth import verify_password
         clean_chat_id = chat_id.replace("telegram:", "")
-        teacher = await get_teacher_by_email(email)
+        clean_email = email.strip().lower()
+        teacher = await get_teacher_by_email(clean_email)
         if not teacher:
+            logger.warning(f"Teacher login failed: '{clean_email}' not found")
             return False, "Teacher not found"
-        if not verify_password(password, teacher["password_hash"]):
+        
+        is_valid = verify_password(password.strip(), teacher.get("password_hash", ""))
+        logger.info(f"Checking teacher password for {clean_email}: valid={is_valid}")
+        if not is_valid:
             return False, "Wrong password"
         name = f"{teacher['fname']} {teacher['lname']}"
         await save_telegram_session(clean_chat_id, "teacher", teacher["idteacher"], name)
+        logger.info(f"Teacher login SUCCESS: {name} (chat_id={clean_chat_id})")
         return True, name
     except Exception as e:
-        logger.error(f"Teacher login error: {e}")
+        logger.error(f"Teacher login error: {e}", exc_info=True)
         return False, str(e)
 
 async def perform_student_login(chat_id: str, student_number: str, password: str) -> tuple[bool, str]:
@@ -127,16 +133,22 @@ async def perform_student_login(chat_id: str, student_number: str, password: str
         from database.db_connector import get_student_by_number, save_telegram_session
         from database.auth import verify_password
         clean_chat_id = chat_id.replace("telegram:", "")
-        student = await get_student_by_number(student_number)
+        clean_num = student_number.strip().upper()
+        student = await get_student_by_number(clean_num)
         if not student:
+            logger.warning(f"Student login failed: '{clean_num}' not found")
             return False, "Student not found"
-        if not verify_password(password, student["password_hash"]):
+        
+        is_valid = verify_password(password.strip(), student.get("password_hash", ""))
+        logger.info(f"Checking student password for {clean_num}: valid={is_valid}")
+        if not is_valid:
             return False, "Wrong password"
         name = f"{student['fname']} {student['lname']}"
         await save_telegram_session(clean_chat_id, "student", student["idstudent"], name)
+        logger.info(f"Student login SUCCESS: {name} (chat_id={clean_chat_id})")
         return True, name
     except Exception as e:
-        logger.error(f"Student login error: {e}")
+        logger.error(f"Student login error: {e}", exc_info=True)
         return False, str(e)
 
 async def perform_logout(chat_id: str) -> str:
@@ -184,7 +196,7 @@ async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str
         if fsm["state"] == "AWAITING_PASSWORD":
             # Extract clean password (last line / strip any prefixes)
             raw_pass = clean_text.splitlines()[-1].strip()
-            password = re.sub(r"^\[.*?\]\s*", "", raw_pass).strip()
+            password = re.sub(r'["\'`«»]', '', re.sub(r"^\[.*?\]\s*", "", raw_pass)).strip()
             role = fsm.get("role", "teacher")
             identifier = fsm.get("identifier", "")
             reset_fsm(chat_id)
