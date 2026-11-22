@@ -270,34 +270,21 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
         if fsm["state"] == "AWAITING_PASSWORD":
             password = None
 
-            # Try raw message content (queued format has password directly)
+            # Extract password ONLY from the last user message (never from previous ones!).
+            # Previous user messages may contain the email/student_number which would be
+            # picked up as a false "plain text" match by extract_password_from_raw.
             if messages:
                 for m in reversed(messages):
                     if m.get("role") == "user":
                         raw = str(m.get("content", ""))
                         password = extract_password_from_raw(raw)
-                        if password:
-                            break
-
-            # Fallback: try last User: line in history IF it's not email/student number
-            if not password and messages:
-                for m in reversed(messages):
-                    content = str(m.get("content", ""))
-                    user_lines = re.findall(r"User:\s*([^\n\r]+)", content)
-                    if user_lines:
-                        last_user = user_lines[-1].strip()
-                        is_email = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", last_user)
-                        is_student = re.search(r"\bH\d+\b", last_user, re.IGNORECASE)
-                        is_role = re.search(r"^(teacher|student|opettaja|opiskelija)$", last_user, re.IGNORECASE)
-                        if last_user and not is_email and not is_student and not is_role and len(last_user) > 2:
-                            password = last_user
-                        break
+                        break  # stop after first (= last) user message regardless
 
             if password:
                 role = fsm.get("role", "teacher")
                 identifier = fsm.get("identifier", "")
                 reset_fsm(chat_id)
-                logger.info(f"-> Attempting {role} login for '{identifier}' with extracted password")
+                logger.info(f"-> Attempting {role} login for '{identifier}' with extracted password (len={len(password)}, repr={repr(password[:20])})")
                 if role == "teacher":
                     success, result = await perform_teacher_login(chat_id, identifier, password)
                     if success:
