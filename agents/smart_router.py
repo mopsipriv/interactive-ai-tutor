@@ -151,11 +151,18 @@ async def perform_logout(chat_id: str) -> str:
         return "Logged out."
 
 async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str]:
-    clean = text.strip()
-    lower = clean.lower()
+    """
+    Evaluates message against deterministic rules (Login, FSM, Static commands, Menu).
+    Returns response string if handled deterministically, or None if LLM is needed.
+    """
+    # Clean up prefixes from telegram/openclaw e.g. [Telegram 12345] or [Name]
+    clean_text = re.sub(r"^\[.*?\]\s*", "", text).strip()
+    clean_lower = re.sub(r'["\'`«»]', '', clean_text).strip().lower()
+    lower = clean_lower
     fsm = get_fsm(chat_id)
 
-    if lower in ["back", "cancel", "peruuta"]:
+    # 1. Global cancel / back
+    if clean_lower in ["back", "cancel", "peruuta"]:
         reset_fsm(chat_id)
         session = await check_db_session(chat_id)
         if not session:
@@ -164,46 +171,36 @@ async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str
         name = session.get("user_name", "")
         return f"🎓 Welcome, {name}!\n\n" + (TEACHER_MENU if role == "teacher" else STUDENT_MENU)
 
-    if lower in ["/logout", "logout", "kirjaudu ulos", "🚪 logout"]:
+    # 2. Logout command
+    if clean_lower in ["/logout", "logout", "kirjaudu ulos", "🚪 logout"]:
         return await perform_logout(chat_id)
 
+    # Check active session in DB
     session = await check_db_session(chat_id)
 
+    # 3. If NOT logged in -> process Login FSM
     if not session:
-        if fsm["state"] == "IDLE" or lower in ["/start", "start", "hi", "hello", "hei", "moi", "login"]:
-            if lower in ["teacher", "opettaja"]:
-                fsm["state"] = "AWAITING_IDENTIFIER"
-                fsm["role"] = "teacher"
-                return "Enter your email:"
-            elif lower in ["student", "opiskelija"]:
-                fsm["state"] = "AWAITING_IDENTIFIER"
-                fsm["role"] = "student"
-                return "Enter your student number (e.g. H100001):"
-            else:
-                fsm["state"] = "AWAITING_ROLE"
-                return LOGIN_STEP_0
-
-        if fsm["state"] == "AWAITING_ROLE":
-            if lower in ["teacher", "opettaja"]:
-                fsm["state"] = "AWAITING_IDENTIFIER"
-                fsm["role"] = "teacher"
-                return "Enter your email:"
-            elif lower in ["student", "opiskelija"]:
-                fsm["state"] = "AWAITING_IDENTIFIER"
-                fsm["role"] = "student"
-                return "Enter your student number (e.g. H100001):"
-            else:
-                return "Please choose your role:\nReply: \"teacher\"  or  \"student\""
-
-        if fsm["state"] == "AWAITING_IDENTIFIER":
-            fsm["identifier"] = clean
+        # 3a. Check if user entered an email directly (e.g. teacher@oamk.fi)
+        if re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_text):
+            email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_text).group(0)
+            fsm["role"] = "teacher"
+            fsm["identifier"] = email_match
             fsm["state"] = "AWAITING_PASSWORD"
             return "Enter your password:"
 
+        # 3b. Check if user entered student number directly (e.g. H100001)
+        if re.search(r"\bH\d+\b", clean_text, re.IGNORECASE):
+            st_match = re.search(r"\bH\d+\b", clean_text, re.IGNORECASE).group(0).upper()
+            fsm["role"] = "student"
+            fsm["identifier"] = st_match
+            fsm["state"] = "AWAITING_PASSWORD"
+            return "Enter your password:"
+
+        # 3c. If waiting for password
         if fsm["state"] == "AWAITING_PASSWORD":
-            password = clean
-            role = fsm["role"]
-            identifier = fsm["identifier"]
+            password = clean_text
+            role = fsm.get("role", "teacher")
+            identifier = fsm.get("identifier", "")
             reset_fsm(chat_id)
 
             if role == "teacher":
@@ -217,6 +214,29 @@ async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str
 
             return "❌ Login failed. Try again.\n\nAre you a teacher or student?\nReply: teacher  or  student"
 
+        # 3d. Check role selection (words boundary so teacher@oamk doesn't match)
+        if re.search(r"\b(teacher|opettaja)\b", clean_lower):
+            fsm["state"] = "AWAITING_IDENTIFIER"
+            fsm["role"] = "teacher"
+            return "Enter your email:"
+
+        if re.search(r"\b(student|opiskelija)\b", clean_lower):
+            fsm["state"] = "AWAITING_IDENTIFIER"
+            fsm["role"] = "student"
+            return "Enter your student number (e.g. H100001):"
+
+        # 3e. If waiting for identifier (non-standard format)
+        if fsm["state"] == "AWAITING_IDENTIFIER":
+            fsm["identifier"] = clean_text
+            fsm["state"] = "AWAITING_PASSWORD"
+            return "Enter your password:"
+
+        # Greeting or start
+        if re.search(r"\b(start|hi|hello|hei|moi|login)\b", clean_lower) or clean_lower.startswith("/start"):
+            fsm["state"] = "AWAITING_ROLE"
+            return LOGIN_STEP_0
+
+        # Default fallback for unauthorized
         return LOGIN_STEP_0
 
     role = session.get("user_role")
@@ -347,15 +367,19 @@ async def chat_completions(request: Request):
             break
 
     chat_id = "default_user"
-    for m in messages:
+    for m in reversed(messages):
         content = str(m.get("content", ""))
-        match = re.search(r"chat_id[:=]\s*(\w+)", content)
+        match = re.search(r"(?:chat_id|user_id|sender_id|peer|from)[:=\s]+(\w+)", content, re.IGNORECASE)
         if match:
             chat_id = match.group(1)
             break
-        match_tg = re.search(r"telegram:(\d+)", content)
+        match_tg = re.search(r"telegram[:_](\d+)", content, re.IGNORECASE)
         if match_tg:
             chat_id = match_tg.group(1)
+            break
+        match_num = re.search(r"\b(\d{7,12})\b", content)
+        if match_num:
+            chat_id = match_num.group(1)
             break
 
     logger.info(f"Incoming message from chat_id={chat_id}: '{user_msg}'")
