@@ -228,25 +228,14 @@ async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str
 
     # 3. If NOT logged in -> process Login FSM
     if not session:
-        # 3a. If waiting for password -> MUST BE CHECKED FIRST!
+        # 3a. If waiting for password -> MUST pass to LLM (password not in OpenClaw context!)
         if fsm["state"] == "AWAITING_PASSWORD":
-            # Extract clean password (last line / strip any prefixes)
-            raw_pass = clean_text.splitlines()[-1].strip()
-            password = re.sub(r'["\'`«»]', '', re.sub(r"^\[.*?\]\s*", "", raw_pass)).strip()
-            role = fsm.get("role", "teacher")
-            identifier = fsm.get("identifier", "")
+            # We cannot extract the password from OpenClaw context (it's not included).
+            # Pass to LLM which calls login_teacher_tool / login_student_tool via MCP.
+            # Reset FSM so next message starts fresh.
             reset_fsm(chat_id)
-
-            if role == "teacher":
-                success, result = await perform_teacher_login(chat_id, identifier, password)
-                if success:
-                    return f"🎓 Welcome, {result}! You are logged in as teacher.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + TEACHER_MENU
-            else:
-                success, result = await perform_student_login(chat_id, identifier, password)
-                if success:
-                    return f"🎓 Welcome, {result}! You are logged in as student.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + STUDENT_MENU
-
-            return "❌ Login failed. Try again.\n\nAre you a teacher or student?\nReply: teacher  or  student"
+            logger.info(f"-> Password step for chat_id={chat_id}: passing to LLM for tool call")
+            return None  # LLM handles login via MCP tool call
 
         # 3b. If waiting for identifier (email or student number)
         if fsm["state"] == "AWAITING_IDENTIFIER":
