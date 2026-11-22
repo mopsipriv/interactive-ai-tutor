@@ -180,25 +180,11 @@ async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str
 
     # 3. If NOT logged in -> process Login FSM
     if not session:
-        # 3a. Check if user entered an email directly (e.g. teacher@oamk.fi)
-        if re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_text):
-            email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_text).group(0)
-            fsm["role"] = "teacher"
-            fsm["identifier"] = email_match
-            fsm["state"] = "AWAITING_PASSWORD"
-            return "Enter your password:"
-
-        # 3b. Check if user entered student number directly (e.g. H100001)
-        if re.search(r"\bH\d+\b", clean_text, re.IGNORECASE):
-            st_match = re.search(r"\bH\d+\b", clean_text, re.IGNORECASE).group(0).upper()
-            fsm["role"] = "student"
-            fsm["identifier"] = st_match
-            fsm["state"] = "AWAITING_PASSWORD"
-            return "Enter your password:"
-
-        # 3c. If waiting for password
+        # 3a. If waiting for password -> MUST BE CHECKED FIRST!
         if fsm["state"] == "AWAITING_PASSWORD":
-            password = clean_text
+            # Extract clean password (last line / strip any prefixes)
+            raw_pass = clean_text.splitlines()[-1].strip()
+            password = re.sub(r"^\[.*?\]\s*", "", raw_pass).strip()
             role = fsm.get("role", "teacher")
             identifier = fsm.get("identifier", "")
             reset_fsm(chat_id)
@@ -214,25 +200,46 @@ async def handle_deterministic_response(text: str, chat_id: str) -> Optional[str
 
             return "❌ Login failed. Try again.\n\nAre you a teacher or student?\nReply: teacher  or  student"
 
-        # 3d. Check role selection (words boundary so teacher@oamk doesn't match)
-        if re.search(r"\b(teacher|opettaja)\b", clean_lower):
+        # 3b. If waiting for identifier (email or student number)
+        if fsm["state"] == "AWAITING_IDENTIFIER":
+            if fsm.get("role") == "teacher":
+                match_email = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_text)
+                fsm["identifier"] = match_email.group(0) if match_email else clean_text
+            else:
+                match_num = re.search(r"\bH\d+\b", clean_text, re.IGNORECASE)
+                fsm["identifier"] = match_num.group(0).upper() if match_num else clean_text
+            fsm["state"] = "AWAITING_PASSWORD"
+            return "Enter your password:"
+
+        # 3c. Check role selection
+        if re.search(r"\b(teacher|opettaja)\b", lower):
             fsm["state"] = "AWAITING_IDENTIFIER"
             fsm["role"] = "teacher"
             return "Enter your email:"
 
-        if re.search(r"\b(student|opiskelija)\b", clean_lower):
+        if re.search(r"\b(student|opiskelija)\b", lower):
             fsm["state"] = "AWAITING_IDENTIFIER"
             fsm["role"] = "student"
             return "Enter your student number (e.g. H100001):"
 
-        # 3e. If waiting for identifier (non-standard format)
-        if fsm["state"] == "AWAITING_IDENTIFIER":
-            fsm["identifier"] = clean_text
+        # 3d. Check direct email entry
+        if re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_text):
+            email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", clean_text).group(0)
+            fsm["role"] = "teacher"
+            fsm["identifier"] = email_match
+            fsm["state"] = "AWAITING_PASSWORD"
+            return "Enter your password:"
+
+        # 3e. Check direct student number entry
+        if re.search(r"\bH\d+\b", clean_text, re.IGNORECASE):
+            st_match = re.search(r"\bH\d+\b", clean_text, re.IGNORECASE).group(0).upper()
+            fsm["role"] = "student"
+            fsm["identifier"] = st_match
             fsm["state"] = "AWAITING_PASSWORD"
             return "Enter your password:"
 
         # Greeting or start
-        if re.search(r"\b(start|hi|hello|hei|moi|login)\b", clean_lower) or clean_lower.startswith("/start"):
+        if re.search(r"\b(start|hi|hello|hei|moi|login)\b", lower) or lower.startswith("/start"):
             fsm["state"] = "AWAITING_ROLE"
             return LOGIN_STEP_0
 
