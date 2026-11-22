@@ -19,3 +19,5 @@ pytest==9.0.3
 apscheduler==3.11.3
 sentence-transformers
 chromadb
+fastapi
+uvicorn

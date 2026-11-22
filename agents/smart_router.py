@@ -42,7 +42,7 @@ def reset_fsm(chat_id: str):
         "identifier": None,
     }
 
-def format_openai_response(content: str, model: str = "deepseek-v4-flash") -> Dict[str, Any]:
+def format_openai_response(content: str, model: str = "deepseek-v4.1-flash") -> Dict[str, Any]:
     return {
         "id": f"chatcmpl-smart-{int(time.time() * 1000)}",
         "object": "chat.completion",
@@ -300,6 +300,8 @@ async def forward_to_upstream_llm(payload: Dict[str, Any]) -> Dict[str, Any]:
     if LLM_PROVIDER == "deepseek":
         headers["Authorization"] = f"Bearer {DEEPSEEK_API_KEY}"
         url = "https://api.deepseek.com/chat/completions"
+        if payload.get("model") in ["deepseek/deepseek-v4.1-flash", "deepseek-v4.1-flash", "deepseek/deepseek-v4-flash", "deepseek-v4-flash"]:
+            payload["model"] = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
     elif LLM_PROVIDER == "groq":
         headers["Authorization"] = f"Bearer {GROQ_API_KEY}"
         url = "https://api.groq.com/openai/v1/chat/completions"
