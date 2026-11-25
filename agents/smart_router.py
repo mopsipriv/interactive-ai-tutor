@@ -797,6 +797,11 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
 
         if cmd_lower in ["stats", "metrics", "router stats", "ai stats"]:
             m = get_metrics_snapshot()
+            # Include the current 'stats' call itself (already counted in total_requests)
+            det = m["deterministic_handled"] + (1 if m["total_requests"] > m["deterministic_handled"] + m["llm_forwarded"] else 0)
+            total = max(m["total_requests"], det + m["llm_forwarded"])
+            ratio = round((det / total) * 100, 1) if total > 0 else 100.0
+            saved = det * ESTIMATED_TOKENS_PER_DETERMINISTIC_HIT
             mins, secs = divmod(m["uptime_seconds"], 60)
             hrs, mins = divmod(mins, 60)
             uptime_str = f"{hrs}h {mins}m {secs}s" if hrs else (f"{mins}m {secs}s" if mins else f"{secs}s")
@@ -805,13 +810,13 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"🤖 Upstream LLM Provider: {LLM_PROVIDER}\n"
                 f"⏱ Uptime: {uptime_str}\n"
-                f"📨 Total Requests: {m['total_requests']}\n"
-                f"⚡ Deterministic (0 tokens): {m['deterministic_handled']}\n"
+                f"📨 Total Requests: {total}\n"
+                f"⚡ Deterministic (0 tokens): {det}\n"
                 f"🧠 Forwarded to LLM (RAG): {m['llm_forwarded']}\n"
-                f"💰 Deterministic Ratio: {m['deterministic_ratio_pct']}%\n"
-                f"🔋 Estimated Tokens Saved: ~{m['estimated_tokens_saved']:,}"
+                f"💰 Deterministic Ratio: {ratio}%\n"
+                f"🔋 Estimated Tokens Saved: ~{saved:,}"
             )
-            await _audit_teacher_action(user_id, cmd_text, "router_stats", f"ratio={m['deterministic_ratio_pct']}%")
+            await _audit_teacher_action(user_id, cmd_text, "router_stats", f"ratio={ratio}%")
             return res
 
         if cmd_lower in ["projects", "projektit", "all projects"]:
