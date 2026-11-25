@@ -4,6 +4,7 @@ from unittest.mock import patch, AsyncMock
 from agents.smart_router import (
     handle_deterministic_response,
     extract_clean_user_message,
+    extract_chat_id,
     trim_conversation_history,
     check_db_session,
     clear_login_attempts,
@@ -310,6 +311,31 @@ class TestSmartRouter(unittest.TestCase):
                 mock_upd.assert_awaited_once()
 
         asyncio.run(run_test())
+
+    def test_extract_chat_id_ignores_prose_from_this_chat(self):
+        msgs = [
+            {
+                "role": "assistant",
+                "content": "🎓 Welcome, James White!\n🔒 Security tip: delete your password message from this chat.",
+            },
+            {
+                "role": "user",
+                "content": (
+                    "[Wed 2026-11-25 14:12 UTC] Conversation info: \u27e6openclaw:ctx\u27e7\n"
+                    '```json\n{"sender":{"id":"123456789","name":"TestUser"}}\n```\n\nstudents'
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>\n"
+                    '{"chat_id":"telegram:123456789"}\n'
+                    "OpenClaw: delete your password message from this chat.\n"
+                    "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>"
+                ),
+            },
+        ]
+        self.assertEqual(extract_chat_id(msgs), "123456789")
 
 if __name__ == "__main__":
     unittest.main()

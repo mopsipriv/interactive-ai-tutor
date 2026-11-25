@@ -144,9 +144,39 @@ def strip_openclaw_wrapper(raw: str) -> str:
         ).strip()
         text = cleaned
 
-    # 4. Strip leading timestamp/sender brackets like [Wed 2026-11-25 13:20 UTC] or [Telegram 12345]
+    # 4. Strip OpenClaw Runtime metadata footer (appended on first turn of a new session)
+    text = re.sub(r"\n+Runtime:\s*agent=[^\n]*", "", text).strip()
+
+    # 5. Strip leading timestamp/sender brackets like [Wed 2026-11-25 13:20 UTC] or [Telegram 12345]
     text = re.sub(r"^(?:\[[^\]]+\]\s*)+", "", text).strip()
     return text
+
+
+def extract_chat_id(messages: List[Dict[str, Any]]) -> str:
+    """
+    Reliably extracts numeric Telegram chat_id from OpenClaw JSON metadata.
+    Never matches natural-language words like 'from this chat'.
+    """
+    patterns = [
+        r'"chat_id"\s*:\s*"?(?:telegram:(?:direct:)?)?(\d{5,15})"?',
+        r'"sender"\s*:\s*\{[^}]*"id"\s*:\s*"?(\d{5,15})"?',
+        r'telegram:(?:direct:)?(\d{5,15})',
+        r'(?:chat_id|user_id|sender_id)\s*[:=]\s*"?(\d{5,15})"?',
+    ]
+    for m in reversed(messages):
+        content = _message_to_text(m.get("content", ""))
+        for pat in patterns:
+            match = re.search(pat, content, re.IGNORECASE)
+            if match:
+                return match.group(1)
+    # Last-resort fallback: any 7-12 digit ID in user/system metadata
+    for m in reversed(messages):
+        if m.get("role") in ("user", "system"):
+            content = _message_to_text(m.get("content", ""))
+            match_num = re.search(r"\b(\d{7,12})\b", content)
+            if match_num:
+                return match_num.group(1)
+    return "default_user"
 
 
 def _message_to_text(content: Any) -> str:
@@ -1037,22 +1067,7 @@ async def chat_completions(request: Request):
         return format_openai_response("No messages provided.")
 
     user_msg = extract_clean_user_message(messages)
-
-    chat_id = "default_user"
-    for m in reversed(messages):
-        content = str(m.get("content", ""))
-        match = re.search(r"(?:chat_id|user_id|sender_id|peer|from)[:=\s]+(\w+)", content, re.IGNORECASE)
-        if match:
-            chat_id = match.group(1)
-            break
-        match_tg = re.search(r"telegram[:_](\d+)", content, re.IGNORECASE)
-        if match_tg:
-            chat_id = match_tg.group(1)
-            break
-        match_num = re.search(r"\b(\d{7,12})\b", content)
-        if match_num:
-            chat_id = match_num.group(1)
-            break
+    chat_id = extract_chat_id(messages)
 
     fsm_state = get_fsm(chat_id)["state"]
     tail_summary = [
