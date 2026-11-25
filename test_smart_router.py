@@ -386,5 +386,36 @@ class TestSmartRouter(unittest.TestCase):
 
         asyncio.run(run_test())
 
+    def test_router_api_key_auth(self):
+        from fastapi.testclient import TestClient
+        from agents.smart_router import app
+
+        client = TestClient(app)
+        with patch.dict("os.environ", {"ROUTER_API_KEY": "super-secret-router-key"}):
+            # Missing token -> 401
+            r_no_auth = client.get("/metrics")
+            self.assertEqual(r_no_auth.status_code, 401)
+
+            # Wrong token -> 401
+            r_bad = client.post(
+                "/v1/chat/completions",
+                json={"messages": [{"role": "user", "content": "hi"}]},
+                headers={"Authorization": "Bearer wrong-key"},
+            )
+            self.assertEqual(r_bad.status_code, 401)
+
+            # Valid token -> 200
+            r_ok = client.get(
+                "/metrics",
+                headers={"Authorization": "Bearer super-secret-router-key"},
+            )
+            self.assertEqual(r_ok.status_code, 200)
+            self.assertIn("deterministic_ratio_pct", r_ok.json())
+
+            # /health stays accessible without token and does not leak metrics
+            r_health = client.get("/health")
+            self.assertEqual(r_health.status_code, 200)
+            self.assertTrue(r_health.json().get("auth_enabled"))
+
 if __name__ == "__main__":
     unittest.main()

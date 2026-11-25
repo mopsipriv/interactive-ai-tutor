@@ -7,13 +7,13 @@ services:
     env_file:
       - agents/.env
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${DB_PASSWORD}}
       MYSQL_DATABASE: ${DB_NAME}
     volumes:
       - ./database/setup.sql:/docker-entrypoint-initdb.d/setup.sql
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-${DB_PASSWORD}}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,12 +21,16 @@ services:
   mcp_server:
     build: .
     container_name: peppi-mcp
-    restart: always
+    restart: unless-stopped
     env_file:
       - agents/.env
     command: fastmcp run mcp_server.py --transport sse --host 0.0.0.0 --port 8000
     ports:
       - "127.0.0.1:8000:8000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - chroma_data:/app/chroma_db
     environment:
@@ -42,14 +46,24 @@ services:
   router:
     build: .
     container_name: peppi-router
-    restart: always
+    restart: unless-stopped
     env_file:
       - agents/.env
     command: python -m agents.smart_router
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - chroma_data:/app/chroma_db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     environment:
       - DB_HOST=peppi-mysql
       - DB_PORT=3306
@@ -61,6 +75,7 @@ services:
       - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ROUTER_API_KEY=${ROUTER_API_KEY:-}
       - MAX_LLM_HISTORY_MESSAGES=${MAX_LLM_HISTORY_MESSAGES:-6}
       - SESSION_TTL_HOURS=${SESSION_TTL_HOURS:-24}
       - ROUTER_PORT=8080

@@ -1,5 +1,6 @@
 import os
 import re
+import hmac
 import json
 import time
 import logging
@@ -23,6 +24,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 UPSTREAM_URL = os.getenv("UPSTREAM_LLM_URL", "https://api.deepseek.com/chat/completions")
+ROUTER_API_KEY = os.getenv("ROUTER_API_KEY", "").strip()
 
 MAX_LOGIN_ATTEMPTS = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
 LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "300"))
@@ -1133,9 +1135,29 @@ async def forward_to_upstream_llm(payload: Dict[str, Any]) -> Dict[str, Any]:
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
         return resp.json()
 
+def verify_router_api_key(request: Request):
+    """
+    Enforces Bearer token authentication between OpenClaw and Smart Router
+    when ROUTER_API_KEY is configured in environment.
+    """
+    expected = os.getenv("ROUTER_API_KEY", ROUTER_API_KEY).strip()
+    if not expected:
+        return
+    auth_header = request.headers.get("authorization", "")
+    prefix = "bearer "
+    if not auth_header.lower().startswith(prefix):
+        logger.warning("Rejected unauthenticated request to Smart Router (missing Bearer token)")
+        raise HTTPException(status_code=401, detail="Unauthorized: missing Bearer token")
+    provided = auth_header[len(prefix):].strip()
+    if not hmac.compare_digest(provided, expected):
+        logger.warning("Rejected unauthenticated request to Smart Router (invalid Bearer token)")
+        raise HTTPException(status_code=401, detail="Unauthorized: invalid Bearer token")
+
+
 @app.post("/v1/chat/completions")
 @app.post("/chat/completions")
 async def chat_completions(request: Request):
+    verify_router_api_key(request)
     try:
         data = await request.json()
     except Exception:
@@ -1174,11 +1196,12 @@ async def health():
     return {
         "status": "ok",
         "provider": LLM_PROVIDER,
-        "metrics": get_metrics_snapshot(),
+        "auth_enabled": bool(os.getenv("ROUTER_API_KEY", ROUTER_API_KEY).strip()),
     }
 
 @app.get("/metrics")
-async def metrics():
+async def metrics(request: Request):
+    verify_router_api_key(request)
     return get_metrics_snapshot()
 
 if __name__ == "__main__":
