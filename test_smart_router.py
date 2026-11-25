@@ -337,5 +337,54 @@ class TestSmartRouter(unittest.TestCase):
         ]
         self.assertEqual(extract_chat_id(msgs), "123456789")
 
+    def test_projects_and_stats_commands(self):
+        async def run_test():
+            chat_t = "test_teacher_stats_1"
+            chat_s = "test_student_proj_1"
+            reset_fsm(chat_t)
+            reset_fsm(chat_s)
+
+            fake_projects = [
+                {"idproject": 1, "project_name": "AI Chatbot Development", "description": "Bot project", "required_courses": [3, 11]},
+                {"idproject": 2, "project_name": "Mini Project", "description": "Intro project", "required_courses": [3]},
+            ]
+            fake_courses = [
+                {"idcourse": 3, "course_code": "IN00CS84", "course_name": "Johdatus ohjelmointiin"},
+                {"idcourse": 11, "course_code": "IN00DL11", "course_name": "Tietokannat ja rajapinnat"},
+            ]
+
+            # Teacher: stats + projects
+            with patch("agents.smart_router.check_db_session", new_callable=AsyncMock) as mock_sess, \
+                 patch("database.db_connector.get_all_projects_with_requirements", new_callable=AsyncMock) as mock_proj, \
+                 patch("database.db_connector.get_all_courses", new_callable=AsyncMock) as mock_crs, \
+                 patch("agents.smart_router._audit_teacher_action", new_callable=AsyncMock):
+                mock_sess.return_value = {"user_role": "teacher", "user_id": 1, "user_name": "James White"}
+                mock_proj.return_value = fake_projects
+                mock_crs.return_value = fake_courses
+
+                r_stats = await handle_deterministic_response("stats", chat_t)
+                self.assertIn("Smart Router AI Optimization Metrics", r_stats)
+                self.assertIn("Estimated Tokens Saved", r_stats)
+
+                r_tproj = await handle_deterministic_response("projects", chat_t)
+                self.assertIn("AI Chatbot Development", r_tproj)
+                self.assertIn("IN00CS84", r_tproj)
+
+            # Student: projects eligibility (completed course 3, missing course 11)
+            with patch("agents.smart_router.check_db_session", new_callable=AsyncMock) as mock_sess, \
+                 patch("database.db_connector.get_all_projects_with_requirements", new_callable=AsyncMock) as mock_proj, \
+                 patch("database.db_connector.get_all_courses", new_callable=AsyncMock) as mock_crs, \
+                 patch("database.db_connector.get_student_enrollments", new_callable=AsyncMock) as mock_enr:
+                mock_sess.return_value = {"user_role": "student", "user_id": 1, "user_name": "John Smith"}
+                mock_proj.return_value = fake_projects
+                mock_crs.return_value = fake_courses
+                mock_enr.return_value = [{"idcourse": 3, "status": "completed"}]
+
+                r_sproj = await handle_deterministic_response("projects", chat_s)
+                self.assertIn("Missing (1): IN00DL11", r_sproj)
+                self.assertIn("Eligible", r_sproj)
+
+        asyncio.run(run_test())
+
 if __name__ == "__main__":
     unittest.main()

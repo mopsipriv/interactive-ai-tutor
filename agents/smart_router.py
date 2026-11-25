@@ -239,11 +239,13 @@ TEACHER_MENU = """🎓 Welcome! You are logged in as teacher.
 📥 requests — pending requests
 📊 analytics — course analytics
 📖 curriculum [TVT2025S-OHJ/DIN2025S]
+🚀 projects — OAMK projects & prerequisites
 👤 profile [name] — student profile
 ✏️ enroll [student] [course]
 📝 grade [student] [course] [1-5]
 🌅 morning brief
 ✅ approve [id] / ❌ reject [id]
+📈 stats — AI router savings metrics
 🔑 change password
 🚪 logout"""
 
@@ -254,6 +256,7 @@ STUDENT_MENU = """🎓 Welcome! You are logged in as student.
 📋 my courses — your enrollments
 📊 my progress — study plan
 🔍 courses — all courses
+🚀 projects — project eligibility
 📝 enroll [course] — request enrollment
 📬 my requests — request status
 🔑 change password
@@ -792,6 +795,46 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
             await _audit_teacher_action(user_id, cmd_text, "enroll_student", res)
             return res
 
+        if cmd_lower in ["stats", "metrics", "router stats", "ai stats"]:
+            m = get_metrics_snapshot()
+            mins, secs = divmod(m["uptime_seconds"], 60)
+            hrs, mins = divmod(mins, 60)
+            uptime_str = f"{hrs}h {mins}m {secs}s" if hrs else (f"{mins}m {secs}s" if mins else f"{secs}s")
+            res = (
+                "📈 Smart Router AI Optimization Metrics\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🤖 Upstream LLM Provider: {LLM_PROVIDER}\n"
+                f"⏱ Uptime: {uptime_str}\n"
+                f"📨 Total Requests: {m['total_requests']}\n"
+                f"⚡ Deterministic (0 tokens): {m['deterministic_handled']}\n"
+                f"🧠 Forwarded to LLM (RAG): {m['llm_forwarded']}\n"
+                f"💰 Deterministic Ratio: {m['deterministic_ratio_pct']}%\n"
+                f"🔋 Estimated Tokens Saved: ~{m['estimated_tokens_saved']:,}"
+            )
+            await _audit_teacher_action(user_id, cmd_text, "router_stats", f"ratio={m['deterministic_ratio_pct']}%")
+            return res
+
+        if cmd_lower in ["projects", "projektit", "all projects"]:
+            from database.db_connector import get_all_projects_with_requirements, get_all_courses
+            projects = await get_all_projects_with_requirements()
+            if not projects:
+                return "🚀 No projects found in the database."
+            courses_map = {c["idcourse"]: c for c in await get_all_courses()}
+            lines = [f"🚀 OAMK Projects ({len(projects)}):", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
+            for p in projects:
+                req_labels = []
+                for cid in p.get("required_courses", []):
+                    c = courses_map.get(cid)
+                    req_labels.append(f"{c['course_code']} ({c['course_name']})" if c else f"Course #{cid}")
+                req_str = ", ".join(req_labels) if req_labels else "None"
+                lines.append(f"\n📌 {p['project_name']}")
+                if p.get("description"):
+                    lines.append(f"   {p['description']}")
+                lines.append(f"   📋 Prerequisites: {req_str}")
+            res = "\n".join(lines)
+            await _audit_teacher_action(user_id, cmd_text, "list_projects", f"{len(projects)} projects")
+            return res
+
         if cmd_lower == "grade" or cmd_lower.startswith("grade "):
             from database.db_connector import update_grade, verify_student_ownership
             rest = cmd_text[len("grade"):].strip()
@@ -870,6 +913,37 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
                 f"✅ Enrollment request submitted for {course['course_name']} ({course['course_code']}).\n"
                 f"Your teacher will review it shortly. Type 'my requests' to check status."
             )
+
+        if cmd_lower in ["projects", "my projects", "projektit"]:
+            from database.db_connector import (
+                get_all_projects_with_requirements,
+                get_all_courses,
+                get_student_enrollments,
+            )
+            projects = await get_all_projects_with_requirements()
+            if not projects:
+                return "🚀 No projects available yet."
+            courses_map = {c["idcourse"]: c for c in await get_all_courses()}
+            enrollments = await get_student_enrollments(user_id)
+            completed_ids = {e["idcourse"] for e in enrollments if e.get("status") == "completed"}
+
+            lines = [f"🚀 Project Eligibility ({len(projects)} projects):", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"]
+            for p in projects:
+                req_ids = p.get("required_courses", [])
+                missing = [cid for cid in req_ids if cid not in completed_ids]
+                if not missing:
+                    status_line = "✅ Eligible — all prerequisites completed!"
+                else:
+                    miss_names = []
+                    for cid in missing:
+                        c = courses_map.get(cid)
+                        miss_names.append(f"{c['course_code']} {c['course_name']}" if c else f"Course #{cid}")
+                    status_line = f"⏳ Missing ({len(missing)}): " + ", ".join(miss_names)
+                lines.append(f"\n📌 {p['project_name']}")
+                if p.get("description"):
+                    lines.append(f"   {p['description']}")
+                lines.append(f"   {status_line}")
+            return "\n".join(lines)
 
         if cmd_lower in ["my requests", "omat pyynnöt", "requests"]:
             from database.db_connector import get_student_requests
