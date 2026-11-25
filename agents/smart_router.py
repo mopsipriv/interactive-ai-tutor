@@ -238,41 +238,131 @@ async def perform_logout(chat_id: str) -> str:
         logger.error(f"Logout error: {e}")
         return "Logged out."
 
-def extract_password_from_raw(raw_content: str) -> Optional[str]:
-    """
-    Try to extract password from raw OpenClaw message content.
-    Handles queued format, new OpenClaw lite format, and plain text.
-    Returns None for classic OpenClaw context (password not in payload).
-    """
-    # Classic OpenClaw context format (<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>) -
-    # password is NOT included in the payload on first delivery.
-    if "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>" in raw_content:
-        if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in raw_content:
-            tail = raw_content.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
-            if tail and len(tail) < 100:
-                first_line = tail.split('\n')[0].strip()
-                return first_line if first_line else None
-        return None  # No password in classic format
 
-    # Queued message format: [timestamp] [Queued user message...]\npassword\nContinue...
-    queued_match = re.search(r'\[Queued user message[^\]]*\]\s*\n(.+?)(?:\n|$)', raw_content, re.IGNORECASE)
-    if queued_match:
-        candidate = queued_match.group(1).strip()
-        if candidate and not re.search(r'^(continue|task|transcript)', candidate, re.IGNORECASE):
-            return candidate
+def _format_dt(val: Any) -> str:
+    if val is None:
+        return "—"
+    return str(val)[:16]
 
-    # New OpenClaw lite format: [timestamp] Conversation info...\n```json\n{...}\n```\n\n<user_input>
-    # Extract last non-empty line that isn't JSON/markdown/metadata
-    lines = [l.strip() for l in raw_content.split('\n') if l.strip()]
-    if lines:
-        last_line = lines[-1]
-        skip_patterns = r'^(\{|\}|```|Conversation|⟦|continue|task|transcript)'
-        if last_line and not re.search(skip_patterns, last_line, re.IGNORECASE):
-            # Sanity check: should look like a user input (not too long, not structured)
-            if len(last_line) < 150 and ':' not in last_line[:5]:
-                return last_line
 
-    return None
+def _format_student_profile(rows: List[Dict[str, Any]]) -> str:
+    """Formats rows returned by get_student_profile() into a clean profile card."""
+    if not rows:
+        return "Profile not found."
+    p = rows[0]
+    credits_earned = sum(
+        int(r.get("credit") or 0)
+        for r in rows
+        if r.get("status") == "completed" and r.get("course_name")
+    )
+    pct = min(100, round((credits_earned / 240) * 100))
+    filled = int(pct / 10)
+    bar = "▓" * filled + "░" * (10 - filled)
+
+    group = p.get("group_code") or "—"
+    program = p.get("study_right") or "TVT2025S-OHJ"
+    valid_until = p.get("valid_until") or "—"
+
+    lines = [
+        "👤 STUDENT PROFILE",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"Name: {p.get('fname')} {p.get('lname')} ({p.get('student_number')})",
+        f"📧 Email: {p.get('email') or '—'}",
+        f"👥 Group: {group}",
+        f"📚 Program: {program}",
+        f"📅 Study right until: {valid_until}",
+        f"📊 Credits: {bar} {credits_earned}/240 ({pct}%)",
+    ]
+
+    enrolled_courses = [r for r in rows if r.get("course_name")]
+    if enrolled_courses:
+        lines.append("\n📋 Recent Courses:")
+        for c in enrolled_courses[:12]:
+            st = c.get("status") or ""
+            icon = "✅" if st == "completed" else ("🔄" if st == "ongoing" else "📋")
+            code = c.get("course_code") or ""
+            grade_str = f" — grade {c['grade']}" if c.get("grade") else ""
+            lines.append(f"  {icon} {c['course_name']} ({code}, {c.get('credit', 0)}cr){grade_str}")
+        if len(enrolled_courses) > 12:
+            lines.append(f"  ... and {len(enrolled_courses) - 12} more (type 'my courses')")
+
+    return "\n".join(lines)
+
+
+async def _pick_course(query: str) -> tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Finds a single course by code or name; returns (course_dict, error_message)."""
+    from database.db_connector import search_courses_by_name
+    q = query.strip()
+    if not q:
+        return None, "Please specify a course code or name (e.g. IN00DL12 or Pilvipalvelut)."
+    matches = await search_courses_by_name(q)
+    if not matches:
+        return None, f"❌ Course '{q}' not found. Type 'courses' to see available courses."
+    # Prefer exact code or exact name match (case-insensitive)
+    for m in matches:
+        if m["course_code"].lower() == q.lower() or m["course_name"].lower() == q.lower():
+            return m, None
+    if len(matches) == 1:
+        return matches[0], None
+    opts = "\n".join(f"• {m['course_code']} — {m['course_name']}" for m in matches[:6])
+    return None, f"Multiple courses match '{q}'. Please use the exact course code:\n{opts}"
+
+
+async def _resolve_student_and_course(rest: str) -> tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]], Optional[str]]:
+    """Parses '<student> <course>' supporting H-numbers, course codes, or full names."""
+    from database.db_connector import search_students_by_name
+    s = rest.strip()
+    if not s:
+        return None, None, None
+
+    student_q = ""
+    course_q = ""
+
+    # Pattern 1: starts with student number (e.g. H100001 IN00DL12 or H100001 Pilvipalvelut)
+    m_num = re.match(r"^(H\d+)\s+(.+)$", s, re.IGNORECASE)
+    if m_num:
+        student_q, course_q = m_num.group(1), m_num.group(2).strip()
+    else:
+        # Pattern 2: contains a course code (e.g. John Smith IN00DL12 or John Smith T009015)
+        m_code = re.search(r"\b([A-Z]{2}\d{2}[A-Z]{2}\d{2}|T\d{6})\b", s, re.IGNORECASE)
+        if m_code and m_code.start() > 0:
+            student_q = s[:m_code.start()].strip()
+            course_q = m_code.group(1).strip()
+        else:
+            # Pattern 3: first 2 words = full name, rest = course; fallback to 1 word
+            parts = s.split()
+            if len(parts) >= 3:
+                cand2 = " ".join(parts[:2])
+                st2 = await search_students_by_name(cand2)
+                if st2:
+                    student_q, course_q = cand2, " ".join(parts[2:])
+                else:
+                    student_q, course_q = parts[0], " ".join(parts[1:])
+            elif len(parts) == 2:
+                student_q, course_q = parts[0], parts[1]
+            else:
+                return None, None, None
+
+    students = await search_students_by_name(student_q)
+    if not students:
+        return None, None, f"❌ Student '{student_q}' not found."
+    student = None
+    for st in students:
+        full = f"{st['fname']} {st['lname']}".lower()
+        if st["student_number"].lower() == student_q.lower() or full == student_q.lower():
+            student = st
+            break
+    if not student:
+        if len(students) == 1:
+            student = students[0]
+        else:
+            opts = "\n".join(f"• {st['fname']} {st['lname']} ({st['student_number']})" for st in students[:5])
+            return None, None, f"Multiple students match '{student_q}'. Please use student number:\n{opts}"
+
+    course, err = await _pick_course(course_q)
+    if err:
+        return None, None, err
+    return student, course, None
 
 
 async def handle_deterministic_response(text: str, chat_id: str, messages: List[Dict[str, Any]] = None) -> Optional[str]:
@@ -381,89 +471,279 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
     name = session.get("user_name", "")
 
     if lower in ["/start", "start", "menu", "valikko", "help", "/help"]:
-        return f"🎓 Welcome, {name}!\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + (TEACHER_MENU if role == "teacher" else STUDENT_MENU)
+        menu = TEACHER_MENU if role == "teacher" else STUDENT_MENU
+        menu_body = menu.split("\n", 1)[1] if "\n" in menu else menu
+        return f"🎓 Welcome, {name}! You are logged in as {role}.\n{menu_body}"
+
+    # Strip leading decorative emojis for command prefix matching
+    cmd_text = re.sub(r"^[^\w/]+\s*", "", clean_text).strip()
+    cmd_lower = cmd_text.lower()
 
     if role == "teacher":
-        if lower in ["⚠️ risk", "risk", "riskit", "risk report"]:
+        if cmd_lower in ["risk", "riskit", "risk report"]:
             from mcp_server import get_risk_report_tool
             return await get_risk_report_tool(user_id)
 
-        if lower in ["📥 requests", "requests", "pyynnöt"]:
-            from mcp_server import get_pending_requests_tool
-            reqs = await get_pending_requests_tool(user_id)
+        if cmd_lower in ["requests", "pyynnöt", "pending requests"]:
+            from database.db_connector import get_pending_requests
+            reqs = await get_pending_requests(user_id)
             if not reqs:
                 return "📥 No pending enrollment requests."
-            res = "📥 Pending Requests:\n"
+            res = f"📥 Pending Requests ({len(reqs)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             for r in reqs:
-                res += f"• Request #{r.get('idrequest')}: {r.get('fname')} {r.get('lname')} → {r.get('course_name')} ({r.get('created_at')})\n"
+                res += (
+                    f"• Request #{r.get('idrequest')}: {r.get('fname')} {r.get('lname')} "
+                    f"({r.get('group_code')}) → {r.get('course_name')} ({r.get('course_code')}) "
+                    f"[{_format_dt(r.get('requested_at'))}]\n"
+                )
+            res += "\nReply: approve [id] or reject [id]"
             return res
 
-        if lower in ["👥 students", "students", "opiskelijat"]:
-            from mcp_server import get_students_by_teacher_tool
-            st_list = await get_students_by_teacher_tool(user_id)
+        if cmd_lower in ["students", "opiskelijat", "my students"]:
+            from database.db_connector import get_students_by_teacher
+            st_list = await get_students_by_teacher(user_id)
             if not st_list:
                 return "👥 No students found for your cohorts."
             res = f"👥 Your Students ({len(st_list)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            for s in st_list[:15]:
-                res += f"• {s.get('fname')} {s.get('lname')} ({s.get('student_number')}) — {s.get('group_code')}\n"
+            for s in st_list[:20]:
+                group = s.get("group_code") or "—"
+                res += f"• {s.get('fname')} {s.get('lname')} ({s.get('student_number')}) — {group}\n"
             return res
 
-        if lower in ["🌅 morning brief", "morning brief"]:
+        if cmd_lower in ["morning brief", "brief", "weekly brief"]:
             from mcp_server import get_morning_brief_tool
-            return await get_morning_brief_tool(user_id, name)
+            brief = await get_morning_brief_tool(user_id, name)
+            return brief or "🌅 No students assigned to your cohorts yet."
+
+        if cmd_lower in ["analytics", "course analytics", "analytiikka"]:
+            from database.db_connector import get_course_analytics
+            rows = await get_course_analytics()
+            if not rows:
+                return "📊 No course analytics data available yet."
+            res = f"📊 Course Analytics ({len(rows)} courses):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            for r in rows[:20]:
+                avg = f"{float(r['avg_grade']):.1f}" if r.get("avg_grade") is not None else "—"
+                total = int(r.get("total_students") or 0)
+                done = int(r.get("completed_count") or 0)
+                pct = round((done / total) * 100) if total else 0
+                res += f"• {r['course_code']} {r['course_name']}: {done}/{total} completed ({pct}%), avg grade {avg}\n"
+            return res
+
+        if cmd_lower == "curriculum" or cmd_lower.startswith("curriculum "):
+            from database.db_connector import get_curriculum
+            prog_arg = cmd_text[len("curriculum"):].strip().upper() or "TVT2025S-OHJ"
+            rows = await get_curriculum(prog_arg)
+            if not rows:
+                return f"❌ Curriculum '{prog_arg}' not found.\nAvailable programs: TVT2025S-OHJ, DIN2025S"
+            res = f"📖 Curriculum: {prog_arg}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            current_year = None
+            for r in rows:
+                if r["year_of_study"] != current_year:
+                    current_year = r["year_of_study"]
+                    res += f"\n\nYear {current_year}:"
+                res += f"\n  • {r['course_code']} — {r['course_name']} ({r['credit']}cr)"
+            return res
+
+        if cmd_lower == "profile" or cmd_lower.startswith("profile "):
+            from database.db_connector import search_students_by_name, get_student_profile
+            query = cmd_text[len("profile"):].strip()
+            if not query:
+                return "Usage: profile [student name or number]\nExample: profile John Smith  or  profile H100001"
+            matches = await search_students_by_name(query)
+            if not matches:
+                return f"❌ Student '{query}' not found."
+            chosen = None
+            for m in matches:
+                if m["student_number"].lower() == query.lower() or f"{m['fname']} {m['lname']}".lower() == query.lower():
+                    chosen = m
+                    break
+            if not chosen:
+                if len(matches) == 1:
+                    chosen = matches[0]
+                else:
+                    opts = "\n".join(f"• {m['fname']} {m['lname']} ({m['student_number']})" for m in matches[:6])
+                    return f"Multiple students found for '{query}'. Please specify:\n{opts}"
+            prof_rows = await get_student_profile(chosen["idstudent"])
+            return _format_student_profile(prof_rows)
+
+        m_approve = re.match(r"^approve\s+#?(\d+)$", cmd_lower)
+        if m_approve:
+            from database.db_connector import approve_request
+            req_id = int(m_approve.group(1))
+            result = await approve_request(req_id, user_id)
+            prefix = "✅ " if not result.startswith("Error") else "❌ "
+            return f"{prefix}Request #{req_id}: {result}"
+
+        m_reject = re.match(r"^reject\s+#?(\d+)$", cmd_lower)
+        if m_reject:
+            from database.db_connector import reject_request
+            req_id = int(m_reject.group(1))
+            result = await reject_request(req_id, user_id)
+            prefix = "✅ " if not result.startswith("Error") else "❌ "
+            return f"{prefix}Request #{req_id}: {result}"
+
+        if cmd_lower == "enroll" or cmd_lower.startswith("enroll "):
+            from database.db_connector import enroll_student
+            rest = cmd_text[len("enroll"):].strip()
+            student, course, err = await _resolve_student_and_course(rest)
+            if err:
+                return err
+            if not student or not course:
+                return "Usage: enroll [student] [course]\nExample: enroll H100001 IN00DL12  or  enroll John Smith Pilvipalvelut"
+            result = await enroll_student(student["idstudent"], course["idcourse"])
+            prefix = "✅ " if "successfully" in result.lower() else "ℹ️ "
+            return f"{prefix}{student['fname']} {student['lname']} ({student['student_number']}) → {course['course_name']} ({course['course_code']}): {result}"
+
+        if cmd_lower == "grade" or cmd_lower.startswith("grade "):
+            from database.db_connector import update_grade
+            rest = cmd_text[len("grade"):].strip()
+            m_grade = re.match(r"^(.+?)\s+(\d+)$", rest)
+            if not m_grade:
+                return "Usage: grade [student] [course] [1-5]\nExample: grade H100001 IN00DL12 5  or  grade John Smith Pilvipalvelut 4"
+            sc_part, grade_val = m_grade.group(1).strip(), int(m_grade.group(2))
+            if grade_val < 1 or grade_val > 5:
+                return "❌ Grade must be between 1 and 5."
+            student, course, err = await _resolve_student_and_course(sc_part)
+            if err:
+                return err
+            if not student or not course:
+                return "Usage: grade [student] [course] [1-5]\nExample: grade H100001 IN00DL12 5"
+            result = await update_grade(student["idstudent"], course["idcourse"], grade_val)
+            prefix = "✅ " if "successfully" in result.lower() else "❌ "
+            return f"{prefix}{student['fname']} {student['lname']} — {course['course_name']} ({course['course_code']}): grade {grade_val} ({result})"
 
     if role == "student":
-        if lower in ["👤 my profile", "my profile", "profile", "profiili"]:
-            from mcp_server import get_student_profile_tool
-            prof = await get_student_profile_tool(user_id)
-            if not prof:
-                return "Profile not found."
-            p = prof[0]
-            pct = round((p.get('credits_earned', 0) / 240) * 100)
-            return f"STUDENT PROFILE:\n👤 {p.get('fname')} {p.get('lname')} — {p.get('student_number')}\n📚 Program: {p.get('program_code')}\n📅 Study right: {p.get('study_right_end')}\n📊 Progress: {p.get('credits_earned', 0)}/240 ({pct}%)"
+        if cmd_lower in ["my profile", "profile", "profiili"]:
+            from database.db_connector import get_student_profile
+            prof = await get_student_profile(user_id)
+            return _format_student_profile(prof)
 
-        if lower in ["📋 my courses", "my courses", "courses"]:
-            from mcp_server import get_student_enrollments_tool
-            courses = await get_student_enrollments_tool(user_id)
+        if cmd_lower in ["my courses", "omat kurssit"]:
+            from database.db_connector import get_student_enrollments
+            courses = await get_student_enrollments(user_id)
             if not courses:
-                return "No enrolled courses."
-            res = "COURSES:\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                return "📋 You have no enrolled courses yet. Type 'courses' to browse available courses."
+            res = f"📋 My Courses ({len(courses)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             for c in courses:
-                icon = "✅" if c.get("status") == "completed" else ("🔄" if c.get("status") == "enrolled" else "📋")
-                res += f"{icon} {c.get('course_name')} ({c.get('course_code')}) — {c.get('status')} {c.get('grade') or ''}\n"
+                st = c.get("status") or ""
+                icon = "✅" if st == "completed" else ("🔄" if st == "ongoing" else "📋")
+                grade_str = f" (grade: {c['grade']})" if c.get("grade") else ""
+                res += f"{icon} {c.get('course_name')} ({c.get('course_code')}, {c.get('credit', 0)}cr) — {st}{grade_str}\n"
             return res
 
-        if lower in ["📊 my progress", "my progress", "progress"]:
-            from mcp_server import get_student_plan_tool, get_student_from_db_tool
-            st = await get_student_from_db_tool(user_id)
-            prog_code = st.get("program_code", "TVT2025S-OHJ") if isinstance(st, dict) else "TVT2025S-OHJ"
+        if cmd_lower in ["courses", "all courses", "kurssit"]:
+            from database.db_connector import get_all_courses
+            courses = await get_all_courses()
+            if not courses:
+                return "No courses found in catalog."
+            res = f"🔍 All OAMK Courses ({len(courses)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            current_year = None
+            for c in sorted(courses, key=lambda x: (x.get("year_of_study", 9), x.get("course_code", ""))):
+                if c.get("year_of_study") != current_year:
+                    current_year = c.get("year_of_study")
+                    res += f"\n\nYear {current_year}:"
+                res += f"\n  • {c['course_code']} — {c['course_name']} ({c['credit']}cr)"
+            res += "\n\nTo request enrollment: enroll [course code or name]"
+            return res
+
+        if cmd_lower in ["my progress", "progress", "study plan", "opintosuunnitelma"]:
+            from mcp_server import get_student_plan_tool
+            from database.db_connector import get_student_from_db
+            st = await get_student_from_db(user_id)
+            prog_code = st.get("study_right", "TVT2025S-OHJ") if isinstance(st, dict) else "TVT2025S-OHJ"
             return await get_student_plan_tool(user_id, prog_code)
 
-        if lower in ["📬 my requests", "my requests"]:
-            from mcp_server import get_student_requests_tool
-            reqs = await get_student_requests_tool(user_id)
+        if cmd_lower == "enroll" or cmd_lower.startswith("enroll "):
+            from database.db_connector import create_enrollment_request
+            course_q = cmd_text[len("enroll"):].strip()
+            course, err = await _pick_course(course_q)
+            if err:
+                return err
+            result = await create_enrollment_request(user_id, course["idcourse"])
+            if result.startswith("Error"):
+                return f"❌ {result}"
+            return (
+                f"✅ Enrollment request submitted for {course['course_name']} ({course['course_code']}).\n"
+                f"Your teacher will review it shortly. Type 'my requests' to check status."
+            )
+
+        if cmd_lower in ["my requests", "omat pyynnöt", "requests"]:
+            from database.db_connector import get_student_requests
+            reqs = await get_student_requests(user_id)
             if not reqs:
                 return "📬 You have no enrollment requests."
-            res = "📬 Your Requests:\n"
+            res = f"📬 Your Enrollment Requests ({len(reqs)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             for r in reqs:
-                res += f"• {r.get('course_name')}: {r.get('status')} ({r.get('created_at')})\n"
+                st = r.get("status") or "pending"
+                icon = "✅" if st == "approved" else ("❌" if st == "rejected" else "⏳")
+                res += (
+                    f"{icon} #{r.get('idrequest')} {r.get('course_name')} ({r.get('course_code')}) — "
+                    f"{st} [{_format_dt(r.get('requested_at'))}]\n"
+                )
             return res
 
     return None
 
+async def enrich_payload_with_rag(payload: Dict[str, Any], user_msg: str, chat_id: str) -> Dict[str, Any]:
+    """Enriches semantic LLM queries with relevant OAMK RAG documents and user role context."""
+    messages = payload.get("messages", [])
+    if not user_msg or not messages:
+        return payload
+    # Do not inject extra system context during multi-step tool call continuations
+    if messages[-1].get("role") == "tool":
+        return payload
+
+    rag_context = ""
+    try:
+        from rag.rag_retriever import retrieve
+        rag_res = retrieve(user_msg, top_k=3)
+        if rag_res and "No relevant information found" not in rag_res:
+            rag_context = rag_res
+    except Exception as e:
+        logger.warning(f"RAG retrieval skipped due to error: {e}")
+
+    session = await check_db_session(chat_id)
+    role_info = ""
+    if session:
+        role_info = f"Current authenticated user: {session.get('user_name')} (role: {session.get('user_role')}).\n"
+
+    if not rag_context and not role_info:
+        return payload
+
+    extra_system = (
+        "You are the OAMK AI Tutor Assistant.\n"
+        f"{role_info}"
+        "Answer clearly and concisely based on OAMK official documents below when relevant. "
+        "Do not invent student grades or personal database records; direct the user to menu commands "
+        "(e.g. 'students', 'risk', 'my courses', 'my progress') for live database queries.\n"
+    )
+    if rag_context:
+        extra_system += f"\n--- OAMK Knowledge Base (RAG) ---\n{rag_context}\n--- End Knowledge Base ---"
+
+    enriched = dict(payload)
+    new_msgs = list(messages)
+    new_msgs.insert(0, {"role": "system", "content": extra_system})
+    enriched["messages"] = new_msgs
+    return enriched
+
+
 async def forward_to_upstream_llm(payload: Dict[str, Any]) -> Dict[str, Any]:
     headers = {"Content-Type": "application/json"}
-    
+    forward_payload = dict(payload)
+    # Ensure JSON response (avoid SSE stream parse error if client requested stream=True)
+    forward_payload["stream"] = False
+    forward_payload.pop("stream_options", None)
+
     if LLM_PROVIDER == "deepseek":
         headers["Authorization"] = f"Bearer {DEEPSEEK_API_KEY}"
         url = "https://api.deepseek.com/chat/completions"
-        if payload.get("model") in ["deepseek/deepseek-v4.1-flash", "deepseek-v4.1-flash", "deepseek/deepseek-v4-flash", "deepseek-v4-flash"]:
-            payload["model"] = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        if forward_payload.get("model") in ["deepseek/deepseek-v4.1-flash", "deepseek-v4.1-flash", "deepseek/deepseek-v4-flash", "deepseek-v4-flash"]:
+            forward_payload["model"] = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
     elif LLM_PROVIDER == "groq":
         headers["Authorization"] = f"Bearer {GROQ_API_KEY}"
         url = "https://api.groq.com/openai/v1/chat/completions"
-        if "model" in payload and "deepseek" in payload["model"]:
-            payload["model"] = "llama-3.3-70b-versatile"
+        if "model" in forward_payload and "deepseek" in forward_payload["model"]:
+            forward_payload["model"] = "llama-3.3-70b-versatile"
     elif LLM_PROVIDER == "openai":
         headers["Authorization"] = f"Bearer {OPENAI_API_KEY}"
         url = "https://api.openai.com/v1/chat/completions"
@@ -472,7 +752,7 @@ async def forward_to_upstream_llm(payload: Dict[str, Any]) -> Dict[str, Any]:
         url = UPSTREAM_URL
 
     async with httpx.AsyncClient(timeout=60.0) as client:
-        resp = await client.post(url, json=payload, headers=headers)
+        resp = await client.post(url, json=forward_payload, headers=headers)
         if resp.status_code != 200:
             logger.error(f"Upstream error {resp.status_code}: {resp.text}")
             raise HTTPException(status_code=resp.status_code, detail=resp.text)
@@ -522,7 +802,8 @@ async def chat_completions(request: Request):
         return format_openai_response(deterministic_answer, model=data.get("model", "deepseek-v4-flash"))
 
     logger.info("-> Forwarding to upstream LLM (Semantic/RAG query)...")
-    return await forward_to_upstream_llm(data)
+    enriched_data = await enrich_payload_with_rag(data, user_msg, chat_id)
+    return await forward_to_upstream_llm(enriched_data)
 
 @app.get("/health")
 async def health():

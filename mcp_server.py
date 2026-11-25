@@ -293,7 +293,10 @@ async def get_morning_brief_tool(teacher_id:int,teacher_name:str):
     pending = await get_pending_requests(teacher_id)
     
     month_name = datetime.now().strftime("%B")
-    calendar_hint = retrieve(f"{month_name} tutoring actions checklist")
+    try:
+        calendar_hint = retrieve(f"{month_name} tutoring actions checklist")
+    except Exception:
+        calendar_hint = "Check student credit pace and pending enrollment requests."
         
     brief = f"\n🌅 Weekly Brief for {teacher_name}\n"
     brief += f"{'━'*35}\n"

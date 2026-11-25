@@ -73,10 +73,11 @@ async def get_student_enrollments(student_id: int):
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
-                """SELECT e.*, c.course_name, c.credit
+                """SELECT e.*, c.course_code, c.course_name, c.credit, c.year_of_study
                    FROM enrollment e
                    JOIN course c ON e.idcourse = c.idcourse
-                   WHERE e.idstudent = %s""",
+                   WHERE e.idstudent = %s
+                   ORDER BY c.year_of_study, c.course_code""",
                 (student_id,)
             )
             result = await cur.fetchall()
@@ -114,8 +115,16 @@ async def enroll_student(student_id: int, course_id: int):
         async with pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    """INSERT INTO enrollment (idstudent, idcourse, status) 
-                    VALUES (%s, %s, 'planned')""",
+                    """SELECT status FROM enrollment
+                       WHERE idstudent = %s AND idcourse = %s LIMIT 1""",
+                    (student_id, course_id)
+                )
+                existing = await cur.fetchone()
+                if existing:
+                    return f"Already enrolled in this course (status: {existing['status']})"
+                await cur.execute(
+                    """INSERT INTO enrollment (idstudent, idcourse, status)
+                    VALUES (%s, %s, 'ongoing')""",
                     (student_id, course_id)
                 )
                 await conn.commit()
@@ -164,16 +173,20 @@ async def get_all_courses():
 
 
 async def update_grade(student_id: int, course_id: int, grade: int):
+    if not isinstance(grade, int) or grade < 1 or grade > 5:
+        return "Error: Grade must be an integer between 1 and 5"
     try:
         pool = await get_pool()
         async with pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    """UPDATE enrollment 
-                    SET grade=%s
+                    """UPDATE enrollment
+                    SET grade=%s, status='completed'
                     WHERE idstudent=%s AND idcourse=%s""",
                     (grade, student_id, course_id,)
                 )
+                if cur.rowcount == 0:
+                    return "Error: Student is not enrolled in this course. Enroll them first."
                 await conn.commit()
         return "Student grade updated successfully"
     except Exception as e:
@@ -185,10 +198,12 @@ async def get_student_profile(student_id: int):
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
-                """SELECT s.*, c.course_name, c.credit, e.status, e.grade
+                """SELECT s.*, gc.group_code, c.course_code, c.course_name, c.credit, e.status, e.grade
                 FROM student s
-                JOIN enrollment e ON s.idstudent = e.idstudent
-                JOIN course c ON e.idcourse = c.idcourse
+                LEFT JOIN student_group sg ON s.idstudent = sg.idstudent
+                LEFT JOIN group_cohort gc ON sg.idgroup = gc.idgroup_cohort
+                LEFT JOIN enrollment e ON s.idstudent = e.idstudent
+                LEFT JOIN course c ON e.idcourse = c.idcourse
                 WHERE s.idstudent = %s""",
                 (student_id,)
             )
@@ -426,11 +441,12 @@ async def get_students_by_teacher(teacher_id: int):
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
-                """SELECT DISTINCT s.*
+                """SELECT DISTINCT s.*, gc.group_code
                 FROM student s
                 JOIN student_group sg ON s.idstudent = sg.idstudent
                 JOIN group_cohort gc ON sg.idgroup = gc.idgroup_cohort
-                WHERE gc.idteacher = %s""",
+                WHERE gc.idteacher = %s
+                ORDER BY gc.group_code, s.idstudent""",
                 (teacher_id,)
             )
             result = await cur.fetchall()
@@ -459,12 +475,30 @@ async def create_enrollment_request(student_id: int, course_id: int):
         async with pool.acquire() as conn:
             async with conn.cursor(aiomysql.DictCursor) as cur:
                 await cur.execute(
-                    """INSERT INTO enrollment_request (idstudent, idcourse, status,requested_at)
-                    VALUES(%s,%s,'pending',%s)""",
+                    """SELECT status FROM enrollment
+                       WHERE idstudent = %s AND idcourse = %s LIMIT 1""",
+                    (student_id, course_id)
+                )
+                enrolled = await cur.fetchone()
+                if enrolled:
+                    return f"Error: You are already enrolled in this course (status: {enrolled['status']})"
+
+                await cur.execute(
+                    """SELECT idrequest FROM enrollment_request
+                       WHERE idstudent = %s AND idcourse = %s AND status = 'pending' LIMIT 1""",
+                    (student_id, course_id)
+                )
+                pending = await cur.fetchone()
+                if pending:
+                    return f"Error: You already have a pending request (#{pending['idrequest']}) for this course"
+
+                await cur.execute(
+                    """INSERT INTO enrollment_request (idstudent, idcourse, status, requested_at)
+                    VALUES(%s, %s, 'pending', %s)""",
                     (student_id, course_id, datetime.now(),)
                 )
                 await conn.commit()
-        return "Create successfully"
+        return "Request created successfully"
     except Exception as e:
         return f"Error: {e}"
 
@@ -539,10 +573,23 @@ async def approve_request(request_id: int, teacher_id: int):
                 )
 
                 await cur.execute(
-                    """INSERT INTO enrollment (idstudent, idcourse, status) 
-                       VALUES (%s, %s, 'ongoing')""",
+                    """SELECT idenrollment FROM enrollment
+                       WHERE idstudent = %s AND idcourse = %s LIMIT 1""",
                     (student_id, course_id)
                 )
+                existing_enrollment = await cur.fetchone()
+                if existing_enrollment:
+                    await cur.execute(
+                        """UPDATE enrollment SET status = 'ongoing'
+                           WHERE idstudent = %s AND idcourse = %s""",
+                        (student_id, course_id)
+                    )
+                else:
+                    await cur.execute(
+                        """INSERT INTO enrollment (idstudent, idcourse, status) 
+                           VALUES (%s, %s, 'ongoing')""",
+                        (student_id, course_id)
+                    )
 
                 await conn.commit()
         return "Request approved and student enrolled successfully"
@@ -562,11 +609,13 @@ async def reject_request(request_id: int, teacher_id: int):
                 await cur.execute(
                     """UPDATE enrollment_request
                     SET status= 'rejected', reviewed_at=%s
-                    WHERE idrequest=%s""",
+                    WHERE idrequest=%s AND status = 'pending'""",
                     (datetime.now(), request_id,)
                 )
+                if cur.rowcount == 0:
+                    return "Error: Request not found or already processed"
                 await conn.commit()
-        return "Request is rejected successfully"
+        return "Request rejected successfully"
     except Exception as e:
         return f"Error: {e}"
 
