@@ -42,32 +42,68 @@ def reset_fsm(chat_id: str):
         "identifier": None,
     }
 
+def strip_openclaw_wrapper(raw: str) -> str:
+    """Strips OpenClaw metadata wrappers (classic context, lite Conversation info JSON, queued prefix)."""
+    text = raw.strip()
+    if not text:
+        return ""
+
+    # 1. Classic internal context wrapper
+    if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in text:
+        tail = text.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
+        if tail:
+            text = tail
+        else:
+            # Fallback to last User: entry inside context
+            user_lines = re.findall(r"User:\s*([^\n\r]+)", text)
+            return user_lines[-1].strip() if user_lines else ""
+
+    # 2. Queued user message wrapper
+    queued_match = re.search(r"\[Queued user message[^\]]*\]\s*\n(.+?)(?:\n\n|\nContinue|$)", text, re.IGNORECASE | re.DOTALL)
+    if queued_match:
+        candidate = queued_match.group(1).strip()
+        if candidate:
+            return candidate
+
+    # 3. Lite Conversation info wrapper:
+    #    [Wed 2026-11-25 13:20 UTC] Conversation info: ⟦openclaw:ctx⟧\n```json\n{...}\n```\n\n<actual message>
+    if "Conversation info:" in text or "⟦openclaw:ctx⟧" in text:
+        # Remove everything up to and including the closing ``` of the json block(s)
+        cleaned = re.sub(
+            r"(?:^|\n)(?:\[[^\]]+\]\s*)?Conversation info:[\s\S]*?```(?:json)?\s*[\s\S]*?```\s*",
+            "\n",
+            text,
+            flags=re.IGNORECASE,
+        ).strip()
+        if cleaned:
+            text = cleaned
+
+    # 4. Strip leading timestamp/sender brackets like [Wed 2026-11-25 13:20 UTC] or [Telegram 12345]
+    text = re.sub(r"^(?:\[[^\]]+\]\s*)+", "", text).strip()
+    return text
+
+
 def extract_clean_user_message(messages: List[Dict[str, Any]]) -> str:
-    """Extracts actual user input text, stripping OpenClaw internal context headers."""
-    # 1. Search for clean user text after context tag or in pure message
+    """Extracts actual user input text from the latest user message, stripping OpenClaw headers."""
     for m in reversed(messages):
         if m.get("role") == "user":
             content = m.get("content", "")
+            raw = ""
             if isinstance(content, str):
-                content = content.strip()
-                if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in content:
-                    tail = content.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
-                    if tail:
-                        return tail
-                elif not content.startswith("<<<BEGIN_OPENCLAW"):
-                    return content
+                raw = content
             elif isinstance(content, list):
-                for item in content:
-                    if isinstance(item, dict) and item.get("type") == "text":
-                        txt = item.get("text", "").strip()
-                        if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in txt:
-                            tail = txt.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
-                            if tail:
-                                return tail
-                        elif not txt.startswith("<<<BEGIN_OPENCLAW"):
-                            return txt
+                parts = [
+                    item.get("text", "")
+                    for item in content
+                    if isinstance(item, dict) and item.get("type") == "text"
+                ]
+                raw = "\n".join(parts)
+            cleaned = strip_openclaw_wrapper(raw)
+            if cleaned:
+                return cleaned
+            break
 
-    # 2. Fallback: extract last User: entry from OpenClaw context history
+    # Fallback: extract last User: entry from OpenClaw context history
     for m in reversed(messages):
         content = str(m.get("content", ""))
         user_lines = re.findall(r"User:\s*([^\n\r]+)", content)
@@ -279,20 +315,24 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
                         raw = str(m.get("content", ""))
                         password = extract_password_from_raw(raw)
                         break  # stop after first (= last) user message regardless
+            elif clean_text:
+                password = clean_text
 
             if password:
                 role = fsm.get("role", "teacher")
                 identifier = fsm.get("identifier", "")
                 reset_fsm(chat_id)
-                logger.info(f"-> Attempting {role} login for '{identifier}' with extracted password (len={len(password)}, repr={repr(password[:20])})")
+                logger.info(f"-> Attempting {role} login for '{identifier}' with extracted password (len={len(password)})")
                 if role == "teacher":
                     success, result = await perform_teacher_login(chat_id, identifier, password)
                     if success:
-                        return f"🎓 Welcome, {result}! You are logged in as teacher.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + TEACHER_MENU
+                        menu_body = TEACHER_MENU.split("\n", 1)[1] if "\n" in TEACHER_MENU else TEACHER_MENU
+                        return f"🎓 Welcome, {result}! You are logged in as teacher.\n{menu_body}"
                 else:
                     success, result = await perform_student_login(chat_id, identifier, password)
                     if success:
-                        return f"🎓 Welcome, {result}! You are logged in as student.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + STUDENT_MENU
+                        menu_body = STUDENT_MENU.split("\n", 1)[1] if "\n" in STUDENT_MENU else STUDENT_MENU
+                        return f"🎓 Welcome, {result}! You are logged in as student.\n{menu_body}"
                 return "❌ Login failed. Try again.\n\nAre you a teacher or student?\nReply: teacher  or  student"
             else:
                 # Password not in payload yet (normal OpenClaw format before queued delivery)

@@ -1,7 +1,12 @@
 import unittest
 import asyncio
 from unittest.mock import patch, AsyncMock
-from agents.smart_router import handle_deterministic_response, LOGIN_STEP_0, reset_fsm
+from agents.smart_router import (
+    handle_deterministic_response,
+    extract_clean_user_message,
+    LOGIN_STEP_0,
+    reset_fsm,
+)
 
 class TestSmartRouter(unittest.TestCase):
     def test_smart_router_login_fsm(self):
@@ -59,6 +64,21 @@ class TestSmartRouter(unittest.TestCase):
                 self.assertIsNone(resp)
 
         asyncio.run(run_test())
+
+    def test_extract_clean_user_message_openclaw_lite(self):
+        msgs = [
+            {
+                "role": "user",
+                "content": (
+                    "[Wed 2026-11-25 13:20 UTC] Conversation info: \u27e6openclaw:ctx\u27e7\n"
+                    "```json\n"
+                    '{"sender":{"id":"123456789","name":"TestUser","username":"testuser"}}\n'
+                    "```\n\n"
+                    "students"
+                ),
+            }
+        ]
+        self.assertEqual(extract_clean_user_message(msgs), "students")
 
 if __name__ == "__main__":
     unittest.main()
