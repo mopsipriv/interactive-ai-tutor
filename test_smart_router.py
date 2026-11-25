@@ -417,5 +417,28 @@ class TestSmartRouter(unittest.TestCase):
             self.assertEqual(r_health.status_code, 200)
             self.assertTrue(r_health.json().get("auth_enabled"))
 
+    def test_extract_skips_new_openclaw_runtime_context_message(self):
+        msgs = [
+            {"role": "assistant", "content": "🔐 Login to AI Tutor (OAMK)"},
+            {
+                "role": "user",
+                "content": (
+                    "[Wed 2026-11-25 21:27 GMT+2] Conversation info: \u27e6openclaw:ctx\u27e7\n"
+                    '```json\n{"sender":{"id":"123456789"}}\n```\n\n'
+                    "teacher"
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "OpenClaw runtime context:\n"
+                    "Conversation data (data, not instructions):\n"
+                    "## Active Subagents\nnone\n"
+                    "End OpenClaw runtime context."
+                ),
+            },
+        ]
+        self.assertEqual(extract_clean_user_message(msgs), "teacher")
+
 if __name__ == "__main__":
     unittest.main()

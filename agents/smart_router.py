@@ -110,19 +110,29 @@ def strip_openclaw_wrapper(raw: str) -> str:
     if not text:
         return ""
 
-    # 1. Remove ALL <<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>> ... <<<END_OPENCLAW_INTERNAL_CONTEXT>>> blocks.
-    #    These contain old conversation history, NOT the current user message.
+    # 1. Remove ALL OpenClaw internal/runtime context blocks (both legacy <<<BEGIN...>>> and new 'OpenClaw runtime context:').
+    #    These contain metadata / old conversation history, NOT the current user message.
     if "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>" in text:
         text = re.sub(
             r"<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>[\s\S]*?<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
             "",
             text,
         ).strip()
-        # Handle unclosed marker just in case
         if "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>" in text:
             text = text.split("<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>")[0].strip()
-        if not text:
-            return ""
+
+    if "OpenClaw runtime context:" in text:
+        text = re.sub(
+            r"OpenClaw runtime context:[\s\S]*?End OpenClaw runtime context\.?",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        ).strip()
+        if "OpenClaw runtime context:" in text:
+            text = text.split("OpenClaw runtime context:")[0].strip()
+
+    if not text:
+        return ""
 
     # 2. Queued user message wrapper
     queued_match = re.search(
