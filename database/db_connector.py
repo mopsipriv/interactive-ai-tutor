@@ -256,6 +256,18 @@ async def get_teacher_by_email(email: str):
     return result if result else None
 
 
+async def get_teacher_by_id(teacher_id: int):
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT * FROM teacher WHERE idteacher=%s""",
+                (teacher_id,)
+            )
+            result = await cur.fetchone()
+    return result if result else None
+
+
 async def set_teacher_password(teacher_id: int, password_hash: str):
     try:
         pool = await get_pool()
@@ -522,6 +534,23 @@ async def get_pending_requests(teacher_id: int):
             )
             result = await cur.fetchall()
     return result if result else []
+
+
+async def verify_student_ownership(student_id: int, teacher_id: int) -> bool:
+    """Check that a student belongs to one of this teacher's groups (RBAC/IDOR protection)."""
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(
+                """SELECT sg.id
+                   FROM student_group sg
+                   JOIN group_cohort gc ON sg.idgroup = gc.idgroup_cohort
+                   WHERE sg.idstudent = %s AND gc.idteacher = %s
+                   LIMIT 1""",
+                (student_id, teacher_id)
+            )
+            result = await cur.fetchone()
+    return result is not None
 
 
 async def verify_request_ownership(request_id: int, teacher_id: int):

@@ -4,6 +4,7 @@ from unittest.mock import patch, AsyncMock
 from agents.smart_router import (
     handle_deterministic_response,
     extract_clean_user_message,
+    trim_conversation_history,
     check_db_session,
     clear_login_attempts,
     LOGIN_STEP_0,
@@ -241,6 +242,72 @@ class TestSmartRouter(unittest.TestCase):
                 mock_get.return_value = None
                 resp = await handle_deterministic_response("my courses", chat_id)
                 self.assertIn("session expired", resp.lower())
+
+        asyncio.run(run_test())
+
+    def test_sliding_window_trims_and_cleans_history(self):
+        msgs = [{"role": "system", "content": "sys"}]
+        for i in range(10):
+            msgs.append({"role": "user", "content": f"msg {i}"})
+            msgs.append({"role": "assistant", "content": f"ans {i}"})
+        msgs.append({
+            "role": "user",
+            "content": "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>\nold stuff\n<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+        })
+        trimmed = trim_conversation_history(msgs, max_non_system=4)
+        self.assertEqual(trimmed[0]["role"], "system")
+        # 1 system + at most 3 non-empty messages (since INTERNAL_CONTEXT-only is dropped)
+        self.assertLessEqual(len(trimmed), 5)
+        for m in trimmed:
+            self.assertNotIn("BEGIN_OPENCLAW_INTERNAL_CONTEXT", m["content"])
+
+    def test_teacher_rbac_idor_protection(self):
+        async def run_test():
+            chat_id = "test_rbac_111"
+            reset_fsm(chat_id)
+            with patch("agents.smart_router.check_db_session", new_callable=AsyncMock) as mock_sess, \
+                 patch("database.db_connector.search_students_by_name", new_callable=AsyncMock) as mock_search, \
+                 patch("database.db_connector.verify_student_ownership", new_callable=AsyncMock) as mock_own, \
+                 patch("agents.smart_router._audit_teacher_action", new_callable=AsyncMock):
+                mock_sess.return_value = {"user_role": "teacher", "user_id": 1, "user_name": "James White"}
+                mock_search.return_value = [
+                    {"idstudent": 6, "fname": "Ava", "lname": "Wilson", "student_number": "H100006"}
+                ]
+                mock_own.return_value = False
+                resp = await handle_deterministic_response("profile H100006", chat_id)
+                self.assertIn("Access denied", resp)
+
+        asyncio.run(run_test())
+
+    def test_change_password_fsm(self):
+        async def run_test():
+            from database.auth import hash_password
+            chat_id = "test_chgpwd_222"
+            reset_fsm(chat_id)
+            old_hash = hash_password("password123")
+
+            with patch("agents.smart_router.check_db_session", new_callable=AsyncMock) as mock_sess, \
+                 patch("database.db_connector.get_student_from_db", new_callable=AsyncMock) as mock_st, \
+                 patch("database.db_connector.update_student_password", new_callable=AsyncMock) as mock_upd:
+                mock_sess.return_value = {"user_role": "student", "user_id": 1, "user_name": "John Smith"}
+                mock_st.return_value = {"idstudent": 1, "password_hash": old_hash}
+                mock_upd.return_value = "Password updated successfully"
+
+                r1 = await handle_deterministic_response("change password", chat_id)
+                self.assertIn("current password", r1.lower())
+
+                r_bad = await handle_deterministic_response("wrongpass", chat_id)
+                self.assertIn("incorrect", r_bad.lower())
+
+                r2 = await handle_deterministic_response("password123", chat_id)
+                self.assertIn("new password", r2.lower())
+
+                r_short = await handle_deterministic_response("123", chat_id)
+                self.assertIn("at least 6", r_short.lower())
+
+                r_ok = await handle_deterministic_response("newpass456", chat_id)
+                self.assertIn("Password updated successfully", r_ok)
+                mock_upd.assert_awaited_once()
 
         asyncio.run(run_test())
 

@@ -27,6 +27,30 @@ UPSTREAM_URL = os.getenv("UPSTREAM_LLM_URL", "https://api.deepseek.com/chat/comp
 MAX_LOGIN_ATTEMPTS = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
 LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "300"))
 SESSION_TTL_HOURS = int(os.getenv("SESSION_TTL_HOURS", "24"))
+MAX_LLM_HISTORY_MESSAGES = int(os.getenv("MAX_LLM_HISTORY_MESSAGES", "6"))
+ESTIMATED_TOKENS_PER_DETERMINISTIC_HIT = 6000
+
+ROUTER_METRICS: Dict[str, Any] = {
+    "started_at": int(time.time()),
+    "total_requests": 0,
+    "deterministic_handled": 0,
+    "llm_forwarded": 0,
+}
+
+
+def get_metrics_snapshot() -> Dict[str, Any]:
+    total = ROUTER_METRICS["total_requests"]
+    det = ROUTER_METRICS["deterministic_handled"]
+    llm = ROUTER_METRICS["llm_forwarded"]
+    ratio = round((det / total) * 100, 1) if total > 0 else 0.0
+    return {
+        "uptime_seconds": int(time.time() - ROUTER_METRICS["started_at"]),
+        "total_requests": total,
+        "deterministic_handled": det,
+        "llm_forwarded": llm,
+        "deterministic_ratio_pct": ratio,
+        "estimated_tokens_saved": det * ESTIMATED_TOKENS_PER_DETERMINISTIC_HIT,
+    }
 
 LOGIN_FSM: Dict[str, Dict[str, Any]] = {}
 LOGIN_ATTEMPTS: Dict[str, Dict[str, Any]] = {}
@@ -190,6 +214,7 @@ TEACHER_MENU = """🎓 Welcome! You are logged in as teacher.
 📝 grade [student] [course] [1-5]
 🌅 morning brief
 ✅ approve [id] / ❌ reject [id]
+🔑 change password
 🚪 logout"""
 
 STUDENT_MENU = """🎓 Welcome! You are logged in as student.
@@ -201,6 +226,7 @@ STUDENT_MENU = """🎓 Welcome! You are logged in as student.
 🔍 courses — all courses
 📝 enroll [course] — request enrollment
 📬 my requests — request status
+🔑 change password
 🚪 logout"""
 
 LOGIN_STEP_0 = """🔐 Login to AI Tutor (OAMK)
@@ -573,6 +599,10 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
     user_id = session.get("user_id")
     name = session.get("user_name", "")
 
+    # Authenticated sub-FSM: password change flow
+    if fsm["state"] in ("CHG_PASS_CURRENT", "CHG_PASS_NEW"):
+        return await _handle_password_change_fsm(fsm, clean_text, chat_id, role, user_id)
+
     if lower in ["/start", "start", "menu", "valikko", "help", "/help"]:
         menu = TEACHER_MENU if role == "teacher" else STUDENT_MENU
         menu_body = menu.split("\n", 1)[1] if "\n" in menu else menu
@@ -582,54 +612,68 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
     cmd_text = re.sub(r"^[^\w/]+\s*", "", clean_text).strip()
     cmd_lower = cmd_text.lower()
 
+    if cmd_lower in ["change password", "vaihda salasana", "password", "/password"]:
+        fsm["state"] = "CHG_PASS_CURRENT"
+        return '🔑 Enter your current password (or type "cancel"):'
+
     if role == "teacher":
         if cmd_lower in ["risk", "riskit", "risk report"]:
             from mcp_server import get_risk_report_tool
-            return await get_risk_report_tool(user_id)
+            res = await get_risk_report_tool(user_id)
+            await _audit_teacher_action(user_id, cmd_text, "risk_report", res)
+            return res
 
         if cmd_lower in ["requests", "pyynnöt", "pending requests"]:
             from database.db_connector import get_pending_requests
             reqs = await get_pending_requests(user_id)
             if not reqs:
-                return "📥 No pending enrollment requests."
-            res = f"📥 Pending Requests ({len(reqs)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            for r in reqs:
-                res += (
-                    f"• Request #{r.get('idrequest')}: {r.get('fname')} {r.get('lname')} "
-                    f"({r.get('group_code')}) → {r.get('course_name')} ({r.get('course_code')}) "
-                    f"[{_format_dt(r.get('requested_at'))}]\n"
-                )
-            res += "\nReply: approve [id] or reject [id]"
+                res = "📥 No pending enrollment requests."
+            else:
+                res = f"📥 Pending Requests ({len(reqs)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                for r in reqs:
+                    res += (
+                        f"• Request #{r.get('idrequest')}: {r.get('fname')} {r.get('lname')} "
+                        f"({r.get('group_code')}) → {r.get('course_name')} ({r.get('course_code')}) "
+                        f"[{_format_dt(r.get('requested_at'))}]\n"
+                    )
+                res += "\nReply: approve [id] or reject [id]"
+            await _audit_teacher_action(user_id, cmd_text, "pending_requests", res)
             return res
 
         if cmd_lower in ["students", "opiskelijat", "my students"]:
             from database.db_connector import get_students_by_teacher
             st_list = await get_students_by_teacher(user_id)
             if not st_list:
-                return "👥 No students found for your cohorts."
-            res = f"👥 Your Students ({len(st_list)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            for s in st_list[:20]:
-                group = s.get("group_code") or "—"
-                res += f"• {s.get('fname')} {s.get('lname')} ({s.get('student_number')}) — {group}\n"
+                res = "👥 No students found for your cohorts."
+            else:
+                res = f"👥 Your Students ({len(st_list)}):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                for s in st_list[:20]:
+                    group = s.get("group_code") or "—"
+                    res += f"• {s.get('fname')} {s.get('lname')} ({s.get('student_number')}) — {group}\n"
+            await _audit_teacher_action(user_id, cmd_text, "list_students", res)
             return res
 
         if cmd_lower in ["morning brief", "brief", "weekly brief"]:
             from mcp_server import get_morning_brief_tool
             brief = await get_morning_brief_tool(user_id, name)
-            return brief or "🌅 No students assigned to your cohorts yet."
+            res = brief or "🌅 No students assigned to your cohorts yet."
+            await _audit_teacher_action(user_id, cmd_text, "morning_brief", res)
+            return res
 
         if cmd_lower in ["analytics", "course analytics", "analytiikka"]:
             from database.db_connector import get_course_analytics
             rows = await get_course_analytics()
             if not rows:
-                return "📊 No course analytics data available yet."
-            res = f"📊 Course Analytics ({len(rows)} courses):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            for r in rows[:20]:
-                avg = f"{float(r['avg_grade']):.1f}" if r.get("avg_grade") is not None else "—"
-                total = int(r.get("total_students") or 0)
-                done = int(r.get("completed_count") or 0)
-                pct = round((done / total) * 100) if total else 0
-                res += f"• {r['course_code']} {r['course_name']}: {done}/{total} completed ({pct}%), avg grade {avg}\n"
+                res = "📊 No course analytics data available yet."
+            else:
+                res = f"📊 Course Analytics ({len(rows)} courses):\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                for r in rows[:20]:
+                    avg = f"{float(r['avg_grade']):.1f}" if r.get("avg_grade") is not None else "—"
+                    total = int(r.get("total_students") or 0)
+                    done = int(r.get("completed_count") or 0)
+                    pct = round((done / total) * 100) if total else 0
+                    res += f"• {r['course_code']} {r['course_name']}: {done}/{total} completed ({pct}%), avg grade {avg}\n"
+            await _audit_teacher_action(user_id, cmd_text, "course_analytics", res)
             return res
 
         if cmd_lower == "curriculum" or cmd_lower.startswith("curriculum "):
@@ -645,10 +689,15 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
                     current_year = r["year_of_study"]
                     res += f"\n\nYear {current_year}:"
                 res += f"\n  • {r['course_code']} — {r['course_name']} ({r['credit']}cr)"
+            await _audit_teacher_action(user_id, cmd_text, "curriculum", f"Viewed {prog_arg}")
             return res
 
         if cmd_lower == "profile" or cmd_lower.startswith("profile "):
-            from database.db_connector import search_students_by_name, get_student_profile
+            from database.db_connector import (
+                search_students_by_name,
+                get_student_profile,
+                verify_student_ownership,
+            )
             query = cmd_text[len("profile"):].strip()
             if not query:
                 return "Usage: profile [student name or number]\nExample: profile John Smith  or  profile H100001"
@@ -666,8 +715,14 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
                 else:
                     opts = "\n".join(f"• {m['fname']} {m['lname']} ({m['student_number']})" for m in matches[:6])
                     return f"Multiple students found for '{query}'. Please specify:\n{opts}"
+            if not await verify_student_ownership(chosen["idstudent"], user_id):
+                denied = f"⛔ Access denied: {chosen['fname']} {chosen['lname']} ({chosen['student_number']}) is not in your assigned student groups."
+                await _audit_teacher_action(user_id, cmd_text, "student_profile_denied", denied)
+                return denied
             prof_rows = await get_student_profile(chosen["idstudent"])
-            return _format_student_profile(prof_rows)
+            res = _format_student_profile(prof_rows)
+            await _audit_teacher_action(user_id, cmd_text, "student_profile", f"Viewed {chosen['student_number']}")
+            return res
 
         m_approve = re.match(r"^approve\s+#?(\d+)$", cmd_lower)
         if m_approve:
@@ -675,7 +730,9 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
             req_id = int(m_approve.group(1))
             result = await approve_request(req_id, user_id)
             prefix = "✅ " if not result.startswith("Error") else "❌ "
-            return f"{prefix}Request #{req_id}: {result}"
+            res = f"{prefix}Request #{req_id}: {result}"
+            await _audit_teacher_action(user_id, cmd_text, "approve_request", res)
+            return res
 
         m_reject = re.match(r"^reject\s+#?(\d+)$", cmd_lower)
         if m_reject:
@@ -683,22 +740,30 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
             req_id = int(m_reject.group(1))
             result = await reject_request(req_id, user_id)
             prefix = "✅ " if not result.startswith("Error") else "❌ "
-            return f"{prefix}Request #{req_id}: {result}"
+            res = f"{prefix}Request #{req_id}: {result}"
+            await _audit_teacher_action(user_id, cmd_text, "reject_request", res)
+            return res
 
         if cmd_lower == "enroll" or cmd_lower.startswith("enroll "):
-            from database.db_connector import enroll_student
+            from database.db_connector import enroll_student, verify_student_ownership
             rest = cmd_text[len("enroll"):].strip()
             student, course, err = await _resolve_student_and_course(rest)
             if err:
                 return err
             if not student or not course:
                 return "Usage: enroll [student] [course]\nExample: enroll H100001 IN00DL12  or  enroll John Smith Pilvipalvelut"
+            if not await verify_student_ownership(student["idstudent"], user_id):
+                denied = f"⛔ Access denied: {student['fname']} {student['lname']} ({student['student_number']}) is not in your assigned student groups."
+                await _audit_teacher_action(user_id, cmd_text, "enroll_student_denied", denied)
+                return denied
             result = await enroll_student(student["idstudent"], course["idcourse"])
             prefix = "✅ " if "successfully" in result.lower() else "ℹ️ "
-            return f"{prefix}{student['fname']} {student['lname']} ({student['student_number']}) → {course['course_name']} ({course['course_code']}): {result}"
+            res = f"{prefix}{student['fname']} {student['lname']} ({student['student_number']}) → {course['course_name']} ({course['course_code']}): {result}"
+            await _audit_teacher_action(user_id, cmd_text, "enroll_student", res)
+            return res
 
         if cmd_lower == "grade" or cmd_lower.startswith("grade "):
-            from database.db_connector import update_grade
+            from database.db_connector import update_grade, verify_student_ownership
             rest = cmd_text[len("grade"):].strip()
             m_grade = re.match(r"^(.+?)\s+(\d+)$", rest)
             if not m_grade:
@@ -711,9 +776,15 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
                 return err
             if not student or not course:
                 return "Usage: grade [student] [course] [1-5]\nExample: grade H100001 IN00DL12 5"
+            if not await verify_student_ownership(student["idstudent"], user_id):
+                denied = f"⛔ Access denied: {student['fname']} {student['lname']} ({student['student_number']}) is not in your assigned student groups."
+                await _audit_teacher_action(user_id, cmd_text, "grade_student_denied", denied)
+                return denied
             result = await update_grade(student["idstudent"], course["idcourse"], grade_val)
             prefix = "✅ " if "successfully" in result.lower() else "❌ "
-            return f"{prefix}{student['fname']} {student['lname']} — {course['course_name']} ({course['course_code']}): grade {grade_val} ({result})"
+            res = f"{prefix}{student['fname']} {student['lname']} — {course['course_name']} ({course['course_code']}): grade {grade_val} ({result})"
+            await _audit_teacher_action(user_id, cmd_text, "grade_student", res)
+            return res
 
     if role == "student":
         if cmd_lower in ["my profile", "profile", "profiili"]:
@@ -787,14 +858,108 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
 
     return None
 
+async def _audit_teacher_action(teacher_id: int, query_text: str, intent: str, result: str):
+    """Logs teacher actions to teacher_query_log for auditability (best-effort, non-blocking on error)."""
+    try:
+        from database.db_connector import log_teacher_query
+        await log_teacher_query(teacher_id, query_text[:500], intent[:50], result[:500])
+    except Exception as e:
+        logger.debug(f"Audit log skipped: {e}")
+
+
+async def _handle_password_change_fsm(
+    fsm: Dict[str, Any],
+    clean_text: str,
+    chat_id: str,
+    role: str,
+    user_id: int,
+) -> str:
+    """2-step deterministic password change flow (CHG_PASS_CURRENT -> CHG_PASS_NEW)."""
+    from database.auth import verify_password, hash_password
+    from database.db_connector import (
+        get_teacher_by_id,
+        get_student_from_db,
+        update_teacher_password,
+        update_student_password,
+    )
+
+    candidate = clean_text.splitlines()[-1].strip() if clean_text else ""
+
+    if fsm["state"] == "CHG_PASS_CURRENT":
+        if not candidate:
+            return '🔑 Enter your current password (or type "cancel"):'
+        account = await (get_teacher_by_id(user_id) if role == "teacher" else get_student_from_db(user_id))
+        if not isinstance(account, dict) or not verify_password(candidate, account.get("password_hash", "")):
+            return '❌ Current password is incorrect. Try again, or type "cancel":'
+        fsm["state"] = "CHG_PASS_NEW"
+        return '✅ Current password verified.\nNow enter your new password (min 6 characters), or type "cancel":'
+
+    if fsm["state"] == "CHG_PASS_NEW":
+        if len(candidate) < 6:
+            return '❌ Password must be at least 6 characters long. Enter a new password, or type "cancel":'
+        new_hash = hash_password(candidate)
+        res = await (
+            update_teacher_password(user_id, new_hash)
+            if role == "teacher"
+            else update_student_password(user_id, new_hash)
+        )
+        reset_fsm(chat_id)
+        if res.startswith("Error"):
+            return f"❌ Could not update password: {res}"
+        if role == "teacher":
+            await _audit_teacher_action(user_id, "change password", "change_password", "Password updated")
+        return (
+            "✅ Password updated successfully!\n"
+            "🔒 Security tip: delete your password messages from this chat."
+        )
+
+    reset_fsm(chat_id)
+    return "Cancelled."
+
+
+def trim_conversation_history(
+    messages: List[Dict[str, Any]],
+    max_non_system: int = MAX_LLM_HISTORY_MESSAGES,
+) -> List[Dict[str, Any]]:
+    """
+    Sliding-window history trimmer for LLM token optimization.
+    Keeps all system messages + the last `max_non_system` conversational turns,
+    and strips bloated OpenClaw INTERNAL_CONTEXT blocks from prior user turns.
+    """
+    system_msgs = [m for m in messages if m.get("role") == "system"]
+    conv_msgs = [m for m in messages if m.get("role") != "system"]
+
+    if len(conv_msgs) > max_non_system:
+        start_idx = len(conv_msgs) - max_non_system
+        # Never start slice with an orphaned tool response
+        while start_idx > 0 and conv_msgs[start_idx].get("role") == "tool":
+            start_idx -= 1
+        conv_msgs = conv_msgs[start_idx:]
+
+    cleaned_conv: List[Dict[str, Any]] = []
+    for m in conv_msgs:
+        if m.get("role") == "user":
+            raw = _message_to_text(m.get("content", ""))
+            stripped = strip_openclaw_wrapper(raw)
+            if not stripped:
+                continue  # skip pure INTERNAL_CONTEXT injection messages
+            cleaned_conv.append({"role": "user", "content": stripped})
+        else:
+            cleaned_conv.append(m)
+
+    return system_msgs + cleaned_conv
+
+
 async def enrich_payload_with_rag(payload: Dict[str, Any], user_msg: str, chat_id: str) -> Dict[str, Any]:
-    """Enriches semantic LLM queries with relevant OAMK RAG documents and user role context."""
+    """Trims conversation history (sliding window) and enriches semantic LLM queries with OAMK RAG documents."""
     messages = payload.get("messages", [])
     if not user_msg or not messages:
         return payload
     # Do not inject extra system context during multi-step tool call continuations
     if messages[-1].get("role") == "tool":
         return payload
+
+    trimmed_msgs = trim_conversation_history(messages, MAX_LLM_HISTORY_MESSAGES)
 
     rag_context = ""
     try:
@@ -810,22 +975,20 @@ async def enrich_payload_with_rag(payload: Dict[str, Any], user_msg: str, chat_i
     if session:
         role_info = f"Current authenticated user: {session.get('user_name')} (role: {session.get('user_role')}).\n"
 
-    if not rag_context and not role_info:
-        return payload
-
-    extra_system = (
-        "You are the OAMK AI Tutor Assistant.\n"
-        f"{role_info}"
-        "Answer clearly and concisely based on OAMK official documents below when relevant. "
-        "Do not invent student grades or personal database records; direct the user to menu commands "
-        "(e.g. 'students', 'risk', 'my courses', 'my progress') for live database queries.\n"
-    )
-    if rag_context:
-        extra_system += f"\n--- OAMK Knowledge Base (RAG) ---\n{rag_context}\n--- End Knowledge Base ---"
-
     enriched = dict(payload)
-    new_msgs = list(messages)
-    new_msgs.insert(0, {"role": "system", "content": extra_system})
+    new_msgs = list(trimmed_msgs)
+    if rag_context or role_info:
+        extra_system = (
+            "You are the OAMK AI Tutor Assistant.\n"
+            f"{role_info}"
+            "Answer clearly and concisely based on OAMK official documents below when relevant. "
+            "Do not invent student grades or personal database records; direct the user to menu commands "
+            "(e.g. 'students', 'risk', 'my courses', 'my progress') for live database queries.\n"
+        )
+        if rag_context:
+            extra_system += f"\n--- OAMK Knowledge Base (RAG) ---\n{rag_context}\n--- End Knowledge Base ---"
+        new_msgs.insert(0, {"role": "system", "content": extra_system})
+
     enriched["messages"] = new_msgs
     return enriched
 
@@ -896,21 +1059,33 @@ async def chat_completions(request: Request):
         (m.get("role"), len(_message_to_text(m.get("content", ""))), _message_to_text(m.get("content", ""))[:45].replace("\n", "\\n"))
         for m in messages[-4:]
     ]
-    safe_msg = "***" if fsm_state == "AWAITING_PASSWORD" and user_msg else user_msg
+    is_secret_step = fsm_state in ("AWAITING_PASSWORD", "CHG_PASS_CURRENT", "CHG_PASS_NEW")
+    safe_msg = "***" if is_secret_step and user_msg else user_msg
     logger.info(f"Incoming message from chat_id={chat_id} (fsm={fsm_state}): '{safe_msg}' | tail={tail_summary}")
 
+    ROUTER_METRICS["total_requests"] += 1
     deterministic_answer = await handle_deterministic_response(user_msg, chat_id, messages)
     if deterministic_answer is not None:
+        ROUTER_METRICS["deterministic_handled"] += 1
         logger.info(f"-> Handled DETERMINISTICALLY (0 tokens): {deterministic_answer[:40]}...")
         return format_openai_response(deterministic_answer, model=data.get("model", "deepseek-v4-flash"))
 
+    ROUTER_METRICS["llm_forwarded"] += 1
     logger.info("-> Forwarding to upstream LLM (Semantic/RAG query)...")
     enriched_data = await enrich_payload_with_rag(data, user_msg, chat_id)
     return await forward_to_upstream_llm(enriched_data)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "provider": LLM_PROVIDER}
+    return {
+        "status": "ok",
+        "provider": LLM_PROVIDER,
+        "metrics": get_metrics_snapshot(),
+    }
+
+@app.get("/metrics")
+async def metrics():
+    return get_metrics_snapshot()
 
 if __name__ == "__main__":
     port = int(os.getenv("ROUTER_PORT", 8080))
