@@ -43,75 +43,79 @@ def reset_fsm(chat_id: str):
     }
 
 def strip_openclaw_wrapper(raw: str) -> str:
-    """Strips OpenClaw metadata wrappers (classic context, lite Conversation info JSON, queued prefix)."""
+    """Strips OpenClaw metadata wrappers (internal context blocks, lite Conversation info JSON, queued prefix)."""
     text = raw.strip()
     if not text:
         return ""
 
-    # 1. Classic internal context wrapper
-    if "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>" in text:
-        tail = text.split("<<<END_OPENCLAW_INTERNAL_CONTEXT>>>")[-1].strip()
-        if tail:
-            text = tail
-        else:
-            # Fallback to last User: entry inside context
-            user_lines = re.findall(r"User:\s*([^\n\r]+)", text)
-            return user_lines[-1].strip() if user_lines else ""
+    # 1. Remove ALL <<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>> ... <<<END_OPENCLAW_INTERNAL_CONTEXT>>> blocks.
+    #    These contain old conversation history, NOT the current user message.
+    if "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>" in text:
+        text = re.sub(
+            r"<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>[\s\S]*?<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+            "",
+            text,
+        ).strip()
+        # Handle unclosed marker just in case
+        if "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>" in text:
+            text = text.split("<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>")[0].strip()
+        if not text:
+            return ""
 
     # 2. Queued user message wrapper
-    queued_match = re.search(r"\[Queued user message[^\]]*\]\s*\n(.+?)(?:\n\n|\nContinue|$)", text, re.IGNORECASE | re.DOTALL)
+    queued_match = re.search(
+        r"\[Queued user message[^\]]*\]\s*\n(.+?)(?:\n\nContinue|\nContinue|$)",
+        text,
+        re.IGNORECASE | re.DOTALL,
+    )
     if queued_match:
         candidate = queued_match.group(1).strip()
         if candidate:
-            return candidate
+            text = candidate
 
-    # 3. Lite Conversation info wrapper:
+    # 3. Lite Conversation info / Sender metadata wrappers:
     #    [Wed 2026-11-25 13:20 UTC] Conversation info: ⟦openclaw:ctx⟧\n```json\n{...}\n```\n\n<actual message>
-    if "Conversation info:" in text or "⟦openclaw:ctx⟧" in text:
-        # Remove everything up to and including the closing ``` of the json block(s)
+    if "Conversation info" in text or "Sender (" in text or "⟦openclaw:ctx⟧" in text:
         cleaned = re.sub(
-            r"(?:^|\n)(?:\[[^\]]+\]\s*)?Conversation info:[\s\S]*?```(?:json)?\s*[\s\S]*?```\s*",
+            r"(?:^|\n)(?:\[[^\]]+\]\s*)?(?:Conversation info|Sender)[^\n]*\n```(?:json)?\s*[\s\S]*?```\s*",
             "\n",
             text,
             flags=re.IGNORECASE,
         ).strip()
-        if cleaned:
-            text = cleaned
+        text = cleaned
 
     # 4. Strip leading timestamp/sender brackets like [Wed 2026-11-25 13:20 UTC] or [Telegram 12345]
     text = re.sub(r"^(?:\[[^\]]+\]\s*)+", "", text).strip()
     return text
 
 
+def _message_to_text(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = [
+            item.get("text", "")
+            for item in content
+            if isinstance(item, dict) and item.get("type") == "text"
+        ]
+        return "\n".join(parts)
+    return str(content or "")
+
+
 def extract_clean_user_message(messages: List[Dict[str, Any]]) -> str:
-    """Extracts actual user input text from the latest user message, stripping OpenClaw headers."""
+    """
+    Extracts the actual current user input text from the latest turn in messages[],
+    skipping OpenClaw internal-context-only injections and stopping at the previous assistant turn.
+    """
     for m in reversed(messages):
-        if m.get("role") == "user":
-            content = m.get("content", "")
-            raw = ""
-            if isinstance(content, str):
-                raw = content
-            elif isinstance(content, list):
-                parts = [
-                    item.get("text", "")
-                    for item in content
-                    if isinstance(item, dict) and item.get("type") == "text"
-                ]
-                raw = "\n".join(parts)
+        role = m.get("role")
+        if role == "assistant":
+            break
+        if role == "user":
+            raw = _message_to_text(m.get("content", ""))
             cleaned = strip_openclaw_wrapper(raw)
             if cleaned:
                 return cleaned
-            break
-
-    # Fallback: extract last User: entry from OpenClaw context history
-    for m in reversed(messages):
-        content = str(m.get("content", ""))
-        user_lines = re.findall(r"User:\s*([^\n\r]+)", content)
-        if user_lines:
-            last_line = user_lines[-1].strip()
-            if last_line:
-                return last_line
-
     return ""
 
 def format_openai_response(content: str, model: str = "deepseek-v4.1-flash") -> Dict[str, Any]:
@@ -302,27 +306,15 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
 
     # 3. If NOT logged in -> process Login FSM
     if not session:
-        # 3a. AWAITING_PASSWORD: try to extract password from raw payload
+        # 3a. AWAITING_PASSWORD: clean_text already has all OpenClaw wrappers stripped
         if fsm["state"] == "AWAITING_PASSWORD":
-            password = None
-
-            # Extract password ONLY from the last user message (never from previous ones!).
-            # Previous user messages may contain the email/student_number which would be
-            # picked up as a false "plain text" match by extract_password_from_raw.
-            if messages:
-                for m in reversed(messages):
-                    if m.get("role") == "user":
-                        raw = str(m.get("content", ""))
-                        password = extract_password_from_raw(raw)
-                        break  # stop after first (= last) user message regardless
-            elif clean_text:
-                password = clean_text
+            password = clean_text.splitlines()[-1].strip() if clean_text else ""
 
             if password:
                 role = fsm.get("role", "teacher")
                 identifier = fsm.get("identifier", "")
                 reset_fsm(chat_id)
-                logger.info(f"-> Attempting {role} login for '{identifier}' with extracted password (len={len(password)})")
+                logger.info(f"-> Attempting {role} login for '{identifier}' with password (len={len(password)})")
                 if role == "teacher":
                     success, result = await perform_teacher_login(chat_id, identifier, password)
                     if success:
@@ -335,8 +327,6 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
                         return f"🎓 Welcome, {result}! You are logged in as student.\n{menu_body}"
                 return "❌ Login failed. Try again.\n\nAre you a teacher or student?\nReply: teacher  or  student"
             else:
-                # Password not in payload yet (normal OpenClaw format before queued delivery)
-                # Keep FSM state AWAITING_PASSWORD and re-prompt
                 logger.info(f"-> Password not in payload for chat_id={chat_id}, re-prompting (FSM stays AWAITING_PASSWORD)")
                 return "Enter your password:"
 
@@ -518,7 +508,13 @@ async def chat_completions(request: Request):
             chat_id = match_num.group(1)
             break
 
-    logger.info(f"Incoming message from chat_id={chat_id}: '{user_msg}'")
+    fsm_state = get_fsm(chat_id)["state"]
+    tail_summary = [
+        (m.get("role"), len(_message_to_text(m.get("content", ""))), _message_to_text(m.get("content", ""))[:45].replace("\n", "\\n"))
+        for m in messages[-4:]
+    ]
+    safe_msg = "***" if fsm_state == "AWAITING_PASSWORD" and user_msg else user_msg
+    logger.info(f"Incoming message from chat_id={chat_id} (fsm={fsm_state}): '{safe_msg}' | tail={tail_summary}")
 
     deterministic_answer = await handle_deterministic_response(user_msg, chat_id, messages)
     if deterministic_answer is not None:

@@ -80,5 +80,54 @@ class TestSmartRouter(unittest.TestCase):
         ]
         self.assertEqual(extract_clean_user_message(msgs), "students")
 
+    def test_extract_skips_trailing_internal_context_message(self):
+        msgs = [
+            {"role": "assistant", "content": "Enter your password:"},
+            {
+                "role": "user",
+                "content": (
+                    "[Wed 2026-11-25 13:28 UTC] Conversation info: \u27e6openclaw:ctx\u27e7\n"
+                    "```json\n"
+                    '{"sender":{"id":"123456789"}}\n'
+                    "```\n\n"
+                    "password123"
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>\n"
+                    "#session:1 2026-11-25 13:28 UTC User: james.white@oamk.fi\n"
+                    "#session:2 2026-11-25 13:28 UTC OpenClaw: Enter your password:\n"
+                    "<<<END_OPENCLAW_INTERNAL_CONTEXT>>>"
+                ),
+            },
+        ]
+        self.assertEqual(extract_clean_user_message(msgs), "password123")
+
+    def test_extract_multipart_content_with_internal_context(self):
+        msgs = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "<<<BEGIN_OPENCLAW_INTERNAL_CONTEXT>>>\nUser: hi\n<<<END_OPENCLAW_INTERNAL_CONTEXT>>>",
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "[Wed 2026-11-25 13:28 UTC] Conversation info: \u27e6openclaw:ctx\u27e7\n"
+                            "```json\n"
+                            '{"sender":{"id":"123456789"}}\n'
+                            "```\n\n"
+                            "james.white@oamk.fi"
+                        ),
+                    },
+                ],
+            }
+        ]
+        self.assertEqual(extract_clean_user_message(msgs), "james.white@oamk.fi")
+
 if __name__ == "__main__":
     unittest.main()
