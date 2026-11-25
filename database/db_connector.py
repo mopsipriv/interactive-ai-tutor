@@ -808,7 +808,8 @@ async def get_telegram_session(chat_id: str):
     async with pool.acquire() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(
-                "SELECT * FROM telegram_sessions WHERE chat_id = %s",
+                """SELECT *, TIMESTAMPDIFF(SECOND, logged_in_at, NOW()) AS session_age_sec
+                   FROM telegram_sessions WHERE chat_id = %s""",
                 (chat_id,)
             )
             return await cur.fetchone()

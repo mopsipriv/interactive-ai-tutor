@@ -24,7 +24,43 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 UPSTREAM_URL = os.getenv("UPSTREAM_LLM_URL", "https://api.deepseek.com/chat/completions")
 
+MAX_LOGIN_ATTEMPTS = int(os.getenv("MAX_LOGIN_ATTEMPTS", "5"))
+LOCKOUT_SECONDS = int(os.getenv("LOGIN_LOCKOUT_SECONDS", "300"))
+SESSION_TTL_HOURS = int(os.getenv("SESSION_TTL_HOURS", "24"))
+
 LOGIN_FSM: Dict[str, Dict[str, Any]] = {}
+LOGIN_ATTEMPTS: Dict[str, Dict[str, Any]] = {}
+EXPIRED_SESSION_NOTICES: set = set()
+
+
+def get_lockout_remaining(chat_id: str) -> int:
+    """Returns remaining lockout seconds for chat_id (0 if not locked)."""
+    rec = LOGIN_ATTEMPTS.get(chat_id)
+    if not rec:
+        return 0
+    locked_until = rec.get("locked_until", 0.0)
+    if locked_until <= 0:
+        return 0
+    remaining = int(locked_until - time.time())
+    if remaining <= 0:
+        LOGIN_ATTEMPTS.pop(chat_id, None)
+        return 0
+    return remaining
+
+
+def record_failed_login(chat_id: str) -> tuple[int, bool]:
+    """Records a failed login attempt. Returns (attempts_left, is_now_locked)."""
+    rec = LOGIN_ATTEMPTS.setdefault(chat_id, {"count": 0, "locked_until": 0.0})
+    rec["count"] += 1
+    if rec["count"] >= MAX_LOGIN_ATTEMPTS:
+        rec["locked_until"] = time.time() + LOCKOUT_SECONDS
+        return 0, True
+    return MAX_LOGIN_ATTEMPTS - rec["count"], False
+
+
+def clear_login_attempts(chat_id: str):
+    LOGIN_ATTEMPTS.pop(chat_id, None)
+
 
 def get_fsm(chat_id: str) -> Dict[str, Any]:
     if chat_id not in LOGIN_FSM:
@@ -174,9 +210,30 @@ Reply: "teacher"  or  "student\""""
 
 async def check_db_session(chat_id: str) -> Optional[Dict[str, Any]]:
     try:
-        from database.db_connector import get_telegram_session
+        from database.db_connector import get_telegram_session, delete_telegram_session
         clean_chat_id = chat_id.replace("telegram:", "")
-        return await get_telegram_session(clean_chat_id)
+        session = await get_telegram_session(clean_chat_id)
+        if not session:
+            return None
+
+        # Check session TTL (default 24h) using DB-calculated session_age_sec or logged_in_at
+        ttl_sec = SESSION_TTL_HOURS * 3600
+        age_sec = session.get("session_age_sec")
+        if age_sec is None and session.get("logged_in_at"):
+            from datetime import datetime
+            ts = session["logged_in_at"]
+            if isinstance(ts, str):
+                ts = datetime.fromisoformat(ts)
+            age_sec = (datetime.now() - ts).total_seconds()
+
+        if age_sec is not None and age_sec > ttl_sec:
+            logger.info(f"Session expired for chat_id={clean_chat_id} (age={int(age_sec)}s > {ttl_sec}s)")
+            await delete_telegram_session(clean_chat_id)
+            reset_fsm(chat_id)
+            EXPIRED_SESSION_NOTICES.add(chat_id)
+            return None
+
+        return session
     except Exception as e:
         logger.error(f"Error checking session: {e}")
         return None
@@ -396,6 +453,19 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
 
     # 3. If NOT logged in -> process Login FSM
     if not session:
+        # 3.0 Notify user if their previous session just expired
+        if chat_id in EXPIRED_SESSION_NOTICES:
+            EXPIRED_SESSION_NOTICES.discard(chat_id)
+            fsm["state"] = "AWAITING_ROLE"
+            return f"⏱ Your session expired after {SESSION_TTL_HOURS}h. Please log in again.\n\n{LOGIN_STEP_0}"
+
+        # 3.1 Rate-limit lockout check
+        lock_rem = get_lockout_remaining(chat_id)
+        if lock_rem > 0:
+            mins, secs = divmod(lock_rem, 60)
+            wait_str = f"{mins}m {secs}s" if mins else f"{secs}s"
+            return f"⛔ Too many failed login attempts. Please wait {wait_str} and try again."
+
         # 3a. AWAITING_PASSWORD: clean_text already has all OpenClaw wrappers stripped
         if fsm["state"] == "AWAITING_PASSWORD":
             password = clean_text.splitlines()[-1].strip() if clean_text else ""
@@ -403,19 +473,52 @@ async def handle_deterministic_response(text: str, chat_id: str, messages: List[
             if password:
                 role = fsm.get("role", "teacher")
                 identifier = fsm.get("identifier", "")
-                reset_fsm(chat_id)
                 logger.info(f"-> Attempting {role} login for '{identifier}' with password (len={len(password)})")
                 if role == "teacher":
                     success, result = await perform_teacher_login(chat_id, identifier, password)
                     if success:
+                        reset_fsm(chat_id)
+                        clear_login_attempts(chat_id)
                         menu_body = TEACHER_MENU.split("\n", 1)[1] if "\n" in TEACHER_MENU else TEACHER_MENU
-                        return f"🎓 Welcome, {result}! You are logged in as teacher.\n{menu_body}"
+                        return (
+                            f"🎓 Welcome, {result}! You are logged in as teacher.\n"
+                            f"🔒 Security tip: delete your password message from this chat.\n"
+                            f"{menu_body}"
+                        )
                 else:
                     success, result = await perform_student_login(chat_id, identifier, password)
                     if success:
+                        reset_fsm(chat_id)
+                        clear_login_attempts(chat_id)
                         menu_body = STUDENT_MENU.split("\n", 1)[1] if "\n" in STUDENT_MENU else STUDENT_MENU
-                        return f"🎓 Welcome, {result}! You are logged in as student.\n{menu_body}"
-                return "❌ Login failed. Try again.\n\nAre you a teacher or student?\nReply: teacher  or  student"
+                        return (
+                            f"🎓 Welcome, {result}! You are logged in as student.\n"
+                            f"🔒 Security tip: delete your password message from this chat.\n"
+                            f"{menu_body}"
+                        )
+
+                # Failed login -> track attempt & keep FSM convenient for retry
+                attempts_left, locked = record_failed_login(chat_id)
+                if locked:
+                    reset_fsm(chat_id)
+                    mins = LOCKOUT_SECONDS // 60
+                    return f"⛔ Too many failed login attempts. Login is locked for {mins} minutes."
+
+                if "Wrong password" in str(result):
+                    # Keep role + identifier so user only re-enters password
+                    return (
+                        f"❌ Wrong password ({attempts_left} attempts remaining).\n"
+                        f"Please enter your password again, or type \"cancel\" to start over:"
+                    )
+
+                # Account not found -> return to identifier step for the same role
+                fsm["state"] = "AWAITING_IDENTIFIER"
+                fsm["identifier"] = None
+                id_label = "email" if role == "teacher" else "student number (e.g. H100001)"
+                return (
+                    f"❌ Account '{identifier}' not found ({attempts_left} attempts remaining).\n"
+                    f"Please enter your {id_label}, or type \"cancel\" to switch role:"
+                )
             else:
                 logger.info(f"-> Password not in payload for chat_id={chat_id}, re-prompting (FSM stays AWAITING_PASSWORD)")
                 return "Enter your password:"

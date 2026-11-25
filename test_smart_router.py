@@ -4,6 +4,8 @@ from unittest.mock import patch, AsyncMock
 from agents.smart_router import (
     handle_deterministic_response,
     extract_clean_user_message,
+    check_db_session,
+    clear_login_attempts,
     LOGIN_STEP_0,
     reset_fsm,
 )
@@ -174,6 +176,71 @@ class TestSmartRouter(unittest.TestCase):
                 resp_my = await handle_deterministic_response("my courses", chat_id)
                 self.assertIn("My Courses", resp_my)
                 self.assertIn("IN00EH18", resp_my)
+
+        asyncio.run(run_test())
+
+    def test_wrong_password_retry_and_rate_limit(self):
+        async def run_test():
+            chat_id = "test_rl_777"
+            reset_fsm(chat_id)
+            clear_login_attempts(chat_id)
+
+            with patch("agents.smart_router.check_db_session", new_callable=AsyncMock) as mock_sess, \
+                 patch("agents.smart_router.perform_teacher_login", new_callable=AsyncMock) as mock_login:
+                mock_sess.return_value = None
+                await handle_deterministic_response("teacher", chat_id)
+                await handle_deterministic_response("james.white@oamk.fi", chat_id)
+
+                # Wrong password -> stays in AWAITING_PASSWORD, shows remaining attempts
+                mock_login.return_value = (False, "Wrong password")
+                r1 = await handle_deterministic_response("bad1", chat_id)
+                self.assertIn("Wrong password (4 attempts remaining)", r1)
+
+                # Retry password directly without re-entering email -> succeeds + security tip
+                mock_login.return_value = (True, "James White")
+                r_ok = await handle_deterministic_response("password123", chat_id)
+                self.assertIn("Welcome, James White!", r_ok)
+                self.assertIn("Security tip", r_ok)
+
+                # Trigger 5 failures -> rate-limit lockout
+                await handle_deterministic_response("teacher", chat_id)
+                await handle_deterministic_response("james.white@oamk.fi", chat_id)
+                mock_login.return_value = (False, "Wrong password")
+                for _ in range(4):
+                    await handle_deterministic_response("wrong", chat_id)
+                r_lock = await handle_deterministic_response("wrong", chat_id)
+                self.assertIn("locked", r_lock.lower())
+
+                # Subsequent message is blocked immediately
+                r_blocked = await handle_deterministic_response("hi", chat_id)
+                self.assertIn("Too many failed login attempts", r_blocked)
+
+            clear_login_attempts(chat_id)
+
+        asyncio.run(run_test())
+
+    def test_session_ttl_expiry(self):
+        async def run_test():
+            chat_id = "test_ttl_555"
+            reset_fsm(chat_id)
+
+            with patch("database.db_connector.get_telegram_session", new_callable=AsyncMock) as mock_get, \
+                 patch("database.db_connector.delete_telegram_session", new_callable=AsyncMock) as mock_del:
+                mock_get.return_value = {
+                    "chat_id": chat_id,
+                    "user_role": "student",
+                    "user_id": 1,
+                    "user_name": "John Smith",
+                    "session_age_sec": 25 * 3600,  # 25 hours (> 24h TTL)
+                }
+                sess = await check_db_session(chat_id)
+                self.assertIsNone(sess)
+                mock_del.assert_awaited_once_with(chat_id)
+
+                # Next deterministic response notifies user about expiry
+                mock_get.return_value = None
+                resp = await handle_deterministic_response("my courses", chat_id)
+                self.assertIn("session expired", resp.lower())
 
         asyncio.run(run_test())
 
